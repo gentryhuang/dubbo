@@ -1,2 +1,7 @@
 http\://dubbo.apache.org/schema/dubbo/dubbo.xsd=META-INF/dubbo.xsd
 http\://code.alibabatech.com/schema/dubbo/dubbo.xsd=META-INF/compat/dubbo.xsd
+
+# 说明：
+# 1 dubbo的xml配置方式与Spring融合的xsd文件位置在dubbo-spring-config模块的META-INF/spring.schemas中指定
+# 2 xmlns 为http://dubbo.apache.org/schema/dubbo
+# 3 xsd 为 META-INF/dubbo.xsd

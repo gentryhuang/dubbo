@@ -9,6 +9,14 @@
     <xsd:import namespace="http://www.springframework.org/schema/beans"/>
     <xsd:import namespace="http://www.springframework.org/schema/tool"/>
 
+
+    <!--
+      1. <xsd:element name="xxx"/> 定义了元素的名称。eg: <xsd:element name="application"/>对应<dubbo:application />
+      2. <xsd:element type=""/> 定义了内建数据类型的名称。eg: <xsd:element type="applicationType"/>对应<xsd:complexType name="applicationType"/>
+      3. <xsd:complexType name=""> 定义了复杂类型。 eg: <xsd:complexType name="applicationType"/>
+
+    -->
+
     <xsd:annotation>
         <xsd:documentation>
             <![CDATA[ Namespace support for the dubbo services provided by dubbo framework. ]]></xsd:documentation>

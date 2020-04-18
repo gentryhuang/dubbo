@@ -1,2 +1,5 @@
 http\://dubbo.apache.org/schema/dubbo=com.alibaba.dubbo.config.spring.schema.DubboNamespaceHandler
 http\://code.alibabatech.com/schema/dubbo=com.alibaba.dubbo.config.spring.schema.DubboNamespaceHandler
+
+# 说明
+# 1 定义了Dubbo的xml namespace 的处理器DubboNamespaceHandler
