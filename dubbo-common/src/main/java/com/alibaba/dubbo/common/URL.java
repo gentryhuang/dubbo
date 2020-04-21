@@ -72,20 +72,36 @@ public final class URL implements Serializable {
 
     private static final long serialVersionUID = -1985165475234910535L;
 
+    /**
+     * 协议名
+     */
     private final String protocol;
 
+    /**
+     * 用户名
+     */
     private final String username;
-
+    /**
+     * 密码
+     */
     private final String password;
 
-    // by default, host to registry
+    /** by default, host to registry
+     * 地址
+     */
     private final String host;
 
-    // by default, port to registry
+    /** by default, port to registry
+     * 端口
+     */
     private final int port;
-
+    /**
+     * 路径（服务名）
+     */
     private final String path;
-
+    /**
+     * 参数集合（实际上就是Service对应的配置项，该属性通过AbstractConfig#appendParameter方法生成的）
+     */
     private final Map<String, String> parameters;
 
     // ==== cache ====

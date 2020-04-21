@@ -24,7 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * AbstractServiceConfig
+ * AbstractServiceConfig  抽象服务配置类
  *
  * @export
  */

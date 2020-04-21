@@ -17,7 +17,7 @@
 package com.alibaba.dubbo.config;
 
 /**
- * ConsumerConfig
+ * ConsumerConfig 服务消费者缺省值配置
  *
  * @export
  */

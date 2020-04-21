@@ -104,6 +104,9 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     // the scope for referring/exporting a service, if it's local, it means searching in current JVM only.
     private String scope;
 
+    /**
+     * 校验RegistryConfig配置，实际上，该方法会初始化RegistryConfig的配置属性
+     */
     protected void checkRegistry() {
         // for backward compatibility
         if (registries == null || registries.isEmpty()) {
@@ -132,6 +135,9 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         }
     }
 
+    /**
+     * 校验ApplicationConfig配置，实际上，该方法会初始化ApplicationConfig的配置属性
+     */
     @SuppressWarnings("deprecation")
     protected void checkApplication() {
         // for backward compatibility
@@ -158,6 +164,12 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         }
     }
 
+    /**
+     * todo 待详细说明
+     *
+     * @param provider
+     * @return
+     */
     protected List<URL> loadRegistries(boolean provider) {
         checkRegistry();
         List<URL> registryList = new ArrayList<URL>();
@@ -203,6 +215,12 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         return registryList;
     }
 
+    /**
+     * todo 待详细说明
+     *
+     * @param registryURL
+     * @return
+     */
     protected URL loadMonitor(URL registryURL) {
         if (monitor == null) {
             String monitorAddress = ConfigUtils.getProperty("dubbo.monitor.address");
@@ -257,6 +275,14 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         return null;
     }
 
+    /**
+     * 校验接口和方法：
+     * 1 接口类必须非空并且必须是接口
+     * 2 方法在接口中已经定义
+     *
+     * @param interfaceClass
+     * @param methods
+     */
     protected void checkInterfaceAndMethods(Class<?> interfaceClass, List<MethodConfig> methods) {
         // interface cannot be null
         if (interfaceClass == null) {
@@ -288,6 +314,11 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         }
     }
 
+    /**
+     * 校验Stub和Mock相关的配置
+     *
+     * @param interfaceClass
+     */
     protected void checkStubAndMock(Class<?> interfaceClass) {
         if (ConfigUtils.isNotEmpty(local)) {
             Class<?> localClass = ConfigUtils.isDefault(local) ? ReflectUtils.forName(interfaceClass.getName() + "Local") : ReflectUtils.forName(local);

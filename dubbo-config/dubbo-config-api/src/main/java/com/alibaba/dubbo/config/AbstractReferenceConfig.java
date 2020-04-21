@@ -22,7 +22,7 @@ import com.alibaba.dubbo.rpc.InvokerListener;
 import com.alibaba.dubbo.rpc.support.ProtocolUtils;
 
 /**
- * AbstractConsumerConfig
+ * AbstractConsumerConfig 抽象引用配置类
  *
  * @export
  * @see com.alibaba.dubbo.config.ReferenceConfig

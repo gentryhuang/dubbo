@@ -28,7 +28,7 @@ import com.alibaba.dubbo.remoting.telnet.TelnetHandler;
 import java.util.Arrays;
 
 /**
- * ProviderConfig
+ * ProviderConfig 服务提供者缺省值配置
  *
  * @export
  * @see com.alibaba.dubbo.config.ProtocolConfig

@@ -23,21 +23,41 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Parameter
+ * 用于Dubbo URL的参数集合拼接
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
 public @interface Parameter {
 
+    /**
+     * 键（别名）
+     * @return
+     */
     String key() default "";
 
+    /**
+     * 是否必须
+     * @return
+     */
     boolean required() default false;
 
+    /**
+     * 是否忽略
+     * @return
+     */
     boolean excluded() default false;
 
+    /**
+     * 是否转译
+     * @return
+     */
     boolean escaped() default false;
 
+    /**
+     * 是否为属性 （目前用于事件通知）
+     * @return
+     */
     boolean attribute() default false;
 
     boolean append() default false;

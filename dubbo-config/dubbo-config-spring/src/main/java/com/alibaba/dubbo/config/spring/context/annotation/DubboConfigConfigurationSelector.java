@@ -29,6 +29,13 @@ import org.springframework.core.type.AnnotationMetadata;
  * @see EnableDubboConfig
  * @see DubboConfigConfiguration
  * @since 2.5.8
+ *
+ * 1 利用ImportSelector要导入哪些组件，只需要返回要导入组件的全限定类名，即 selectImports方法返回值
+ * 2 如果selectImports方法返回值对应的类，它里面有使用@Bean注解的方法，那么此时给容器中导入的不只有当前返回值对应类的实例，还有该类型中
+ *   加了@Bean对应的实例
+ * 3 注意：给容器导入的不是 DubboConfigConfigurationSelector，因为它实现了ImportSelector接口，导入的是该类的selectImports方法中返回的值对应的类
+ *
+ *
  */
 public class DubboConfigConfigurationSelector implements ImportSelector, Ordered {
 

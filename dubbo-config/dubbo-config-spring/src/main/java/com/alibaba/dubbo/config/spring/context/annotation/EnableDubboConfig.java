@@ -61,15 +61,20 @@ import java.lang.annotation.Target;
  * @see DubboConfigConfiguration
  * @see DubboConfigConfigurationSelector
  * @since 2.5.8
+ *
+ * 开启Dubbo配置
+ *
  */
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@Import(DubboConfigConfigurationSelector.class)
+@Import(DubboConfigConfigurationSelector.class) // 使用DubboConfigConfigurationSelector类给容器导入组件
 public @interface EnableDubboConfig {
 
     /**
+     * 配置是否绑定到多个SpringBean上
+     *
      * It indicates whether binding to multiple Spring Beans.
      *
      * @return the default value is <code>false</code>
