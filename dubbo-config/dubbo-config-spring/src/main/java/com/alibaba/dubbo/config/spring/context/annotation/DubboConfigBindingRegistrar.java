@@ -52,6 +52,8 @@ import static org.springframework.beans.factory.support.BeanDefinitionReaderUtil
  * @see EnableDubboConfigBinding
  * @see DubboConfigBindingBeanPostProcessor
  * @since 2.5.8
+ * <p>
+ * 处理 @EnableDubboConfigBinding 注解，注册相应的 Dubbo AbstractConfig 到Spring 容器
  */
 public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware {
 
@@ -62,32 +64,41 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
 
+        // 获得 @EnableDubboConfigBinding注解
         AnnotationAttributes attributes = AnnotationAttributes.fromMap(
                 importingClassMetadata.getAnnotationAttributes(EnableDubboConfigBinding.class.getName()));
-
+        // 根据 @EnableDubboConfigBinding注解信息 注册配置对应的 Bean Definition 对象
         registerBeanDefinitions(attributes, registry);
 
     }
 
     protected void registerBeanDefinitions(AnnotationAttributes attributes, BeanDefinitionRegistry registry) {
-
+        // 获得prefix 属性（因为有可能有占位符，需要要解析）
         String prefix = environment.resolvePlaceholders(attributes.getString("prefix"));
-
+        // 获得type属性，即AbstractConfig的实现类
         Class<? extends AbstractConfig> configClass = attributes.getClass("type");
-
+        // 获的multiple属性，决定配置使用用于多BeanDefinition
         boolean multiple = attributes.getBoolean("multiple");
 
         registerDubboConfigBeans(prefix, configClass, multiple, registry);
 
     }
 
+    /**
+     * 组册dubbo Config Bean对象
+     *
+     * @param prefix
+     * @param configClass
+     * @param multiple
+     * @param registry
+     */
     private void registerDubboConfigBeans(String prefix,
                                           Class<? extends AbstractConfig> configClass,
                                           boolean multiple,
                                           BeanDefinitionRegistry registry) {
-
+        // 获得prefix 开头的配置属性，以map形式返回
         Map<String, Object> properties = getSubProperties(environment.getPropertySources(), prefix);
-
+        // 如果配置属性为空，就不创建ConfigBean
         if (CollectionUtils.isEmpty(properties)) {
             if (log.isDebugEnabled()) {
                 log.debug("There is no property for binding to dubbo config class [" + configClass.getName()
@@ -95,20 +106,34 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
             }
             return;
         }
-
+        /**
+         * 获得配置属性对应的Bean名字的集合
+         *
+         * # application.properties (multiple=true的情况下可以配置的)
+         * dubbo.applications.x.name=a
+         * dubbo.applications.y.name=b
+         *
+         */
         Set<String> beanNames = multiple ? resolveMultipleBeanNames(properties) :
                 Collections.singleton(resolveSingleBeanName(properties, configClass, registry));
 
+        // 遍历Bean名字集合
         for (String beanName : beanNames) {
-
+            // 注册Dubbo Config Bean 对象
             registerDubboConfigBean(beanName, configClass, registry);
-
+            // 注册Dubbo Config对象对应的DubboConfigBindingBeanPostProcessor对象
             registerDubboConfigBindingBeanPostProcessor(prefix, beanName, multiple, registry);
 
         }
 
     }
 
+    /**
+     * 注册Dubbo ConfigBean对象
+     * @param beanName
+     * @param configClass
+     * @param registry
+     */
     private void registerDubboConfigBean(String beanName, Class<? extends AbstractConfig> configClass,
                                          BeanDefinitionRegistry registry) {
 
@@ -125,21 +150,28 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
 
     }
 
+    /**
+     * 创建的Dubbo Config
+     *
+     * @param prefix
+     * @param beanName
+     * @param multiple
+     * @param registry
+     */
     private void registerDubboConfigBindingBeanPostProcessor(String prefix, String beanName, boolean multiple,
                                                              BeanDefinitionRegistry registry) {
-
+        // 创建BeanDefinitionBuilder对象
         Class<?> processorClass = DubboConfigBindingBeanPostProcessor.class;
-
         BeanDefinitionBuilder builder = rootBeanDefinition(processorClass);
 
+        // 添加构造方法的参数为 actualPrefix和beanName，即创建DubboConfigBindingBeanPostProcessor对象需要这两个参数
         String actualPrefix = multiple ? normalizePrefix(prefix) + beanName : prefix;
-
         builder.addConstructorArgValue(actualPrefix).addConstructorArgValue(beanName);
-
+        // 获得创建的DubboConfigBindingBeanPostProcessor对象
         AbstractBeanDefinition beanDefinition = builder.getBeanDefinition();
-
+         // 设置rol属性
         beanDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
-
+        // 注册到注册表
         registerWithGeneratedName(beanDefinition, registry);
 
         if (log.isInfoEnabled()) {
@@ -158,12 +190,19 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
 
     }
 
+    /**
+     * 获得配置属性对应的Bean 名字的集合
+     *
+     * @param properties
+     * @return
+     */
+    // 例如： dubbo.application.${beanName}.name=dubbo-demo-annotation-provider
     private Set<String> resolveMultipleBeanNames(Map<String, Object> properties) {
 
         Set<String> beanNames = new LinkedHashSet<String>();
 
         for (String propertyName : properties.keySet()) {
-
+            // 获取${beanName} 字符串
             int index = propertyName.indexOf(".");
 
             if (index > 0) {
@@ -179,11 +218,19 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
 
     }
 
+    /**
+     * 例如： dubbo.application.name=dubbo-demo-annotation-provider
+     *
+     * @param properties
+     * @param configClass
+     * @param registry
+     * @return
+     */
     private String resolveSingleBeanName(Map<String, Object> properties, Class<? extends AbstractConfig> configClass,
                                          BeanDefinitionRegistry registry) {
-
+        // 获得Bean的名称
         String beanName = (String) properties.get("id");
-
+        // 没有没有定义，就基于Spring提供的机制生成对应的Bean的名字
         if (!StringUtils.hasText(beanName)) {
             BeanDefinitionBuilder builder = rootBeanDefinition(configClass);
             beanName = BeanDefinitionReaderUtils.generateBeanName(builder.getRawBeanDefinition(), registry);

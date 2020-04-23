@@ -37,19 +37,32 @@ import static com.alibaba.spring.util.BeanFactoryUtils.getOptionalBean;
  * Abstract Configurable {@link Annotation} Bean Builder
  *
  * @since 2.5.7
+ *
+ * 泛型A对应 @Reference 泛型B对应ReferenceBean类
+ *
  */
 abstract class AbstractAnnotationConfigBeanBuilder<A extends Annotation, B extends AbstractInterfaceConfig> {
 
     protected final Log logger = LogFactory.getLog(getClass());
-
+    /**
+     * 注解
+     */
     protected final A annotation;
-
+    /**
+     * 应用上下文
+     */
     protected final ApplicationContext applicationContext;
-
+    /**
+     * 类加载器
+     */
     protected final ClassLoader classLoader;
-
+    /**
+     * Bean 对象
+     */
     protected Object bean;
-
+    /**
+     * 接口
+     */
     protected Class<?> interfaceClass;
 
     protected AbstractAnnotationConfigBeanBuilder(A annotation, ClassLoader classLoader,
@@ -64,17 +77,20 @@ abstract class AbstractAnnotationConfigBeanBuilder<A extends Annotation, B exten
     }
 
     /**
-     * Build {@link B}
+     * Build {@link B}  构造泛型B对象，此处就是构造ReferenceBean对象
      *
      * @return non-null
      * @throws Exception
      */
     public final B build() throws Exception {
 
+        /**
+         * 校验依赖
+         */
         checkDependencies();
-
+        // 执行构造Bean 对象
         B bean = doBuild();
-
+        // 配置Bean 对象
         configureBean(bean);
 
         if (logger.isInfoEnabled()) {
@@ -96,19 +112,38 @@ abstract class AbstractAnnotationConfigBeanBuilder<A extends Annotation, B exten
      */
     protected abstract B doBuild();
 
-
+    /**
+     * 配置Bean对象
+     * @param bean
+     * @throws Exception
+     */
     protected void configureBean(B bean) throws Exception {
 
+        /**
+         * 前置配置
+         */
         preConfigureBean(annotation, bean);
 
+        /**
+         * 配置RegistryConfig属性
+         */
         configureRegistryConfigs(bean);
-
+        /**
+         * 配置MonitorConfig属性
+         */
         configureMonitorConfig(bean);
-
+        /**
+         * 配置ApplicationConfig属性
+         */
         configureApplicationConfig(bean);
-
+        /**
+         * 配置 ModuleConfig属性
+         */
         configureModuleConfig(bean);
 
+        /**
+         * 后置配置
+         */
         postConfigureBean(annotation, bean);
 
     }

@@ -38,6 +38,8 @@ import org.springframework.core.env.Environment;
  * @see EnableDubboConfigBinding
  * @see DubboConfigBindingRegistrar
  * @since 2.5.8
+ *
+ * 处理Dubbo AbstractConfig Bean的配置属性注入
  */
 
 public class DubboConfigBindingBeanPostProcessor implements BeanPostProcessor, ApplicationContextAware, InitializingBean {
@@ -45,15 +47,16 @@ public class DubboConfigBindingBeanPostProcessor implements BeanPostProcessor, A
     private final Log log = LogFactory.getLog(getClass());
 
     /**
-     * The prefix of Configuration Properties
+     * The prefix of Configuration Properties // 属性配置前缀
      */
     private final String prefix;
 
     /**
-     * Binding Bean Name
+     * Binding Bean Name  // Bean的名字
      */
     private final String beanName;
 
+    // todo DubboConfigBinder 带看？？？
     private DubboConfigBinder dubboConfigBinder;
 
     private ApplicationContext applicationContext;

@@ -26,6 +26,8 @@ import org.springframework.context.annotation.PropertySource;
 
 /**
  * MergeProvider
+ *
+ * Java Config + 注解的方式
  */
 public class AnnotationProvider {
 
