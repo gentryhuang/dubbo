@@ -60,27 +60,36 @@ public class ReferenceAnnotationBeanPostProcessor extends AbstractAnnotationBean
         ApplicationContextAware, ApplicationListener {
 
     /**
-     * The bean name of {@link ReferenceAnnotationBeanPostProcessor}
+     * The bean name of {@link ReferenceAnnotationBeanPostProcessor}  // Bean名称
      */
     public static final String BEAN_NAME = "referenceAnnotationBeanPostProcessor";
 
     /**
-     * Cache size
+     * Cache size  缓存大小
      */
     private static final int CACHE_SIZE = Integer.getInteger(BEAN_NAME + ".cache.size", 32);
 
-    private final ConcurrentMap<String, ReferenceBean<?>> referenceBeanCache =
-            new ConcurrentHashMap<>(CACHE_SIZE);
-
-    private final ConcurrentHashMap<String, ReferenceBeanInvocationHandler> localReferenceBeanInvocationHandlerCache =
-            new ConcurrentHashMap<>(CACHE_SIZE);
-
-    private final ConcurrentMap<InjectionMetadata.InjectedElement, ReferenceBean<?>> injectedFieldReferenceBeanCache =
-            new ConcurrentHashMap<>(CACHE_SIZE);
-
-    private final ConcurrentMap<InjectionMetadata.InjectedElement, ReferenceBean<?>> injectedMethodReferenceBeanCache =
-            new ConcurrentHashMap<>(CACHE_SIZE);
-
+    /**
+     * ReferenceBean 缓存Map
+     * key: Reference Bean 的名称
+     */
+    private final ConcurrentMap<String, ReferenceBean<?>> referenceBeanCache = new ConcurrentHashMap<>(CACHE_SIZE);
+    /**
+     * ReferenceBeanInvocationHandler 缓存Map
+     * key: Reference Bean 名字
+     */
+    private final ConcurrentHashMap<String, ReferenceBeanInvocationHandler> localReferenceBeanInvocationHandlerCache = new ConcurrentHashMap<>(CACHE_SIZE);
+    /**
+     * 使用属性进行注入的 @Reference Bean 的缓存 Map (一般使用这个)
+     */
+    private final ConcurrentMap<InjectionMetadata.InjectedElement, ReferenceBean<?>> injectedFieldReferenceBeanCache = new ConcurrentHashMap<>(CACHE_SIZE);
+    /**
+     * 使用方法进行注入的 @Reference Bean 的缓存 Map
+     */
+    private final ConcurrentMap<InjectionMetadata.InjectedElement, ReferenceBean<?>> injectedMethodReferenceBeanCache = new ConcurrentHashMap<>(CACHE_SIZE);
+    /**
+     * 应用上下文
+     */
     private ApplicationContext applicationContext;
 
     /**
@@ -120,15 +129,28 @@ public class ReferenceAnnotationBeanPostProcessor extends AbstractAnnotationBean
         return Collections.unmodifiableMap(injectedMethodReferenceBeanCache);
     }
 
+    /**
+     * 获得要注入@Reference Bean
+     *
+     * @param attributes
+     * @param bean
+     * @param beanName
+     * @param injectedType
+     * @param injectedElement
+     * @return
+     * @throws Exception
+     */
     @Override
     protected Object doGetInjectedBean(AnnotationAttributes attributes, Object bean, String beanName, Class<?> injectedType,
                                        InjectionMetadata.InjectedElement injectedElement) throws Exception {
         /**
+         * 获得 Reference Bean 的名字
          * The name of bean that annotated Dubbo's {@link Service @Service} in local Spring {@link ApplicationContext}
          */
         String referencedBeanName = buildReferencedBeanName(attributes, injectedType);
 
         /**
+         * 获得ReferenceBean对象
          * The name of bean that is declared by {@link Reference @Reference} annotation injection
          */
         String referenceBeanName = getReferenceBeanName(attributes, injectedType);
