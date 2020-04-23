@@ -52,6 +52,11 @@ import org.springframework.context.annotation.Configuration;
  */
 public class DubboConfigConfiguration {
 
+
+    //------1 @EnableConfigurationBeanBindings注解是@EnableConfigurationBeanBinding注解数组 -----/
+    //------2 这两个注解都使用 ImportBeanDefinitionRegistrar 进行组件的导入  ------/
+
+
     /**
      * Single Dubbo {@link AbstractConfig Config} Bean Binding
      */

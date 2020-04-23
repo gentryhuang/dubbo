@@ -59,6 +59,9 @@ import static org.springframework.core.annotation.AnnotationAttributes.fromMap;
  * @see DubboConfigBindingBeanPostProcessor
  * @since 2.5.8
  * @deprecated it will be removed in future, please use {@link ConfigurationBeanBindingRegistrar} for replacement
+ * <p>
+ * 1 该类已经废弃，可以看新的{@link com.alibaba.spring.beans.factory.annotation.ConfigurationBeanBindingsRegister}
+ * 2 处理@EnableDubboConfigBindings注解，注册相应的Dubbo AbstractConfig 到Spring容器
  */
 @Deprecated
 public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware,

@@ -37,20 +37,35 @@ import static org.apache.dubbo.config.spring.context.config.NamePropertyDefaultV
  * @see DubboConfigConfiguration
  * @see Ordered
  * @since 2.5.8
+ * <p>
+ * 通过调用ImportBeanDefinitionRegistra接口中的方法，可以给容器中手动添加自定义的组件（使用BeanDefinitionRegistry中的方法）
  */
 public class DubboConfigConfigurationRegistrar implements ImportBeanDefinitionRegistrar {
 
+    /**
+     * 处理@EnableDubboConfig注解，注册相应的DubboConfigConfiguration到Spring容器中
+     *
+     * @param importingClassMetadata 当前标注@Import注解的类的所有注解信息
+     * @param registry               Bean定义的注册表，通过它可以操作容器中bean定义信息，我们可以把所有需要添加到容器中的Bean，调用它的方法手动添加到注册表中
+     *                               <p>
+     *                               1 可以判断容器中已经存在了哪些Bean的定义： boolean definition = registry.containsBeanDefinition("bean的名称")
+     *                               2 移除某个bean定义： registr.removeBeanDefinition("bean的名称");
+     *                               3 创建某个Bean定义： registr.registerBeanDefinition("baneName",BeanDefinition);
+     */
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
 
+        // 获得@EnableDubboConfig注解的属性
         AnnotationAttributes attributes = AnnotationAttributes.fromMap(
                 importingClassMetadata.getAnnotationAttributes(EnableDubboConfig.class.getName()));
 
+        // 获得multiple属性
         boolean multiple = attributes.getBoolean("multiple");
 
-        // Single Config Bindings
+        // 注册DubboConfigConfiguration.Single Bean对象对Spring容器
         registerBeans(registry, DubboConfigConfiguration.Single.class);
 
+        // 注册DubboConfigConfiguration.Multiple Bean对象到Spring容器
         if (multiple) { // Since 2.6.6 https://github.com/apache/dubbo/issues/3193
             registerBeans(registry, DubboConfigConfiguration.Multiple.class);
         }
