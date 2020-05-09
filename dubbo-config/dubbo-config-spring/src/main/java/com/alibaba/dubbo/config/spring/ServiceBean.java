@@ -83,7 +83,7 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
     }
 
     @Override
-    public void setApplicationContext(ApplicationContext applicationContext) {
+    public void setApplicationContext(ApplicationContext applicationContext) {// 当前加载的上下文
         this.applicationContext = applicationContext;
         SpringExtensionFactory.addApplicationContext(applicationContext);
         if (applicationContext != null) {

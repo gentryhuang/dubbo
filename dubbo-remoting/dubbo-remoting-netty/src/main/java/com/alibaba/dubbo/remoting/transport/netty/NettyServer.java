@@ -58,9 +58,19 @@ public class NettyServer extends AbstractServer implements Server {
     private org.jboss.netty.channel.Channel channel;
 
     public NettyServer(URL url, ChannelHandler handler) throws RemotingException {
+        /**
+         * 1 为providerUrl添加参数 threadname=DubboServerHandler-ip:port 【ExecutorUtil.setThreadName(url, SERVER_THREAD_POOL_NAME))】
+         * 2 使用 ChannelHandlers.wrap(DecodeHandler对象,providerUrl)对DecodeHandler对象进行三层包装，最终得到MultiMessageHandler实例子
+         * 3 调用父类的构造方法初始化NettyServer的各个属性，最后启动Netty
+         */
         super(url, ChannelHandlers.wrap(handler, ExecutorUtil.setThreadName(url, SERVER_THREAD_POOL_NAME)));
     }
 
+    /**
+     * 启动Netty服务，监听客户端链接
+     *
+     * @throws Throwable
+     */
     @Override
     protected void doOpen() throws Throwable {
         NettyHelper.setNettyLoggerFactory();

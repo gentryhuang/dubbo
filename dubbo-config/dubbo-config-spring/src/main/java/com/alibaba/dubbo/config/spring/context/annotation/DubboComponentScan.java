@@ -39,7 +39,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Import(DubboComponentScanRegistrar.class)
+@Import(DubboComponentScanRegistrar.class) // 使用DubboComponentScanRegistrar类，处理DubboComponentScan注解，为Spring容器注册ServiceAnnotation和ReferenceAnnotation的Bean后置处理器
 public @interface DubboComponentScan {
 
     /**
@@ -48,6 +48,9 @@ public @interface DubboComponentScan {
      * {@code @DubboComponentScan(basePackages="org.my.pkg")}.
      *
      * @return the base packages to scan
+     *
+     * 和 basePackages 等价
+     *
      */
     String[] value() default {};
 
@@ -59,6 +62,9 @@ public @interface DubboComponentScan {
      * package names.
      *
      * @return the base packages to scan
+     *
+     * 要扫描包的数组
+     *
      */
     String[] basePackages() default {};
 
@@ -68,6 +74,9 @@ public @interface DubboComponentScan {
      * scanned.
      *
      * @return classes from the base packages to scan
+     *
+     * 要扫描的类的数组
+     *
      */
     Class<?>[] basePackageClasses() default {};
 

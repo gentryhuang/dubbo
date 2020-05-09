@@ -140,7 +140,7 @@ public abstract class AbstractConfig implements Serializable {
                             logger.info("Use System Property " + pn + " to config dubbo");
                         }
                     }
-                    // 配置优先级以及覆盖： 启动参数变量 > XML配置 > properties配置 。因此需要使用getter判断XML是否已经配置
+                    // 配置优先级以及覆盖： 启动参数变量 > XML配置[注解/java配置] > properties配置 。因此需要使用getter判断XML是否已经配置
                     if (value == null || value.length() == 0) {
                         Method getter;
                         try {

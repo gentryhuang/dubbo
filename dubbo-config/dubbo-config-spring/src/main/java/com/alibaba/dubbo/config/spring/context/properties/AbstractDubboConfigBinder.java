@@ -25,10 +25,17 @@ import org.springframework.core.env.PropertySource;
  */
 public abstract class AbstractDubboConfigBinder implements DubboConfigBinder {
 
+    /**
+     * PropertySource 数组 （迭代）
+     */
     private Iterable<PropertySource<?>> propertySources;
-
+    /**
+     * 默认忽略未知的属性
+     */
     private boolean ignoreUnknownFields = true;
-
+    /**
+     * 默认忽略无效属性
+     */
     private boolean ignoreInvalidFields = false;
 
     /**

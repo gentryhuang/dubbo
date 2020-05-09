@@ -37,13 +37,21 @@ public class JavassistProxyFactory extends AbstractProxyFactory {
 
     @Override
     public <T> Invoker<T> getInvoker(T proxy, Class<T> type, URL url) {
-        // TODO Wrapper cannot handle this scenario correctly: the classname contains '$'
+        // Wrapper类不能正确处理类名包含$的类
+        /**
+         * JavassistProxyFactory 模式原理：
+         * 1 创建Wrapper类，实现invokeMethod方法。该类记录了实例的属性名，方法名等信息
+         * 2 在方法invokeMethod体中会为每个ref的方法都做方法名和方法参数匹配校验，匹配直接调用调用。相比较JdkProxyFactory省去了反射调用的开销【JdkProxyFactory通过反射
+         * 获取真实对象的方法，然后调用】
+         */
         final Wrapper wrapper = Wrapper.getWrapper(proxy.getClass().getName().indexOf('$') < 0 ? proxy.getClass() : type);
+        // 创建 AbstractProxyInvoker
         return new AbstractProxyInvoker<T>(proxy, type, url) {
             @Override
             protected Object doInvoke(T proxy, String methodName,
                                       Class<?>[] parameterTypes,
                                       Object[] arguments) throws Throwable {
+
                 return wrapper.invokeMethod(proxy, methodName, parameterTypes, arguments);
             }
         };

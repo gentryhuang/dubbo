@@ -27,20 +27,39 @@ import java.util.Map;
  */
 class InjvmExporter<T> extends AbstractExporter<T> {
 
+    /**
+     * 服务键
+     */
     private final String key;
-
+    /**
+     * Exporter 集合
+     * key : 服务键
+     * 该值实际就是 {@link com.alibaba.dubbo.rpc.protocol.AbstractProtocol#exporterMap}
+     */
     private final Map<String, Exporter<?>> exporterMap;
 
+    /**
+     * 构造方法，发起暴露
+     *
+     * @param invoker
+     * @param key
+     * @param exporterMap
+     */
     InjvmExporter(Invoker<T> invoker, String key, Map<String, Exporter<?>> exporterMap) {
         super(invoker);
         this.key = key;
         this.exporterMap = exporterMap;
+        // 加入到Exporter集合[会把自己加入到AbstractProtocol中的Map中]
         exporterMap.put(key, this);
     }
 
+    /**
+     * 取消暴露
+     */
     @Override
     public void unexport() {
         super.unexport();
+        // 移除 key对应的Exporter
         exporterMap.remove(key);
     }
 

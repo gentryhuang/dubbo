@@ -53,6 +53,7 @@ public class Transporters {
         } else {
             handler = new ChannelHandlerDispatcher(handlers);
         }
+        // 由 具体的Transporter 来创建Server ,默认是NettyTransporter创建NettyServer
         return getTransporter().bind(url, handler);
     }
 

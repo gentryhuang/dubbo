@@ -51,13 +51,23 @@ import static org.springframework.beans.factory.support.BeanDefinitionBuilder.ro
  */
 public class DubboComponentScanRegistrar implements ImportBeanDefinitionRegistrar {
 
+    /**
+     * @param importingClassMetadata @DubboComponentScan 注解的信息
+     * @param registry               Bean定义注册
+     */
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
-
+        /**
+         * 获得要扫描的包
+         */
         Set<String> packagesToScan = getPackagesToScan(importingClassMetadata);
-
+        /**
+         * 创建 ServiceAnnotationBeanPostProcessor Bean 对象，后续扫描 `@Service` 注解的类，创建对应的 Service Bean 对象
+         */
         registerServiceAnnotationBeanPostProcessor(packagesToScan, registry);
-
+        /**
+         * 创建 ReferenceAnnotationBeanPostProcessor Bean 对象，后续扫描 `@Reference` 注解的类，创建对应的 Reference Bean 对象
+         */
         registerReferenceAnnotationBeanPostProcessor(registry);
 
     }
@@ -68,13 +78,19 @@ public class DubboComponentScanRegistrar implements ImportBeanDefinitionRegistra
      * @param packagesToScan packages to scan without resolving placeholders
      * @param registry       {@link BeanDefinitionRegistry}
      * @since 2.5.8
+     * <p>
+     * 创建 ServiceAnnotationBeanPostProcessor Bean 对象，后续扫描 @Service 注解的类，创建对应的 Service Bean 对象
      */
     private void registerServiceAnnotationBeanPostProcessor(Set<String> packagesToScan, BeanDefinitionRegistry registry) {
-
+        // 创建ServiceAnnotationBeanPostProcessor的BeanDefinitionBuilder 对象
         BeanDefinitionBuilder builder = rootBeanDefinition(ServiceAnnotationBeanPostProcessor.class);
+        // 设置构造方法参数为 packagesToScan，即ServiceAnnotationBeanPostProcessor的BeanDefinitionBuilder 扫描该包
         builder.addConstructorArgValue(packagesToScan);
+        // 设置 role 属性
         builder.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+        // 获得 AbstractBeanDefinition 对象
         AbstractBeanDefinition beanDefinition = builder.getBeanDefinition();
+        // 注册到注册表中
         BeanDefinitionReaderUtils.registerWithGeneratedName(beanDefinition, registry);
 
     }
@@ -83,27 +99,43 @@ public class DubboComponentScanRegistrar implements ImportBeanDefinitionRegistra
      * Registers {@link ReferenceAnnotationBeanPostProcessor} into {@link BeanFactory}
      *
      * @param registry {@link BeanDefinitionRegistry}
+     *                 <ul>
+     *                  <li>1 创建 ReferenceAnnotationBeanPostProcessor Bean 对象，后续扫描 @Reference 注解的类，创建对应的 Reference Bean 对象。</li>
+     *                  <li>  2 ReferenceAnnotationBeanPostProcessor创建不需要BeanDefinitionBuilder，是因为要扫描包的动作已经被 ServiceAnnotationBeanPostProcessor的BeanDefinitionBuilder做了，所以可以直接创建BeanDefinition并注册到注册表</li>
+     *                 </ul>
      */
     private void registerReferenceAnnotationBeanPostProcessor(BeanDefinitionRegistry registry) {
 
         // Register @Reference Annotation Bean Processor
-        BeanRegistrar.registerInfrastructureBean(registry,
-                ReferenceAnnotationBeanPostProcessor.BEAN_NAME, ReferenceAnnotationBeanPostProcessor.class);
+        BeanRegistrar.registerInfrastructureBean(registry, ReferenceAnnotationBeanPostProcessor.BEAN_NAME, ReferenceAnnotationBeanPostProcessor.class);
 
     }
 
+    /**
+     * 获得 DubboComponentScan注解扫描的包
+     *
+     * @param metadata
+     * @return
+     */
     private Set<String> getPackagesToScan(AnnotationMetadata metadata) {
+        // 获得 @DubboComponentScan 注解
         AnnotationAttributes attributes = AnnotationAttributes.fromMap(
                 metadata.getAnnotationAttributes(DubboComponentScan.class.getName()));
+        // 获得basePackages 属性值
         String[] basePackages = attributes.getStringArray("basePackages");
+        // 获得basePackageClasses属性值
         Class<?>[] basePackageClasses = attributes.getClassArray("basePackageClasses");
+        // 获得默认属性（basePackages的默认属性）
         String[] value = attributes.getStringArray("value");
-        // Appends value array attributes
+        // 将属性添加到 packagesToScan 集合中
         Set<String> packagesToScan = new LinkedHashSet<String>(Arrays.asList(value));
         packagesToScan.addAll(Arrays.asList(basePackages));
+        // 处理 扫描的类的数组 ，得到每个类的包名，然后添加到 包路径数组中
         for (Class<?> basePackageClass : basePackageClasses) {
             packagesToScan.add(ClassUtils.getPackageName(basePackageClass));
         }
+
+        // packagesToScan 为空的话，则默认使用DubboComponentScan注解类所在的包做为扫描包
         if (packagesToScan.isEmpty()) {
             return Collections.singleton(ClassUtils.getPackageName(metadata.getClassName()));
         }

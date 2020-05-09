@@ -96,7 +96,7 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
                                           Class<? extends AbstractConfig> configClass,
                                           boolean multiple,
                                           BeanDefinitionRegistry registry) {
-        // 获得prefix 开头的配置属性，以map形式返回
+        // 获得prefix 开头的配置属性，以map形式返回 【environment.getPropertySources() 获得是系统属性、系统变量和@ResourceProperty注解导入的propertis配置文件中的属性k-v】
         Map<String, Object> properties = getSubProperties(environment.getPropertySources(), prefix);
         // 如果配置属性为空，就不创建ConfigBean
         if (CollectionUtils.isEmpty(properties)) {
@@ -107,7 +107,7 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
             return;
         }
         /**
-         * 获得配置属性对应的Bean名字的集合
+         * 获得配置属性对应的Bean名字的集合，注意注解形式获得Bean的名字，如果没有配置id属性，那么就是使用Spring自动生成机制，生成的名字形式：  com.alibaba.dubbo.config.ApplicationConfig#0
          *
          * # application.properties (multiple=true的情况下可以配置的)
          * dubbo.applications.x.name=a
@@ -119,9 +119,9 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
 
         // 遍历Bean名字集合
         for (String beanName : beanNames) {
-            // 注册Dubbo Config Bean 对象
+            // 注册Dubbo Config Bean 对象【没有设置属性值】
             registerDubboConfigBean(beanName, configClass, registry);
-            // 注册Dubbo Config对象对应的DubboConfigBindingBeanPostProcessor对象
+            // 注册Dubbo Config对象对应的DubboConfigBindingBeanPostProcessor对象，之后为Dubbo Config 设置属性值
             registerDubboConfigBindingBeanPostProcessor(prefix, beanName, multiple, registry);
 
         }
@@ -151,7 +151,7 @@ public class DubboConfigBindingRegistrar implements ImportBeanDefinitionRegistra
     }
 
     /**
-     * 创建的Dubbo Config
+     * 创建的Dubbo Config对象的DubboConfigBindingBeanPostProcessor对象 【目的：实现对DubboConfig对象的配置属性设置】
      *
      * @param prefix
      * @param beanName

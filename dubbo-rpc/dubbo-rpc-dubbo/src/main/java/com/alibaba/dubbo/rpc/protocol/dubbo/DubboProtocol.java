@@ -62,6 +62,9 @@ public class DubboProtocol extends AbstractProtocol {
     public static final int DEFAULT_PORT = 20880;
     private static final String IS_CALLBACK_SERVICE_INVOKE = "_isCallBackServiceInvoke";
     private static DubboProtocol INSTANCE;
+    /**
+     * 通信服务器集合，key:服务器地址。格式：host:port
+     */
     private final Map<String, ExchangeServer> serverMap = new ConcurrentHashMap<String, ExchangeServer>(); // <host:port,Exchanger>
     private final Map<String, ReferenceCountExchangeClient> referenceClientMap = new ConcurrentHashMap<String, ReferenceCountExchangeClient>(); // <host:port,Exchanger>
     private final ConcurrentMap<String, LazyConnectExchangeClient> ghostClientMap = new ConcurrentHashMap<String, LazyConnectExchangeClient>();
@@ -70,14 +73,16 @@ public class DubboProtocol extends AbstractProtocol {
     //consumer side export a stub service for dispatching event
     //servicekey-stubmethods
     private final ConcurrentMap<String, String> stubServiceMethodsMap = new ConcurrentHashMap<String, String>();
+    // 经过层层包装后，会成为最终的服务端处理器，如netty
     private ExchangeHandler requestHandler = new ExchangeHandlerAdapter() {
 
         @Override
         public Object reply(ExchangeChannel channel, Object message) throws RemotingException {
             if (message instanceof Invocation) {
                 Invocation inv = (Invocation) message;
+                // 获取Invoker
                 Invoker<?> invoker = getInvoker(channel, inv);
-                // need to consider backward-compatibility if it's a callback
+                // need to consider backward-compatibility if it's a callback  如果是callback 需要处理高版本调用低版本的问题
                 if (Boolean.TRUE.toString().equals(inv.getAttachments().get(IS_CALLBACK_SERVICE_INVOKE))) {
                     String methodsStr = invoker.getUrl().getParameters().get("methods");
                     boolean hasMethod = false;
@@ -226,16 +231,21 @@ public class DubboProtocol extends AbstractProtocol {
 
     @Override
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
+        // 1 获取URL
         URL url = invoker.getUrl();
 
-        // export service.
+        //2 服务暴露
+        //2.1 获取服务键
         String key = serviceKey(url);
+        //2.2 创建dubboExporter对象
         DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap);
+        //2.3 把创建的DubboExporter添加到缓存中
         exporterMap.put(key, exporter);
 
         //export an stub service for dispatching event
         Boolean isStubSupportEvent = url.getParameter(Constants.STUB_EVENT_KEY, Constants.DEFAULT_STUB_EVENT);
         Boolean isCallbackservice = url.getParameter(Constants.IS_CALLBACK_SERVICE, false);
+
         if (isStubSupportEvent && !isCallbackservice) {
             String stubServiceMethods = url.getParameter(Constants.STUB_EVENT_METHODS_KEY);
             if (stubServiceMethods == null || stubServiceMethods.length() == 0) {
@@ -248,44 +258,68 @@ public class DubboProtocol extends AbstractProtocol {
             }
         }
 
+        // 启动服务器
         openServer(url);
+        // 初始化 系列化优化器
         optimizeSerialization(url);
         return exporter;
     }
 
+    /**
+     * 启动服务器
+     *
+     * @param url
+     */
     private void openServer(URL url) {
-        // find server.
+        // 获得服务地址【主机、端口:ip:port】
         String key = url.getAddress();
         //client can export a service which's only for server to invoke
+        // 参数配置项 isserver,可以暴露一个仅当前JVM可调用的服务【todo 目前该配置项应不存在了】
         boolean isServer = url.getParameter(Constants.IS_SERVER_KEY, true);
         if (isServer) {
+            // 从serverMap中获取服务器地址:端口 对应的通信服务器
             ExchangeServer server = serverMap.get(key);
             if (server == null) {
+                // 不存在则创建服务器
                 serverMap.put(key, createServer(url));
             } else {
                 // server supports reset, use together with override
+                // 存在则重置服务器属性 【多个Service服务共用同一个协议，服务器也是同一个，那么就可能存在】
                 server.reset(url);
             }
         }
     }
 
+    /**
+     * 创建并启动通信服务器
+     *
+     * @param url
+     * @return
+     */
     private ExchangeServer createServer(URL url) {
         // send readonly event when server closes, it's enabled by default
+        // 默认开启 服务器关闭时发送 READ_ONLY事件
         url = url.addParameterIfAbsent(Constants.CHANNEL_READONLYEVENT_SENT_KEY, Boolean.TRUE.toString());
         // enable heartbeat by default
+        // 默认开启 心跳 【heartbeat参数会在HeaderExchangeServer启动心跳计时器使用】
         url = url.addParameterIfAbsent(Constants.HEARTBEAT_KEY, String.valueOf(Constants.DEFAULT_HEARTBEAT));
+        // 校验Server 的 Dubbo SPI扩展是否存在，默认是Netty
         String str = url.getParameter(Constants.SERVER_KEY, Constants.DEFAULT_REMOTING_SERVER);
-
-        if (str != null && str.length() > 0 && !ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(str))
+        if (str != null && str.length() > 0 && !ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(str)) {
             throw new RpcException("Unsupported server type: " + str + ", url: " + url);
-
+        }
+        // 设置编辑码器 为 dubbo协议，即DubboCountCodec
         url = url.addParameter(Constants.CODEC_KEY, DubboCodec.NAME);
+
+        // 启动服务器
         ExchangeServer server;
         try {
+            // 启动服务，需要ExchangeHandler【todo RPC】
             server = Exchangers.bind(url, requestHandler);
         } catch (RemotingException e) {
             throw new RpcException("Fail to start server(url: " + url + ") " + e.getMessage(), e);
         }
+        // 校验Client 的 Dubbo SPI拓展是否存在
         str = url.getParameter(Constants.CLIENT_KEY);
         if (str != null && str.length() > 0) {
             Set<String> supportedTypes = ExtensionLoader.getExtensionLoader(Transporter.class).getSupportedExtensions();

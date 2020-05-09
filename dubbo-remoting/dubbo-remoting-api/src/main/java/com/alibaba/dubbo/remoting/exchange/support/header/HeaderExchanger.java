@@ -41,6 +41,13 @@ public class HeaderExchanger implements Exchanger {
 
     @Override
     public ExchangeServer bind(URL url, ExchangeHandler handler) throws RemotingException {
+        /**
+         * 1 对ExchangeHandlerAdapter 进行了两次包装，最终得到DecodeHandler
+         * (1) 将ExchangeHandlerAdapter赋值给HeaderExchangeHandler的ExchangeHandler handler属性
+         * (2) 将创建的 HeaderExchangeHandler 对象 赋值给 DecodeHandler的父类 AbstractChannelHandlerDelegate 的 ChannelHandler handler属性
+         * 2 使用Transporters.bind创建服务，如NettyServer
+         * 3 使用 HeaderExchangeServer 包装了上一步创建的服务
+         */
         return new HeaderExchangeServer(Transporters.bind(url, new DecodeHandler(new HeaderExchangeHandler(handler))));
     }
 

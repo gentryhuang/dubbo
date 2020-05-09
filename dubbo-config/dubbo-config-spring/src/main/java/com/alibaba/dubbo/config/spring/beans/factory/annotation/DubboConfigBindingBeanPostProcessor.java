@@ -38,7 +38,7 @@ import org.springframework.core.env.Environment;
  * @see EnableDubboConfigBinding
  * @see DubboConfigBindingRegistrar
  * @since 2.5.8
- *
+ * <p>
  * 处理Dubbo AbstractConfig Bean的配置属性注入
  */
 
@@ -56,13 +56,21 @@ public class DubboConfigBindingBeanPostProcessor implements BeanPostProcessor, A
      */
     private final String beanName;
 
-    // todo DubboConfigBinder 带看？？？
+    /**
+     * Dubbo 配置属性绑定器 ，用来绑定配置属性到Dubbo Config中 （底层使用Spring DataBinder实现的）
+     */
     private DubboConfigBinder dubboConfigBinder;
-
+    /**
+     * 应用上下文
+     */
     private ApplicationContext applicationContext;
-
+    /**
+     * 是否忽略未知的属性
+     */
     private boolean ignoreUnknownFields = true;
-
+    /**
+     * 是否忽略类型不对的属性
+     */
     private boolean ignoreInvalidFields = true;
 
     /**
@@ -76,23 +84,82 @@ public class DubboConfigBindingBeanPostProcessor implements BeanPostProcessor, A
         this.beanName = beanName;
     }
 
+    /**
+     * Bean后处理器的 前置处理方法。这里设置配置属性到Dubbo Config中。注意： 该方法的执行说明Dubbo Config对象的创建和属性设置完毕。
+     * @param bean
+     * @param beanName
+     * @return
+     * @throws BeansException
+     */
     @Override
     public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
-
+         // 选择bean的名称是 this.beanName【针对注解机制创建Bean定义，其他方式创建的Bean定义不符合条件】，并且是AbstractConfig类型的 Bean定义
         if (beanName.equals(this.beanName) && bean instanceof AbstractConfig) {
 
             AbstractConfig dubboConfig = (AbstractConfig) bean;
-
+            // 设置prefix开头的配置属性到 DubboConfig中
             dubboConfigBinder.bind(prefix, dubboConfig);
-
             if (log.isInfoEnabled()) {
                 log.info("The properties of bean [name : " + beanName + "] have been binding by prefix of " +
                         "configuration properties : " + prefix);
             }
         }
-
         return bean;
+    }
 
+    /**
+     * Bean后处理器的后置处理方法，这里直接返回Dubbo Config 对象，不做其他的处理
+     * @param bean
+     * @param beanName
+     * @return
+     * @throws BeansException
+     */
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        return bean;
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+    }
+
+    /**
+     *
+     * @throws Exception
+     */
+    @Override
+    public void afterPropertiesSet() throws Exception {
+         // 获得DubboConfigBinder对象
+        if (dubboConfigBinder == null) {
+            try {
+                dubboConfigBinder = applicationContext.getBean(DubboConfigBinder.class);
+            } catch (BeansException ignored) {
+                if (log.isDebugEnabled()) {
+                    log.debug("DubboConfigBinder Bean can't be found in ApplicationContext.");
+                }
+                // Use Default implementation // 创建默认的配置绑定器
+                dubboConfigBinder = createDubboConfigBinder(applicationContext.getEnvironment());
+            }
+        }
+        // 设置 是否忽略未知/无效的属性
+        dubboConfigBinder.setIgnoreUnknownFields(ignoreUnknownFields);
+        dubboConfigBinder.setIgnoreInvalidFields(ignoreInvalidFields);
+
+    }
+
+    /**
+     * Create {@link DubboConfigBinder} instance.
+     *
+     * @param environment
+     * @return {@link DefaultDubboConfigBinder}
+     */
+    protected DubboConfigBinder createDubboConfigBinder(Environment environment) {
+        // 创建DefaultDubboConfigBinder对象
+        DefaultDubboConfigBinder defaultDubboConfigBinder = new DefaultDubboConfigBinder();
+        // 设置environment属性
+        defaultDubboConfigBinder.setEnvironment(environment);
+        return defaultDubboConfigBinder;
     }
 
     public boolean isIgnoreUnknownFields() {
@@ -117,48 +184,6 @@ public class DubboConfigBindingBeanPostProcessor implements BeanPostProcessor, A
 
     public void setDubboConfigBinder(DubboConfigBinder dubboConfigBinder) {
         this.dubboConfigBinder = dubboConfigBinder;
-    }
-
-    @Override
-    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-        return bean;
-    }
-
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
-    }
-
-    @Override
-    public void afterPropertiesSet() throws Exception {
-
-        if (dubboConfigBinder == null) {
-            try {
-                dubboConfigBinder = applicationContext.getBean(DubboConfigBinder.class);
-            } catch (BeansException ignored) {
-                if (log.isDebugEnabled()) {
-                    log.debug("DubboConfigBinder Bean can't be found in ApplicationContext.");
-                }
-                // Use Default implementation
-                dubboConfigBinder = createDubboConfigBinder(applicationContext.getEnvironment());
-            }
-        }
-
-        dubboConfigBinder.setIgnoreUnknownFields(ignoreUnknownFields);
-        dubboConfigBinder.setIgnoreInvalidFields(ignoreInvalidFields);
-
-    }
-
-    /**
-     * Create {@link DubboConfigBinder} instance.
-     *
-     * @param environment
-     * @return {@link DefaultDubboConfigBinder}
-     */
-    protected DubboConfigBinder createDubboConfigBinder(Environment environment) {
-        DefaultDubboConfigBinder defaultDubboConfigBinder = new DefaultDubboConfigBinder();
-        defaultDubboConfigBinder.setEnvironment(environment);
-        return defaultDubboConfigBinder;
     }
 
 }

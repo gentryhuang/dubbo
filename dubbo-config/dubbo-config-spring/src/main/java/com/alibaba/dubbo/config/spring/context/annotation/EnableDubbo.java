@@ -46,8 +46,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@EnableDubboConfig // 开启Dubbo Config
-@DubboComponentScan // 扫描Dubbo 的@Service 和 @Reference  Bean
+@EnableDubboConfig // 开启Dubbo Config 【DubboConfig对象的创建和DubboConfig中的属性设置（通过配置文件中的值）】
+@DubboComponentScan // 扫描Dubbo 的@Service 和 @Reference 注解的包或者类们，从而创建Bean对象
 public @interface EnableDubbo {
 
     /**

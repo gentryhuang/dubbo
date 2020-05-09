@@ -39,13 +39,14 @@ import static org.springframework.util.StringUtils.commaDelimitedListToStringArr
  * {@link ReferenceBean} Builder
  *
  * @since 2.5.7
- *
+ * <p>
  * 对AbstractAnnotationConfigBeanBuilder中抽象方法进行具体实现
- *
  */
 class ReferenceBeanBuilder extends AbstractAnnotationConfigBeanBuilder<Reference, ReferenceBean> {
 
-    // Ignore those fields
+    /**
+     * 将注解的属性设置到ReferenceBean，忽略一下属性，这些属性会单独处理
+     */
     static final String[] IGNORE_FIELD_NAMES = of("application", "module", "consumer", "monitor", "registry");
 
     private ReferenceBeanBuilder(Reference annotation, ClassLoader classLoader, ApplicationContext applicationContext) {
@@ -54,19 +55,17 @@ class ReferenceBeanBuilder extends AbstractAnnotationConfigBeanBuilder<Reference
 
     /**
      * 配置interfaceClass
+     *
      * @param reference
      * @param referenceBean
      */
     private void configureInterface(Reference reference, ReferenceBean referenceBean) {
-         // 从@Reference 获得interfaceName属性，从而获得 interfaceClass 类
+        // 从@Reference 获得interfaceName属性，从而获得 interfaceClass 类
         Class<?> interfaceClass = reference.interfaceClass();
 
         if (void.class.equals(interfaceClass)) {
-
             interfaceClass = null;
-
             String interfaceClassName = reference.interfaceName();
-
             if (StringUtils.hasText(interfaceClassName)) {
                 if (ClassUtils.isPresent(interfaceClassName, classLoader)) {
                     interfaceClass = ClassUtils.resolveClassName(interfaceClassName, classLoader);
@@ -74,7 +73,7 @@ class ReferenceBeanBuilder extends AbstractAnnotationConfigBeanBuilder<Reference
             }
 
         }
-        // 如果获取不到，则使用interfaceClass即可
+        // 如果获取不到，则使用interfaceClass即可【引用的服务Class类型】
         if (interfaceClass == null) {
             interfaceClass = this.interfaceClass;
         }
@@ -89,6 +88,7 @@ class ReferenceBeanBuilder extends AbstractAnnotationConfigBeanBuilder<Reference
 
     /**
      * 配置ConsumerConfig
+     *
      * @param reference
      * @param referenceBean
      */
@@ -96,21 +96,31 @@ class ReferenceBeanBuilder extends AbstractAnnotationConfigBeanBuilder<Reference
         // 获得 ConsumerConfig 对象
         String consumerBeanName = reference.consumer();
         ConsumerConfig consumerConfig = getOptionalBean(applicationContext, consumerBeanName, ConsumerConfig.class);
-       // 设置到referenceBean 中
+        // 设置到referenceBean 中
         referenceBean.setConsumer(consumerConfig);
 
     }
 
+    /**
+     * ReferenceBeanBuilder#build的方法调用，用来创建Reference对象。【对父类方法的重写】
+     *
+     * @return
+     */
     @Override
     protected ReferenceBean doBuild() {
         // 创建 ReferenceBean对象
         return new ReferenceBean<Object>();
     }
 
+    /**
+     * ReferenceBean 创建后的前置配置
+     * @param reference
+     * @param referenceBean
+     */
     @Override
     protected void preConfigureBean(Reference reference, ReferenceBean referenceBean) {
         Assert.notNull(interfaceClass, "The interface class must set first!");
-        // 创建DataBinder对象
+        // 创建DataBinder对象,将ReferenceBean包装成DataBinder。已经进行属性绑定，绑定到的对象就是ReferenceBean
         DataBinder dataBinder = new DataBinder(referenceBean);
         // Register CustomEditors for special fields   // 注册指定属性的自定义Editor
         dataBinder.registerCustomEditor(String.class, "filter", new StringTrimmerEditor(true));
@@ -133,7 +143,7 @@ class ReferenceBeanBuilder extends AbstractAnnotationConfigBeanBuilder<Reference
             }
         });
 
-        // Bind annotation attributes 将注解的属性设置到reference
+        // Bind annotation attributes 将注解的属性设置到ReferenceBean中，排除 {@link IGNORE_FIELD_NAMES} 属性，这些属性后续单独处理
         dataBinder.bind(new AnnotationPropertyValuesAdapter(reference, applicationContext.getEnvironment(), IGNORE_FIELD_NAMES));
 
     }
@@ -159,6 +169,13 @@ class ReferenceBeanBuilder extends AbstractAnnotationConfigBeanBuilder<Reference
         return annotation.monitor();
     }
 
+    /**
+     * ReferenceBean 的后置配置
+     *
+     * @param annotation
+     * @param bean
+     * @throws Exception
+     */
     @Override
     protected void postConfigureBean(Reference annotation, ReferenceBean bean) throws Exception {
         // 设置 applicationContext
@@ -173,6 +190,14 @@ class ReferenceBeanBuilder extends AbstractAnnotationConfigBeanBuilder<Reference
 
     }
 
+    /**
+     * 创建ReferenceBeanBuilder
+     *
+     * @param annotation
+     * @param classLoader
+     * @param applicationContext
+     * @return
+     */
     public static ReferenceBeanBuilder create(Reference annotation, ClassLoader classLoader,
                                               ApplicationContext applicationContext) {
         return new ReferenceBeanBuilder(annotation, classLoader, applicationContext);

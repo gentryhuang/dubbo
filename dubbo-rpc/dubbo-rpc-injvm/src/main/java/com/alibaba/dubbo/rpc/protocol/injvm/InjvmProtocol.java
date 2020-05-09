@@ -34,15 +34,28 @@ import java.util.Map;
  */
 public class InjvmProtocol extends AbstractProtocol implements Protocol {
 
+    /**
+     * 协议名
+     */
     public static final String NAME = Constants.LOCAL_PROTOCOL;
-
+    /**
+     * 端口
+     */
     public static final int DEFAULT_PORT = 0;
+    /**
+     * 单例：在Dubbo SPI中，被初始化有且仅有一次
+     */
     private static InjvmProtocol INSTANCE;
 
     public InjvmProtocol() {
         INSTANCE = this;
     }
 
+    /**
+     * 获得单例子
+     *
+     * @return
+     */
     public static InjvmProtocol getInjvmProtocol() {
         if (INSTANCE == null) {
             ExtensionLoader.getExtensionLoader(Protocol.class).getExtension(InjvmProtocol.NAME); // load
@@ -81,8 +94,17 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
         return DEFAULT_PORT;
     }
 
+    /**
+     * 进行服务暴露，创建InjvmExporter
+     *
+     * @param invoker Service invoker
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
+        // 创建Exporter，并且把自己添加到 exporterMap 中
         return new InjvmExporter<T>(invoker, invoker.getUrl().getServiceKey(), exporterMap);
     }
 

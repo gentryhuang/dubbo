@@ -135,7 +135,7 @@ public class ReferenceAnnotationBeanPostProcessor extends AnnotationInjectedBean
 
         // 1 获得 Reference Bean 的名字
         String referencedBeanName = buildReferencedBeanName(reference, injectedType);
-        // 2 创建ReferenceBean 对象
+        // 2 创建ReferenceBean 对象 【todo 重要】
         ReferenceBean referenceBean = buildReferenceBeanIfAbsent(referencedBeanName, reference, injectedType, getClassLoader());
         // 3 缓存到 injectedFieldReferenceBeanCache 或 injectedMethodReferenceBeanCache
         cacheInjectedReferenceBean(referenceBean, injectedElement);
@@ -177,7 +177,8 @@ public class ReferenceAnnotationBeanPostProcessor extends AnnotationInjectedBean
 
         /** ---- 根据引用的Dubbo 服务是远程的还是本地的，做不同的处理
          * 1 远程的dubbo 服务，理论来说（不考虑对方挂掉的情况）是已经存在的，此时可以进行加载引用
-         * 2 本地dubbo 服务，此时并未暴露，则先添加对应的InvocationHandler到缓存中，等后续可以通过Spring事件监听的功能，进行实现
+         * 2 本地dubbo 服务，此时并未暴露，则先添加对应的InvocationHandler到缓存中，等后续可以通过Spring事件监听回掉机制，监听服务暴露事件，然后判断当前暴露的服务是不是
+         *   在invocationHandler缓存中的服务，如果是就进行移除并初始化该服务，然后拿到该服务
          * 3 ReferenceBeanInvocationHandler是ReferenceAnnotationBeanPostProcessor的静态内部类，实现了DubboInvocationHander接口
          */
         // 如果应用上下文中已经初始化了，说明引入的服务是本地的@Service Bean ，则将引入的Dubbo服务的InvocationHandler添加到本地缓存中，不进行初始化（要想初始化，引入的服务必须是已经暴露的状态）
@@ -202,7 +203,7 @@ public class ReferenceAnnotationBeanPostProcessor extends AnnotationInjectedBean
          */
         private final ReferenceBean referenceBean;
         /**
-         * Bean 对象
+         * Bean 对象(引用的服务)
          */
         private Object bean;
 
@@ -217,7 +218,8 @@ public class ReferenceAnnotationBeanPostProcessor extends AnnotationInjectedBean
         }
 
         /**
-         * 通过初始化方法，获得 ReferenceBean.ref (引用ref)
+         * 1 通过初始化方法，获得 ReferenceBean.ref (引用的服务)
+         * 2 调用ReferenceBean#get()方法，进行引用的Bean的初始化，最后返回引用的服务
          */
         private void init() {
             this.bean = referenceBean.get();
@@ -241,11 +243,13 @@ public class ReferenceAnnotationBeanPostProcessor extends AnnotationInjectedBean
      * @param reference
      * @param injectedType
      * @return
+     *
+     * 创建 Service Bean 的名字：使用的是ServiceBeanNameBuilder 的逻辑，即和Dubbo Service Bean 的名是同一套，这个是合理的，因为引入的就是服务提供者
      */
     private String buildReferencedBeanName(Reference reference, Class<?> injectedType) {
-        // 创建 Service Bean 的名字
+        // 创建ServiceBeanNameBuilder
         ServiceBeanNameBuilder builder = ServiceBeanNameBuilder.create(reference, injectedType, getEnvironment());
-
+         // 对构建的Service Bean 的名字进行解析 （todo Service Bean 那边已经解析过了，这里貌似重复解析占位符了）
         return getEnvironment().resolvePlaceholders(builder.build());
     }
 
@@ -260,16 +264,17 @@ public class ReferenceAnnotationBeanPostProcessor extends AnnotationInjectedBean
      * @throws Exception
      */
     private ReferenceBean buildReferenceBeanIfAbsent(String referencedBeanName, Reference reference,
-                                                     Class<?> referencedType, ClassLoader classLoader)
-            throws Exception {
+                                                     Class<?> referencedType, ClassLoader classLoader) throws Exception {
+
         // 先从ReferenceBeanCache 缓存中，获得referencedBeanName 对应的 ReferenceBean 对象
         ReferenceBean<?> referenceBean = referenceBeanCache.get(referencedBeanName);
         // 如果不存在，则进行创建，然后添加到缓存中
         if (referenceBean == null) {
             ReferenceBeanBuilder beanBuilder = ReferenceBeanBuilder
                     .create(reference, classLoader, applicationContext)
+                    // 引用类型作为接口类型
                     .interfaceClass(referencedType);
-            // 创建ReferenceBean
+            // 创建ReferenceBean【1. 创建ReferenceBean对象 2.ReferenceBean 配置】
             referenceBean = beanBuilder.build();
             referenceBeanCache.put(referencedBeanName, referenceBean);
         }
@@ -312,7 +317,7 @@ public class ReferenceAnnotationBeanPostProcessor extends AnnotationInjectedBean
     }
 
     /**
-     * 处理服务暴露事件
+     * 处理服务暴露事件 【ServiceBean 暴露服务完成后，会主动触发ServiceBeanExportedEvent事件，{@link ServiceBean#onApplicationEvent(org.springframework.context.event.ContextRefreshedEvent)}】
      * @param event
      */
     private void onServiceBeanExportEvent(ServiceBeanExportedEvent event) {
@@ -323,7 +328,7 @@ public class ReferenceAnnotationBeanPostProcessor extends AnnotationInjectedBean
     }
 
     private void initReferenceBeanInvocationHandler(ServiceBean serviceBean) {
-        // 或得引用的服务名称
+        // 获得引用的服务名称
         String serviceBeanName = serviceBean.getBeanName();
         // 服务已经暴露了，就移除掉
         ReferenceBeanInvocationHandler handler = localReferenceBeanInvocationHandlerCache.remove(serviceBeanName);

@@ -98,11 +98,15 @@ class ServiceBeanNameBuilder {
         return this;
     }
 
+    /**
+     * ServiceBean:${interfaceClassName}:${version}:${group}
+     * @return
+     */
     public String build() {
         StringBuilder beanNameBuilder = new StringBuilder("ServiceBean").append(SEPARATOR);
-        // Required
+        //  interfaceClassName是必须的
         append(beanNameBuilder, interfaceClassName);
-        // Optional
+        // version 和 group 是可选的
         append(beanNameBuilder, version);
         append(beanNameBuilder, group);
         // Build and remove last ":"

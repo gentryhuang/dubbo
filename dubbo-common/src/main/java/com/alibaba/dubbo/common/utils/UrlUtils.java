@@ -27,6 +27,39 @@ import java.util.Set;
 
 public class UrlUtils {
 
+
+    /**
+     * 解析注册中心地址，创建Dubbo URL数组
+     * @param address
+     * @param defaults
+     * @return
+     */
+    public static List<URL> parseURLs(String address, Map<String, String> defaults) {
+        // 判断注册中心地址的有效性
+        if (address == null || address.length() == 0) {
+            return null;
+        }
+        // 注册中心地址address 可以使用"|"或者";"作为分割符，设置多个注册中心分组。注意：一个注册中心集群是一个分组而不是多个。
+        String[] addresses = Constants.REGISTRY_SPLIT_PATTERN.split(address);
+        if (addresses == null || addresses.length == 0) {
+            return null; //here won't be empty
+        }
+        List<URL> registries = new ArrayList<URL>();
+        // 遍历注册中心分组
+        for (String addr : addresses) {
+            registries.add(parseURL(addr, defaults));
+        }
+        return registries;
+    }
+
+    /**
+     * 解析单个 URL，将defaults属性集合 里的参数合并到 注册中心地址address中，合并逻辑：
+     * 可以把address 认为是url,defaults认为是defaultURL。如果url有不存在的属性时，从defaultURL获得对应的属性，设置到url中
+     *
+     * @param address 注册中心地址
+     * @param defaults 参数集合
+     * @return Dubbo URL
+     */
     public static URL parseURL(String address, Map<String, String> defaults) {
         if (address == null || address.length() == 0) {
             return null;
@@ -65,6 +98,7 @@ public class UrlUtils {
             defaultParameters.remove("port");
             defaultParameters.remove("path");
         }
+        // 分离url中的各个参数，然后根据各个参数构建标准的Dubbo URL -> protocol://username:password@host:port/path?key=value&key=value...
         URL u = URL.valueOf(url);
         boolean changed = false;
         String protocol = u.getProtocol();
@@ -118,25 +152,11 @@ public class UrlUtils {
                 }
             }
         }
+        // 根据标准构建的Ddubbo URL中的参数的值是否有效，会重新构建Dubbo URL，区别在于之前无效的参数都是用默认值替换
         if (changed) {
             u = new URL(protocol, username, password, host, port, path, parameters);
         }
         return u;
-    }
-
-    public static List<URL> parseURLs(String address, Map<String, String> defaults) {
-        if (address == null || address.length() == 0) {
-            return null;
-        }
-        String[] addresses = Constants.REGISTRY_SPLIT_PATTERN.split(address);
-        if (addresses == null || addresses.length == 0) {
-            return null; //here won't be empty
-        }
-        List<URL> registries = new ArrayList<URL>();
-        for (String addr : addresses) {
-            registries.add(parseURL(addr, defaults));
-        }
-        return registries;
     }
 
     public static Map<String, Map<String, String>> convertRegister(Map<String, Map<String, String>> register) {

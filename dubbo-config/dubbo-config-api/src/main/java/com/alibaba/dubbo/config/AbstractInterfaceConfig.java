@@ -165,47 +165,78 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     }
 
     /**
-     * todo 待详细说明
+     * 加载注册中心URL数组
      *
-     * @param provider
-     * @return
+     * @param provider 是否是服务提供者
+     * @return URL数组
      */
     protected List<URL> loadRegistries(boolean provider) {
+        // 校验RegistryConfig 配置数组，该方法会初始化RegistryConfig的配置属性
         checkRegistry();
+        // 创建注册中心URL数组
         List<URL> registryList = new ArrayList<URL>();
         if (registries != null && !registries.isEmpty()) {
+            // 遍历RegistryConfig 数组
             for (RegistryConfig config : registries) {
+                // 获取注册中心的地址
                 String address = config.getAddress();
+                // 地址为空就使用 0.0.0.0 任意地址
                 if (address == null || address.length() == 0) {
                     address = Constants.ANYHOST_VALUE;
                 }
+                // 如果配置了启动参数的注册中心地址，它的优先级最高，就进行覆盖
                 String sysaddress = System.getProperty("dubbo.registry.address");
                 if (sysaddress != null && sysaddress.length() > 0) {
                     address = sysaddress;
                 }
+                // 选择有效的注册中心地址
                 if (address.length() > 0 && !RegistryConfig.NO_AVAILABLE.equalsIgnoreCase(address)) {
+
+                    // 创建参数集合map,用于Dubbo URL的构建
                     Map<String, String> map = new HashMap<String, String>();
+
+                    // 将各种配置对象的属性添加到参数集合map中
                     appendParameters(map, application);
+                    /**
+                     * 需要注意的是：RegistryConfig 的 getAddress方法上使用了 @Parameter(excluded = true)注解，因此它的address属性不会加入到参数集合map中
+                     *  @Parameter(excluded = true)
+                     *  public String getAddress() {return address;}
+                     */
                     appendParameters(map, config);
-                    map.put("path", RegistryService.class.getName());
+
+                    // 添加 path,dubbo,timestamp,pid 到参数集合map中
+                    map.put("path", RegistryService.class.getName()); // 这里的path要和服务暴露逻辑中的path区分
                     map.put("dubbo", Version.getProtocolVersion());
                     map.put(Constants.TIMESTAMP_KEY, String.valueOf(System.currentTimeMillis()));
                     if (ConfigUtils.getPid() > 0) {
                         map.put(Constants.PID_KEY, String.valueOf(ConfigUtils.getPid()));
                     }
+
+                    // 参数集合map中不存在 protocol 参数【以上配置对象的属性中没有有效的协议protocol参数】，就默认 使用 dubbo 作为 协议protocol的值
                     if (!map.containsKey("protocol")) {
+                        // todo remote扩展实现已经不存在了，不需考虑这种情况
                         if (ExtensionLoader.getExtensionLoader(RegistryFactory.class).hasExtension("remote")) {
                             map.put("protocol", "remote");
                         } else {
                             map.put("protocol", "dubbo");
                         }
                     }
+
+                    // 解析地址，创建Dubbo URL数组 【数组大小可以为一】
                     List<URL> urls = UrlUtils.parseURLs(address, map);
+
+                    // 循环 dubbo url
                     for (URL url : urls) {
+                        // 设置 registry=${protocol}参数,设置到注册中心的 URL的参数部分的位置上，并且是追加式的添加
                         url = url.addParameter(Constants.REGISTRY_KEY, url.getProtocol());
+                        // 重置Dubbo URL中的 protocol属性为 'registry'
                         url = url.setProtocol(Constants.REGISTRY_PROTOCOL);
-                        if ((provider && url.getParameter(Constants.REGISTER_KEY, true))
-                                || (!provider && url.getParameter(Constants.SUBSCRIBE_KEY, true))) {
+                        /**
+                         * 1 如果是服务提供者,是否只订阅不注册，如果是就不添加到注册中心URL数组中
+                         * 2 如果是服务消费者，是否是只注册不订阅，如果是就不添加到注册中心URL数组中
+                         *
+                         */
+                        if ((provider && url.getParameter(Constants.REGISTER_KEY, true)) || (!provider && url.getParameter(Constants.SUBSCRIBE_KEY, true))) {
                             registryList.add(url);
                         }
                     }
@@ -216,12 +247,13 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     }
 
     /**
-     * todo 待详细说明
+     * 加载监控中心URL
      *
-     * @param registryURL
-     * @return
+     * @param registryURL 注册中心URL
+     * @return 监控中心URL
      */
     protected URL loadMonitor(URL registryURL) {
+        // 如果监控配置为空，就从属性配置中加载配置到MonitorConfig
         if (monitor == null) {
             String monitorAddress = ConfigUtils.getProperty("dubbo.monitor.address");
             String monitorProtocol = ConfigUtils.getProperty("dubbo.monitor.protocol");
@@ -237,7 +269,10 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                 monitor.setProtocol(monitorProtocol);
             }
         }
+        // 为MonitorConfig加载配置【启动参数变量和properties配置到配置对象】
         appendProperties(monitor);
+
+        // 添加 interface,dubbo,timestamp,pid 到 map 集合中
         Map<String, String> map = new HashMap<String, String>();
         map.put(Constants.INTERFACE_KEY, MonitorService.class.getName());
         map.put("dubbo", Version.getProtocolVersion());
@@ -245,6 +280,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         if (ConfigUtils.getPid() > 0) {
             map.put(Constants.PID_KEY, String.valueOf(ConfigUtils.getPid()));
         }
+
         //set ip
         String hostToRegistry = ConfigUtils.getSystemProperty(Constants.DUBBO_IP_TO_REGISTRY);
         if (hostToRegistry == null || hostToRegistry.length() == 0) {
@@ -253,22 +289,35 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             throw new IllegalArgumentException("Specified invalid registry ip from property:" + Constants.DUBBO_IP_TO_REGISTRY + ", value:" + hostToRegistry);
         }
         map.put(Constants.REGISTER_IP_KEY, hostToRegistry);
+
         appendParameters(map, monitor);
         appendParameters(map, application);
+        // 获得监控地址
         String address = monitor.getAddress();
+        // 如果启动参数配置了监控中心地址，就进行覆盖，启动参数优先级最高
         String sysaddress = System.getProperty("dubbo.monitor.address");
         if (sysaddress != null && sysaddress.length() > 0) {
             address = sysaddress;
         }
+
+        // 直连监控中心服务器地址
         if (ConfigUtils.isNotEmpty(address)) {
+            // 若监控地址不存在 protocol 参数，默认 dubbo 添加到 map 集合中
             if (!map.containsKey(Constants.PROTOCOL_KEY)) {
+                // todo 可以忽略，logstat这个拓展实现已经不存在了
                 if (ExtensionLoader.getExtensionLoader(MonitorFactory.class).hasExtension("logstat")) {
                     map.put(Constants.PROTOCOL_KEY, "logstat");
                 } else {
                     map.put(Constants.PROTOCOL_KEY, "dubbo");
                 }
             }
+            // 解析地址，创建Dubbo URL 对象
             return UrlUtils.parseURL(address, map);
+
+            /**
+             * 1  当 protocol=registry时，并且注册中心URL非空时，从注册中心发现监控中心地址，以注册中心URL为基础，创建监控中心URL
+             * 2  基于注册中心创建的监控中心URL： protocol = dubbo,parameters.protocol=registry,parameter.refer=map
+             */
         } else if (Constants.REGISTRY_PROTOCOL.equals(monitor.getProtocol()) && registryURL != null) {
             return registryURL.setProtocol("dubbo").addParameter(Constants.PROTOCOL_KEY, "registry").addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map));
         }

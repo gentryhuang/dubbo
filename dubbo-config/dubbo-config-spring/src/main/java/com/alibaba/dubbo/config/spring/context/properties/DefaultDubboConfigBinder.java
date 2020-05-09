@@ -27,20 +27,23 @@ import static com.alibaba.spring.util.PropertySourcesUtils.getSubProperties;
 
 /**
  * Default {@link DubboConfigBinder} implementation based on Spring {@link DataBinder}
+ * <p>
+ * 使用Spring DataBinder，将配置属性设置到Dubbo Config对象中
  */
 public class DefaultDubboConfigBinder extends AbstractDubboConfigBinder {
 
     @Override
     public <C extends AbstractConfig> void bind(String prefix, C dubboConfig) {
+        // 将Dubbo Config包装成 DataBinder对象
         DataBinder dataBinder = new DataBinder(dubboConfig);
-        // Set ignored*
+        // 设置响应的 ignored* 属性
         dataBinder.setIgnoreInvalidFields(isIgnoreInvalidFields());
         dataBinder.setIgnoreUnknownFields(isIgnoreUnknownFields());
-        // Get properties under specified prefix from PropertySources
+        // 从PropertySources中获取prefix开头的配置属性 [getPropertySources() : 系统属性，系统环境和@ProperSources的属性k-v]
         Map<String, Object> properties = getSubProperties(getPropertySources(), prefix);
-        // Convert Map to MutablePropertyValues
+        // Convert Map to MutablePropertyValues 根据prefix开头的配置属性创建 MutablePropertyValues对象
         MutablePropertyValues propertyValues = new MutablePropertyValues(properties);
-        // Bind
+        // Bind  绑定配置属性到 Dubbo Config
         dataBinder.bind(propertyValues);
     }
 

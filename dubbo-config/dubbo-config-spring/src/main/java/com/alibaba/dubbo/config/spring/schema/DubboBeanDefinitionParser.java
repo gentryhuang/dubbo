@@ -182,7 +182,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
 
         // 用来保存已解析的属性集合
         Set<String> props = new HashSet<String>();
-        ManagedMap parameters = null;
+        ManagedMap parameters = null; // 专门存放<dubbo:parameters/> 标签下子标签属性信息。最后都设置到Bean定义中
 
         // 循环Bean对象的setter方法 (根据标签对应的配置类型中的属性去解析标签)
         for (Method setter : beanClass.getMethods()) {
@@ -191,7 +191,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
             if (name.length() > 3 && name.startsWith("set") && Modifier.isPublic(setter.getModifiers()) && setter.getParameterTypes().length == 1) {
                 // 获取方法的参数类型
                 Class<?> type = setter.getParameterTypes()[0];
-                // 提取set对应的属性名字，eg: setTimeout->timeout
+                // 提取set对应的属性名字，eg: setTimeout->timeout,setBeanName->bean-name
                 String property = StringUtils.camelToSplitName(name.substring(3, 4).toLowerCase() + name.substring(4), "-");
                 // 保存到属性集合中
                 props.add(property);
@@ -201,7 +201,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                 try {
                     getter = beanClass.getMethod("get" + name.substring(3), new Class<?>[0]);
                 } catch (NoSuchMethodException e) {
-                    try {
+                    try { // 没有setter对应的getter方法，尝试获取is方法。is方法在功能上是同getter
                         getter = beanClass.getMethod("is" + name.substring(3), new Class<?>[0]);
                     } catch (NoSuchMethodException e2) {
                     }
@@ -223,7 +223,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                 } else if ("arguments".equals(property)) {
                     parseArguments(id, element.getChildNodes(), beanDefinition, parserContext);
                 } else {
-                    // 判断标签中是否配置了Bean定义中该属性
+                    // 判断标签中是否配置了Bean定义中该属性 [标签中配置了才会设置到BeanDefinition中]
                     String value = element.getAttribute(property);
                     if (value != null) {
                         value = value.trim();
@@ -246,7 +246,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                 Object reference;
                                 // 处理属性类型为基本类型的情况
                                 if (isPrimitive(type)) {
-                                    // 兼容性处理
+                                    // 兼容性处理【一些设置了但是意义不大的属性就把值设置为null】
                                     if ("async".equals(property) && "false".equals(value)
                                             || "timeout".equals(property) && "0".equals(value)
                                             || "delay".equals(property) && "0".equals(value)
@@ -312,7 +312,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
                                     beanDefinition.getPropertyValues().addPropertyValue("oninvokeMethod", invokeRefMethod);
                                     //--------- 事件通知        --------------/
                                 } else {
-                                    // ref 对应的Bean 必须是单例的
+                                    // ref 对应的Bean 必须是单例的 【该Bean 已经在Spring的Bean 定义中】
                                     if ("ref".equals(property) && parserContext.getRegistry().containsBeanDefinition(value)) {
                                         BeanDefinition refBean = parserContext.getRegistry().getBeanDefinition(value);
                                         if (!refBean.isSingleton()) {
@@ -331,7 +331,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
             }
         }
 
-        // 将XML元素没有遍历到的属性添加到Map集合中，然后整个集合加入到Bean定义的属性中（一般这种情况很少）
+        // 将XML元素没有遍历到的属性添加到Map集合中，然后整个集合加入到Bean定义的属性中（一般这种情况很少，这种情况是针对用户自定义的属性，不是Dubbo Schema 约定好的）
         NamedNodeMap attributes = element.getAttributes();
         int len = attributes.getLength();
         for (int i = 0; i < len; i++) {

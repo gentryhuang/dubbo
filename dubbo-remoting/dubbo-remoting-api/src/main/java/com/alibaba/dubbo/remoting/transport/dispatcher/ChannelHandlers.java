@@ -43,8 +43,21 @@ public class ChannelHandlers {
         INSTANCE = instance;
     }
 
+    /**
+     *1  对DecodeHandler对象进行层层包装，最终得到MultiMessageHandler：
+     *  MultiMessageHandler->HeartbeatHandler->AllChangeHandler[url:providerUrl,executor:FixedExecutor,handler:DecodeHandler]
+     *2 MultiMessageHandler 创建后，NettyServer就开始调用各个父类进行属性初始化
+     *
+     * @param handler
+     * @param url
+     * @return
+     */
     protected ChannelHandler wrapInternal(ChannelHandler handler, URL url) {
-        return new MultiMessageHandler(new HeartbeatHandler(ExtensionLoader.getExtensionLoader(Dispatcher.class)
-                .getAdaptiveExtension().dispatch(handler, url)));
+        return new MultiMessageHandler( // MultiMessageHandler
+                new HeartbeatHandler( // HeartbeatHandler
+                        ExtensionLoader.getExtensionLoader(Dispatcher.class).getAdaptiveExtension() // AllDispatcher ,Dispatcher决定了dubbo的线程模型，指定了哪些线程做什么
+                                .dispatch(handler, url) // AllChannelHandler
+                )
+        );
     }
 }

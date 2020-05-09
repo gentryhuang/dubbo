@@ -29,6 +29,7 @@ import com.alibaba.dubbo.rpc.listener.ListenerExporterWrapper;
 import com.alibaba.dubbo.rpc.listener.ListenerInvokerWrapper;
 
 import java.util.Collections;
+import java.util.List;
 
 /**
  * ListenerProtocol
@@ -49,14 +50,29 @@ public class ProtocolListenerWrapper implements Protocol {
         return protocol.getDefaultPort();
     }
 
+    /**
+     * 用于给Exporter增加ExporterListener，监听Exporter暴露完成和取消暴露完成
+     *
+     * @param invoker Service invoker
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
+        // 远程暴露直接返回
         if (Constants.REGISTRY_PROTOCOL.equals(invoker.getUrl().getProtocol())) {
             return protocol.export(invoker);
         }
-        return new ListenerExporterWrapper<T>(protocol.export(invoker),
-                Collections.unmodifiableList(ExtensionLoader.getExtensionLoader(ExporterListener.class)
-                        .getActivateExtension(invoker.getUrl(), Constants.EXPORTER_LISTENER_KEY)));
+        /**
+         * 1 InjvmProtocol#export(invoker)方法执行之前的切面方法： ProtocolListenerWrapper#export
+         * 2 获得ExporterListener的自适应扩展实现
+         * 3 创建带 ExporterListener的ListenerExporterWrapper,用来监控服务暴露完毕后的回调操作【实现接口方法：com.alibaba.dubbo.rpc.ExporterListener#exported(com.alibaba.dubbo.rpc.Exporter)，
+         * exported 方法会被调用】*/
+        Exporter<T> export = protocol.export(invoker);
+        List<ExporterListener> exporterListeners = Collections.unmodifiableList(ExtensionLoader.getExtensionLoader(ExporterListener.class)
+                .getActivateExtension(invoker.getUrl(), Constants.EXPORTER_LISTENER_KEY));
+        return new ListenerExporterWrapper<T>(export, exporterListeners);
     }
 
     @Override
