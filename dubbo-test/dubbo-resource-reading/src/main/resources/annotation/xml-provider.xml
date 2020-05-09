@@ -21,7 +21,7 @@
 
 
     <!-- 服务提供者-->
-    <bean id="xmlService" class="com.code.resource.reading.xml.xmlServiceImpl"/>
+    <bean id="xmlService" class="com.code.resource.reading.provider.xml.xmlServiceImpl"/>
 
     <dubbo:service interface="com.code.resource.reading.api.DemoService" ref="xmlService"/>
 

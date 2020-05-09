@@ -1,16 +1,18 @@
-package com.code.resource.reading.xml;
+package com.code.resource.reading.provider.annotation.impl;
+
 
 import com.code.resource.reading.api.DemoService;
 
 /**
- * xmlServiceImpl
+ * DemoService
  *
  * @author <a href="mailto:libao.huang@yunhutech.com">shunhua</a>
- * @since 2020/05/09
+ * @since 2020/04/19
  * <p>
  * desc：
  */
-public class xmlServiceImpl implements DemoService {
+public class DemoServiceImpl implements DemoService {
+
     @Override
     public String hello() {
         return null;

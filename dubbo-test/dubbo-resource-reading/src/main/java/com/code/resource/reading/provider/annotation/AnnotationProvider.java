@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.code.resource.reading.annotation;
+package com.code.resource.reading.provider.annotation;
 
 import com.alibaba.dubbo.config.spring.context.annotation.EnableDubbo;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -39,8 +39,8 @@ public class AnnotationProvider {
      * 配置和注解混合使用
      */
     @Configuration
-    @EnableDubbo(scanBasePackages = "com.code.resource.reading.annotation.impl")
-    @PropertySource({"classpath:/com/code/resource/reading/annotation/dubbo-provider.properties"})
+    @EnableDubbo(scanBasePackages = "com.code.resource.reading.provider.annotation.impl")
+    @PropertySource({"classpath:/com/code/resource/reading/provider/annotation/dubbo-provider.properties"})
     @ImportResource({"classpath:annotation/xml-provider.xml"})
     static public class ProviderConfiguration {
     }
