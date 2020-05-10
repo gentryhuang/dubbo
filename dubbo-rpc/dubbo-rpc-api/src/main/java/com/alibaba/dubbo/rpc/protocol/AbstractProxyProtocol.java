@@ -126,10 +126,13 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
     }
 
     protected String getAddr(URL url) {
+        // 先从URL中获取bind.ip的值作为ip的值
         String bindIp = url.getParameter(Constants.BIND_IP_KEY, url.getHost());
+        // 如果URL中设置了anyhost属性，那么ip的值取 0.0.0.0
         if (url.getParameter(Constants.ANYHOST_KEY, false)) {
             bindIp = Constants.ANYHOST_VALUE;
         }
+        // 返回： ip:port
         return NetUtils.getIpByHost(bindIp) + ":" + url.getParameter(Constants.BIND_PORT_KEY, url.getPort());
     }
 

@@ -52,6 +52,12 @@ class InjvmInvoker<T> extends AbstractInvoker<T> {
         }
     }
 
+    /**
+     * 调用，本质上就是利用共用的 Map
+     * @param invocation
+     * @return
+     * @throws Throwable
+     */
     @Override
     public Result doInvoke(Invocation invocation) throws Throwable {
         Exporter<?> exporter = InjvmProtocol.getExporter(exporterMap, getUrl());

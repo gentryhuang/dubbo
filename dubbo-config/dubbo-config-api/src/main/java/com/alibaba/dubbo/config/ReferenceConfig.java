@@ -64,10 +64,17 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 
     private static final long serialVersionUID = -5864351140409987595L;
 
+    /**
+     * 自适应 Protocol 拓展实现
+     */
     private static final Protocol refprotocol = ExtensionLoader.getExtensionLoader(Protocol.class).getAdaptiveExtension();
+
 
     private static final Cluster cluster = ExtensionLoader.getExtensionLoader(Cluster.class).getAdaptiveExtension();
 
+    /**
+     * 自适应 ProxyFactory 拓展实现
+     */
     private static final ProxyFactory proxyFactory = ExtensionLoader.getExtensionLoader(ProxyFactory.class).getAdaptiveExtension();
     private final List<URL> urls = new ArrayList<URL>();
     // interface name
@@ -75,7 +82,11 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
     private Class<?> interfaceClass;
     // client type
     private String client;
+
     // url for peer-to-peer invocation
+    /**
+     * 直连服务提供者地址
+     */
     private String url;
     // method configs
     private List<MethodConfig> methods;
@@ -211,8 +222,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         } else {
             try {
                 // 根据接口名，获得对应的接口类
-                interfaceClass = Class.forName(interfaceName, true, Thread.currentThread()
-                        .getContextClassLoader());
+                interfaceClass = Class.forName(interfaceName, true, Thread.currentThread().getContextClassLoader());
             } catch (ClassNotFoundException e) {
                 throw new IllegalStateException(e.getMessage(), e);
             }
@@ -304,11 +314,12 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         // 校验 Stub和 Mock 相关的配置
         checkStubAndMock(interfaceClass);
 
-       // 创建参数集合map，用于下面创建Dubbo URL
+        // 创建参数集合map，用于下面创建Dubbo URL
         Map<String, String> map = new HashMap<String, String>();
+        // 符合条件的方法对象的属性，主要用来Dubbo事件通知
+        Map<Object, Object> attributes = new HashMap<Object, Object>();
 
         // 将 side，dubbo,timestamp,pid参数，添加到map集合中
-        Map<Object, Object> attributes = new HashMap<Object, Object>();
         map.put(Constants.SIDE_KEY, Constants.CONSUMER_SIDE);
         map.put(Constants.DUBBO_VERSION_KEY, Version.getProtocolVersion());
         map.put(Constants.TIMESTAMP_KEY, String.valueOf(System.currentTimeMillis()));
@@ -360,7 +371,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             }
         }
 
-        // 以系统环境变量（DUBBO_IP_TO_REGISTRY）作为服务注册地址
+        // 以系统环境变量（DUBBO_IP_TO_REGISTRY）作为服务注册地址,没有设置再取主机地址
         String hostToRegistry = ConfigUtils.getSystemProperty(Constants.DUBBO_IP_TO_REGISTRY);
         if (hostToRegistry == null || hostToRegistry.length() == 0) {
             hostToRegistry = NetUtils.getLocalHost();
@@ -375,6 +386,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 
 
         ref = createProxy(map);
+
         ConsumerModel consumerModel = new ConsumerModel(getUniqueServiceName(), this, ref, interfaceClass.getMethods());
         ApplicationModel.initConsumerModel(getUniqueServiceName(), consumerModel);
     }

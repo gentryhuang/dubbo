@@ -72,13 +72,20 @@ public class HttpProtocol extends AbstractProxyProtocol {
 
     @Override
     protected <T> Runnable doExport(final T impl, Class<T> type, URL url) throws RpcException {
+        // 获取地址 ip:port
         String addr = getAddr(url);
         HttpServer server = serverMap.get(addr);
         if (server == null) {
+            /**
+             * 1 通过SPI机制获取具体的 HttpBinder的拓展实现
+             * 2 具体的HttpBinder实现调用bind方法： 1） 启动服务 2）为服务设置具体的请求处理器
+             */
             server = httpBinder.bind(url, new InternalHandler());
             serverMap.put(addr, server);
         }
+        // 获取url的path
         final String path = url.getAbsolutePath();
+        // 以path作为key，value 是一个代理对象
         skeletonMap.put(path, createExporter(impl, type));
 
         final String genericPath = path + "/" + Constants.GENERIC_KEY;
@@ -93,11 +100,22 @@ public class HttpProtocol extends AbstractProxyProtocol {
         };
     }
 
+    /**
+     * 创建Exporter（使用Spring的）
+     * @param impl
+     * @param type
+     * @param <T>
+     * @return
+     */
     private <T> HttpInvokerServiceExporter createExporter(T impl, Class<?> type) {
+        // 创建 HttpInvokerServiceExporter
         final HttpInvokerServiceExporter httpServiceExporter = new HttpInvokerServiceExporter();
+        // 设置接口
         httpServiceExporter.setServiceInterface(type);
+        // 设置实现
         httpServiceExporter.setService(impl);
         try {
+            // 根据 接口和实现，创建代理对象
             httpServiceExporter.afterPropertiesSet();
         } catch (Exception e) {
             throw new RpcException(e.getMessage(), e);
@@ -172,18 +190,24 @@ public class HttpProtocol extends AbstractProxyProtocol {
         return super.getErrorCode(e);
     }
 
+    /**
+     * 接收请求处理器
+     */
     private class InternalHandler implements HttpHandler {
 
         @Override
         public void handle(HttpServletRequest request, HttpServletResponse response)
                 throws IOException, ServletException {
+            // 获取请求的uri
             String uri = request.getRequestURI();
+            // 从缓存中取出uri对应的服务代理对象
             HttpInvokerServiceExporter skeleton = skeletonMap.get(uri);
             if (!request.getMethod().equalsIgnoreCase("POST")) {
                 response.setStatus(500);
             } else {
                 RpcContext.getContext().setRemoteAddress(request.getRemoteAddr(), request.getRemotePort());
                 try {
+                    // 处理请求，结果写到response中
                     skeleton.handleRequest(request, response);
                 } catch (Throwable e) {
                     throw new ServletException(e);

@@ -186,7 +186,7 @@ public class RegistryProtocol implements Protocol {
     private <T> ExporterChangeableWrapper<T> doLocalExport(final Invoker<T> originInvoker) {
         // 获得在 bounds 缓存中的key【就是生成key的逻辑，也是服务提供者暴露地址,即从Invoker的URL中Map属性集合中获取key为'export'的服务提供者暴露地址，该地址要写到注册中心上】
         String key = getCacheKey(originInvoker);
-        // 从 bounds 获得，是否存在已经暴露过的服务
+        // 从 bounds 缓存中获得，是否存在已经暴露过的服务
         ExporterChangeableWrapper<T> exporter = (ExporterChangeableWrapper<T>) bounds.get(key);
         if (exporter == null) {
             synchronized (bounds) {
