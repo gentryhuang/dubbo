@@ -42,6 +42,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
 
     /**
      * CuratorZookeeperClient 构造方法主要用于创建和启动 CuratorFramework 实例
+     *
      * @param url
      */
     public CuratorZookeeperClient(URL url) {
@@ -137,6 +138,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
         }
         return false;
     }
+
     @Override
     public boolean isConnected() {
         return client.getZookeeperClient().isConnected();
@@ -147,11 +149,25 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
         client.close();
     }
 
+    /**
+     * 创建一个监听path子节点的watcher  todo  注意：这里只是创建一个CuratorWatcher监听器，并没有对节点进行绑定
+     *
+     * @param path
+     * @param listener
+     * @return
+     */
     @Override
     public CuratorWatcher createTargetChildListener(String path, ChildListener listener) {
         return new CuratorWatcherImpl(listener);
     }
 
+    /**
+     * 为path节点绑定CuratorWatcher监听器
+     *
+     * @param path
+     * @param listener
+     * @return
+     */
     @Override
     public List<String> addTargetChildListener(String path, CuratorWatcher listener) {
         try {
@@ -168,6 +184,9 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
         ((CuratorWatcherImpl) listener).unwatch();
     }
 
+    /**
+     * 实现CuratorWatcher接口
+     */
     private class CuratorWatcherImpl implements CuratorWatcher {
 
         private volatile ChildListener listener;
@@ -180,10 +199,18 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
             this.listener = null;
         }
 
+        /**
+         * 1 当path节点下的子节点发生变化的时候，会首先调用TargetChildListener的process(WatchedEvent event)方法，
+         * 2 在该方法中又会调用ChildListener实例的childChanged(String parentPath, List<String> currentChilds)方法
+         *
+         * @param event
+         * @throws Exception
+         */
         @Override
         public void process(WatchedEvent event) throws Exception {
             if (listener != null) {
                 String path = event.getPath() == null ? "" : event.getPath();
+                // 监听子节点列表的变化
                 listener.childChanged(path,
                         // if path is null, curator using watcher will throw NullPointerException.
                         // if client connect or disconnect to server, zookeeper will queue

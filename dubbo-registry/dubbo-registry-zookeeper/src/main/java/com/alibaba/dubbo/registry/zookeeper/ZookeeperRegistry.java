@@ -217,6 +217,15 @@ public class ZookeeperRegistry extends FailbackRegistry {
 
                 // ---- 处理指定Service 层的发起订阅，例如服务消费这的订阅 ----------
             } else {
+
+                /**
+                 * ConcurrentMap<URL, ConcurrentMap<NotifyListener, ChildListener>> zkListeners
+                 * 1 根据url获取ConcurrentMap<NotifyListener, ChildListener>，没有就创建
+                 * 2 根据listener从ConcurrentMap<NotifyListener, ChildListener>获取ChildListener，没有就创建（创建的ChildListener用来监听子节点的变化）
+                 * 3 创建path持久化节点
+                 * 4 创建path子节点监听器
+                 */
+
                 // 子节点数据数组
                 List<URL> urls = new ArrayList<URL>();
                 // 循环分类数组，其中，调用toCategoriesPath(url)方法，获得分类数组
@@ -229,8 +238,9 @@ public class ZookeeperRegistry extends FailbackRegistry {
                         listeners = zkListeners.get(url);
                     }
                     /**
-                     *  获得listener(NotifyListener)对应的ChildListener对象。todo 在URL层发生变更时 ？？？，会调用NotifyListener#notify(url,listener,currentChilds)方法，
-                     *  回调NotifyListener的逻辑。todo 这样，如果Service下增加新的服务提供者实例（新的URL）,服务消费者可以创建新的Invoker对象，用于调用该服务提供者。???
+                     * 对监听器集合处理 ConcurrentMap<URL, ConcurrentMap<NotifyListener, ChildListener>> zkListeners。
+                     * 获得listener(NotifyListener)对应的ChildListener对象，没有就会创建这里创建出来的ChildListener实例中的childChanged方法实际上
+                     * 就是最终当parentPath[即toCategoriesPath方法处理后的元素path]下的currentchilds发生变化时，执行的逻辑。其中会回调NotifyListener#notify方法
                      */
 
                     ChildListener zkListener = listeners.get(listener);
@@ -238,15 +248,18 @@ public class ZookeeperRegistry extends FailbackRegistry {
                         listeners.putIfAbsent(listener, new ChildListener() {
                             @Override
                             public void childChanged(String parentPath, List<String> currentChilds) {
-                                // 变更时，调用 notity方法，回调 NotifyListener 【增量】
+                                // 变更时，调用 notity方法，回调 NotifyListener 【增量】,用来监听子节点列表的变化
                                 ZookeeperRegistry.this.notify(url, listener, toUrlsWithEmpty(url, parentPath, currentChilds));
                             }
                         });
                         zkListener = listeners.get(listener);
                     }
-                    // 创建 Type 节点，该节点为持久节点
+                    // 创建 Type 节点，该节点为持久节点，如： /dubbo/com.alibaba.dubbo.demo.DemoService/configurators
                     zkClient.create(path, false);
-                    // 向Zookeeper path节点发起订阅
+                    /**
+                     * 向Zookeeper path节点发起订阅，即使用AbstractZookeeperClient<TargetChildListener>的addChildListener(String path, final ChildListener listener)方法为path下的子节点
+                     * 添加上边创建出来的内部类ChildListener实例
+                     */
                     List<String> children = zkClient.addChildListener(path, zkListener);
                     // 添加到urls 中
                     if (children != null) {
@@ -425,12 +438,13 @@ public class ZookeeperRegistry extends FailbackRegistry {
     }
 
     /**
-     * 获得providers 中，和consumer匹配的URL数组
-     * <p>
-     * 若不存在配置，则创建   'empty://' 的URL返回，通过这样的方式，可以处理类似服务提供者为空的情况
+     * 1 获得providers 中，和consumer匹配的URL集合
+     * 2 如果URL集合不为空，直接返回这个集合
+     * 3 如果URL集合为空，首先从path中获取category的值，然后将consumer的协议换成empty并添加参数category=path中的category的值。
+     * 形式：'empty://' 的URL返回，通过这样的方式，可以处理类似服务提供者为空的情况
      *
-     * @param consumer  用于匹配URL
-     * @param path      被匹配的URL的字符串
+     * @param consumer  用于匹配URL 如：provider://10.1.22.101:20880/com.alibaba.dubbo.demo.DemoService?key=value&...
+     * @param path      被匹配的URL的字符串 如：/dubbo/com.alibaba.dubbo.demo.DemoService/configurators
      * @param providers 匹配的URL数组
      * @return
      */

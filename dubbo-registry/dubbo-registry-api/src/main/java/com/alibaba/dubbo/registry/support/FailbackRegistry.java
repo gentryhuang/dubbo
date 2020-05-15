@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
  * FailbackRegistry. (SPI, Prototype, ThreadSafe)
  * 1 实现AbstractRegistry 抽象类，支持失败重试的Registry抽象类
  * 2 AbstractRegistry 进行的注册，订阅等操作，更多的是操作缓存，而无和注册中心实际的操作。FailbackRegistry 在 AbstractRegistry的基础上，实现了和注册中心实际的操作，
- *   并支持失败重试的特性。
+ * 并支持失败重试的特性。
  */
 public abstract class FailbackRegistry extends AbstractRegistry {
 
@@ -134,6 +134,15 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         listeners.add(listener);
     }
 
+
+    /**
+     * 1 从ConcurrentMap<URL, Set<NotifyListener>> failedSubscribed 中获取当前url的订阅失败列表Set<NotifyListener>，之后从中删除掉该NotifyListener实例；
+     * 2 从ConcurrentMap<URL, Set<NotifyListener>> failedUnsubscribed 中获取当前url的反订阅失败列表Set<NotifyListener>，之后从中删除掉该NotifyListener实例；
+     * 3 从ConcurrentMap<URL, Map<NotifyListener, List<URL>>> failedNotified 中获取当前url的通知失败map Map<NotifyListener, List<URL>>，之后从中删除掉该NotifyListener实例以及其需要通知的所有的url。
+     *
+     * @param url
+     * @param listener
+     */
     private void removeFailedSubscribed(URL url, NotifyListener listener) {
         Set<NotifyListener> listeners = failedSubscribed.get(url);
         if (listeners != null) {
@@ -211,11 +220,16 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     @Override
     public void subscribe(URL url, NotifyListener listener) {
+        /** 调用父类AbstractRegistry的方法，将listener实例加入到url所对应的监听器集合中 {@link #subscribed } 中 */
         super.subscribe(url, listener);
+        // 从failedSubscribed/failedUnsubscribed中 url所对应的监听器集合中删除listener，接着从failedNotified获取当前url的通知失败map，然后从中删除掉listener以及其需要通知的所有url
         removeFailedSubscribed(url, listener);
         try {
-            // Sending a subscription request to the server side
+            // 向服务端发送订阅请求,具体请求处理由子类实现
             doSubscribe(url, listener);
+            /** 如果在订阅的过程抛出异常，那么尝试获取缓存url，如果有缓存url，则进行失败通知。之后“将失败的订阅请求记录到失败列表，定时重试”，如果没有缓存url，
+             * 如果开启了启动时检测或者直接抛出的异常是SkipFailbackWrapperException，则直接抛出异常，不会“将失败的订阅请求记录到失败列表，定时重试”
+             */
         } catch (Exception e) {
             Throwable t = e;
 
@@ -224,7 +238,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                 notify(url, listener, urls);
                 logger.error("Failed to subscribe " + url + ", Using cached list: " + urls + " from cache file: " + getUrl().getParameter(Constants.FILE_KEY, System.getProperty("user.home") + "/dubbo-registry-" + url.getHost() + ".cache") + ", cause: " + t.getMessage(), t);
             } else {
-                // If the startup detection is opened, the Exception is thrown directly.
+                // 如果开启了启动时检测check=true,则直接抛出异常
                 boolean check = getUrl().getParameter(Constants.CHECK_KEY, true)
                         && url.getParameter(Constants.CHECK_KEY, true);
                 boolean skipFailback = t instanceof SkipFailbackWrapperException;
@@ -238,7 +252,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                 }
             }
 
-            // Record a failed registration request to a failed list, retry regularly
+            // 将失败的订阅请求记录到失败列表，定时重试
             addFailedSubscribed(url, listener);
         }
     }
@@ -285,9 +299,10 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             throw new IllegalArgumentException("notify listener == null");
         }
         try {
+            // 进行通知
             doNotify(url, listener, urls);
         } catch (Exception t) {
-            // Record a failed registration request to a failed list, retry regularly
+            // 将失败的通知请求记录到失败列表中，定时重试
             Map<NotifyListener, List<URL>> listeners = failedNotified.get(url);
             if (listeners == null) {
                 failedNotified.putIfAbsent(url, new ConcurrentHashMap<NotifyListener, List<URL>>());
@@ -298,6 +313,13 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
     }
 
+    /**
+     * 会调用父类的通知方法
+     *
+     * @param url
+     * @param listener
+     * @param urls
+     */
     protected void doNotify(URL url, NotifyListener listener, List<URL> urls) {
         super.notify(url, listener, urls);
     }

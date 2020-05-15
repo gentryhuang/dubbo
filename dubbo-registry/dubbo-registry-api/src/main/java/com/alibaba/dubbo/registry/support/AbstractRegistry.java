@@ -52,7 +52,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * AbstractRegistry. (SPI, Prototype, ThreadSafe)
  * 1 实现Registry 接口
- * 2 实现了一下方法：
+ * 2 实现了以下方法：
  * - 通用的注册、订阅、查询、通知等方法
  * - 持久化注册数据到文件，以properties格式存储。用于，当重启时无法从注册中心加载服务提供者列表信息时，就可以从该文件中读取
  */
@@ -190,7 +190,15 @@ public abstract class AbstractRegistry implements Registry {
         return lastCacheChanged;
     }
 
+    /**
+     * @param version
+     */
     public void doSaveProperties(long version) {
+        /**
+         * CAS判断：在saveProperties(URL url)方法中执行了long version = lastCacheChanged.incrementAndGet();
+         * 这里进行if (version < lastCacheChanged.get())判断，如果满足这个条件，说明当前线程在进行doSaveProperties(long version)时，
+         * 已经有其他线程执行了saveProperties(URL url)，马上就要执行doSaveProperties(long version)，所以当前线程放弃操作，让后边的这个线程来做保存操作。
+         */
         if (version < lastCacheChanged.get()) {
             return;
         }
@@ -355,8 +363,8 @@ public abstract class AbstractRegistry implements Registry {
     /**
      * 先缓存到 subscribed 中，再通过子类 FailbackRegistry 具体执行订阅逻辑
      *
-     * @param url      Subscription condition, not allowed to be empty, e.g. consumer://10.20.153.10/com.alibaba.foo.BarService?version=1.0.0&application=kylin
-     * @param listener A listener of the change event, not allowed to be empty
+     * @param url      订阅条件，不允许为空，如：consumer://10.10.10.10/com.alibaba.foo.BarService?version=1.0.0&application=kylin
+     * @param listener 变更事件监听器，不允许为空
      */
     @Override
     public void subscribe(URL url, NotifyListener listener) {
@@ -369,6 +377,10 @@ public abstract class AbstractRegistry implements Registry {
         if (logger.isInfoEnabled()) {
             logger.info("Subscribe: " + url);
         }
+        /**
+         * 1 从ConcurrentMap<URL, Set<NotifyListener>> subscribed中获取key为url的集合Set<NotifyListener>
+         * 2 如果该集合存在，直接将当前的NotifyListener实例存入该集合,如果集合不存在，先创建，之后放入subscribed中，并将当前的NotifyListener实例存入刚刚创建的集合
+         */
         Set<NotifyListener> listeners = subscribed.get(url);
         if (listeners == null) {
             subscribed.putIfAbsent(url, new ConcurrentHashSet<NotifyListener>());
@@ -402,6 +414,7 @@ public abstract class AbstractRegistry implements Registry {
 
     /**
      * 在注册中心断开，重连成功会调用该方法，进行恢复注册和订阅
+     *
      * @throws Exception
      */
     protected void recover() throws Exception {
@@ -432,7 +445,9 @@ public abstract class AbstractRegistry implements Registry {
 
 
     protected void notify(List<URL> urls) {
-        if (urls == null || urls.isEmpty()) return;
+        if (urls == null || urls.isEmpty()) {
+            return;
+        }
 
         for (Map.Entry<URL, Set<NotifyListener>> entry : getSubscribed().entrySet()) {
             URL url = entry.getKey();
@@ -480,7 +495,7 @@ public abstract class AbstractRegistry implements Registry {
             logger.info("Notify urls for subscribe url " + url + ", urls: " + urls);
         }
 
-        // 将 `urls` 按照 `url.parameter.category` 分类，添加到集合result集合中
+        // 将 `urls` 按照 `url.parameter.category` 分类，添加到Map集合result中
         Map<String, List<URL>> result = new HashMap<String, List<URL>>();
         for (URL u : urls) {
             if (UrlUtils.isMatch(url, u)) {
@@ -497,7 +512,7 @@ public abstract class AbstractRegistry implements Registry {
             return;
         }
 
-        // 获得消费者 URL 对应的在 `notified` 中，通知的 URL 变化结果（全量数据），会把result中的值放入到 categoryNotified中
+        // 获得消费者URL对应的在 `notified` 中,通知的 URL 变化结果（全量数据），会把result中的值放入到 categoryNotified中
         Map<String, List<URL>> categoryNotified = notified.get(url);
         if (categoryNotified == null) {
             notified.putIfAbsent(url, new ConcurrentHashMap<String, List<URL>>());
@@ -506,17 +521,28 @@ public abstract class AbstractRegistry implements Registry {
 
         // 处理通知的 URL 变化结果（全量数据），即按照分类，循环处理通知的URL变化结果（全量数据）
         for (Map.Entry<String, List<URL>> entry : result.entrySet()) {
+            // 获得分类名
             String category = entry.getKey();
+            // 获得分类名对应的通知ULR列表
             List<URL> categoryList = entry.getValue();
-            // 将result 覆盖到 `notified`，需要注意：当某个分类的数据为空时，会依然有 urls 。其中 `urls[0].protocol = empty` ，通过这样的方式，处理所有服务提供者为空的情况。
+            // 1 将result 覆盖到 `notified`【填充notified集合】，需要注意：当某个分类的数据为空时，会依然有 urls 。其中 `urls[0].protocol = empty` ，通过这样的方式，处理所有服务提供者为空的情况。
             categoryNotified.put(category, categoryList);
-            // 保存到文件
+            // 2 保存传入的url到properties和文件保存 // todo 这个操作为什么要在循环体内
             saveProperties(url);
-            // 通知监听器处理。例如，有新的服务提供者启动时，被通知，创建新的 Invoker 对象。
+            // 3 调用传入的listener的notify()方法
             listener.notify(categoryList);
         }
     }
 
+
+    /**
+     * 1 按照url从ConcurrentMap<URL, Map<String, List<URL>>> notified中将Map<String, List<URL>>拿出来，之后将所有category的list组成一串buf（以空格分隔）
+     * 2 将 serviceKey - buf 写入本地磁盘缓存中：Properties properties
+     * 3 将AtomicLong lastCacheChanged加1
+     * 4 之后根据syncSaveFile判断时同步保存properties到文件，还是异步保存properties到文件
+     *
+     * @param url
+     */
     private void saveProperties(URL url) {
         if (file == null) {
             return;
@@ -536,6 +562,7 @@ public abstract class AbstractRegistry implements Registry {
                 }
             }
             properties.setProperty(url.getServiceKey(), buf.toString());
+            // 版本号，使用CAS
             long version = lastCacheChanged.incrementAndGet();
             if (syncSaveFile) {
                 doSaveProperties(version);

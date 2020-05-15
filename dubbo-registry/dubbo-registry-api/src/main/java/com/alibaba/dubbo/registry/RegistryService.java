@@ -59,7 +59,7 @@ public interface RegistryService {
     void unregister(URL url);
 
 
-    /** ----------------------- 在 URL.parameters.category 属性上，表示订阅的数据分类。目前有四种类型：
+    /** todo ----------------------- 在 URL.parameters.category 属性上，表示订阅的数据分类。目前有四种类型：
      * 1 consumers 服务消费者列表
      * 2 providers 服务提供者列表
      * 3 routers 路由规则列表

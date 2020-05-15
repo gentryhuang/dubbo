@@ -21,7 +21,7 @@ import com.alibaba.dubbo.common.extension.Adaptive;
 import com.alibaba.dubbo.common.extension.SPI;
 
 /**
- * RegistryFactory. (SPI, Singleton, ThreadSafe) 注册中心工厂接口，创建的注册中心，包含注册中心客户端
+ * RegistryFactory. (SPI, Singleton, ThreadSafe) 注册中心工厂接口，创建的注册中心，包含注册中心客户端。注意和注册中心客户端工厂的区别。
  *
  * @see com.alibaba.dubbo.registry.support.AbstractRegistryFactory
  */
