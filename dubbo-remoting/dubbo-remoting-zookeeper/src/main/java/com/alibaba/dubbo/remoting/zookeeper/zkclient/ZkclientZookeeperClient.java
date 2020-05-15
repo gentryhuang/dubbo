@@ -35,9 +35,16 @@ public class ZkclientZookeeperClient extends AbstractZookeeperClient<IZkChildLis
 
     private volatile KeeperState state = KeeperState.SyncConnected;
 
+    /**
+     * ZkclientZookeeperClient 构造方法主要用于创建和启动 ZkClient 实例
+     *
+     * @param url
+     */
     public ZkclientZookeeperClient(URL url) {
         super(url);
+        // 创建 ZkClientWrapper 【包装了ZkClient,实现监听】
         client = new ZkClientWrapper(url.getBackupAddress(), 30000);
+        // 添加监听器
         client.addListener(new IZkStateListener() {
             @Override
             public void handleStateChanged(KeeperState state) throws Exception {
@@ -54,6 +61,7 @@ public class ZkclientZookeeperClient extends AbstractZookeeperClient<IZkChildLis
                 stateChanged(StateListener.RECONNECTED);
             }
         });
+        // 启动客户端
         client.start();
     }
 

@@ -24,7 +24,18 @@ import com.alibaba.dubbo.rpc.Invoker;
 import com.alibaba.dubbo.rpc.RpcException;
 
 /**
- * DeprecatedProtocolFilter
+ * DeprecatedProtocolFilter  实现 InvokerListenerAdapter 抽象类 ，引用废弃的服务时，打印错误日志提醒
+ *
+ * @Activate(Constants.DEPRECATED_KEY) 注解，基于Dubbo SPI Activate 机制加载：
+ * 1 配置方式：<dubbo:service interface="com.alibaba.dubbo.demo.DemoService" ref="demoService" deprecated="true" />，通过设置 deprecated为true，该方式仅适用于 远程引用服务
+ *
+ * 2 本地引用服务 废弃服务方式：
+ *   <dubbo:reference id="demoService" interface="com.alibaba.dubbo.demo.DemoService" protocol="injvm">
+ *     <dubbo:parameter key="deprecated" value="true" />
+ *   </dubbo:reference>
+ *
+ *   注意：本地引用服务时，不是使用服务提供者的URL，而是服务消费者的URL
+ *
  */
 @Activate(Constants.DEPRECATED_KEY)
 public class DeprecatedInvokerListener extends InvokerListenerAdapter {

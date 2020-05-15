@@ -13,6 +13,6 @@ import com.code.resource.reading.api.DemoService;
 public class xmlServiceImpl implements DemoService {
     @Override
     public String hello() {
-        return null;
+        return "hello xml-service";
     }
 }

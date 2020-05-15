@@ -28,12 +28,19 @@ import com.alibaba.dubbo.rpc.protocol.AbstractInvoker;
 import java.util.Map;
 
 /**
- * InjvmInvoker
+ * InjvmInvoker  继承AbstractInvoker抽象类
  */
 class InjvmInvoker<T> extends AbstractInvoker<T> {
 
+    /**
+     * 服务键
+     */
     private final String key;
-
+    /**
+     * Exporter集合，在InjvmInvoker#invoke(invocation)方法中，通过该Invoker的key属性，获得对应的Exporter对象
+     * key: 服务键
+     * 该值实际就是 {@link com.alibaba.dubbo.rpc.protocol.AbstractProtocol#exporterMap}。
+     */
     private final Map<String, Exporter<?>> exporterMap;
 
     InjvmInvoker(Class<T> type, URL url, String key, Map<String, Exporter<?>> exporterMap) {
@@ -42,8 +49,14 @@ class InjvmInvoker<T> extends AbstractInvoker<T> {
         this.exporterMap = exporterMap;
     }
 
+    /**
+     * 是否可用。开启启动时检查时，调用该方法，判断该Invoker对象是否有对应的Exporter，若不存在，说明以来服务不存在，检查不通过
+     *
+     * @return
+     */
     @Override
     public boolean isAvailable() {
+        // 判断是否有Exporter对象
         InjvmExporter<?> exporter = (InjvmExporter<?>) exporterMap.get(key);
         if (exporter == null) {
             return false;
@@ -54,6 +67,7 @@ class InjvmInvoker<T> extends AbstractInvoker<T> {
 
     /**
      * 调用，本质上就是利用共用的 Map
+     *
      * @param invocation
      * @return
      * @throws Throwable

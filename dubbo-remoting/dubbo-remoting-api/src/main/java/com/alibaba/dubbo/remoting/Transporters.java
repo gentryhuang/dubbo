@@ -51,9 +51,13 @@ public class Transporters {
         if (handlers.length == 1) {
             handler = handlers[0];
         } else {
+            // 如果handlers 元素数量大于1，则创建 ChannelHandler分发器
             handler = new ChannelHandlerDispatcher(handlers);
         }
-        // 由 具体的Transporter 来创建Server ,默认是NettyTransporter创建NettyServer
+        /**
+         * 1 获取自适应 Transporter 实例，并调用实例方法
+         * 2 由具体的Transporter 来创建Server ,默认是NettyTransporter创建NettyServer
+         */
         return getTransporter().bind(url, handler);
     }
 

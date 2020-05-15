@@ -51,34 +51,83 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * AbstractRegistry. (SPI, Prototype, ThreadSafe)
- *
+ * 1 实现Registry 接口
+ * 2 实现了一下方法：
+ * - 通用的注册、订阅、查询、通知等方法
+ * - 持久化注册数据到文件，以properties格式存储。用于，当重启时无法从注册中心加载服务提供者列表信息时，就可以从该文件中读取
  */
 public abstract class AbstractRegistry implements Registry {
 
-    // URL address separator, used in file cache, service provider URL separation
-    private static final char URL_SEPARATOR = ' ';
-    // URL address separated regular expression for parsing the service provider URL list in the file cache
-    private static final String URL_SPLIT = "\\s+";
     // Log output
     protected final Logger logger = LoggerFactory.getLogger(getClass());
+
+    // URL地址分割符，用于文件缓存中，服务提供者URL分隔
+    private static final char URL_SEPARATOR = ' ';
+    // URL地址分隔正则表达式，用于解析文件缓存中服务提供者URL列表
+    private static final String URL_SPLIT = "\\s+";
+
+    /**
+     * 本地磁盘缓存
+     * 1 其中特殊的 key值 .registries 记录注册中心列表
+     * 2 其他的均为{@link #notified} 服务提供者列表
+     * 3 数据流向： 启动时，从file读取数据到 properties中。注册中心数据发生变更时，通知到Registry后，修改properties对应的值，并写入file
+     * 4 数据的键-值对
+     * （1）大多数情况下，键为服务消费者的URL的服务键 {@link URL#getServiceKey()},值为服务提供者列表/路由规则列表/配置规则列表
+     * （2）特殊情况下， .registries
+     * （3）值会存在为列表的情况，使用空格  URL_SEPARATOR
+     */
     // Local disk cache, where the special key value.registies records the list of registry centers, and the others are the list of notified service providers
     private final Properties properties = new Properties();
+
+    /**
+     * 注册中心缓存写入执行器（线程数为1）
+     */
     // File cache timing writing
     private final ExecutorService registryCacheExecutor = Executors.newFixedThreadPool(1, new NamedThreadFactory("DubboSaveRegistryCache", true));
+
+    /**
+     * properties发生变更时，是否同步写入文件
+     */
     // Is it synchronized to save the file
     private final boolean syncSaveFile;
+    /**
+     * 数据版本号 {@link #properties}
+     */
     private final AtomicLong lastCacheChanged = new AtomicLong();
+    /**
+     * 已注册 URL 集合。注意，注册的URL不仅仅可以是服务提供者的，也可以是服务消费者的
+     */
     private final Set<URL> registered = new ConcurrentHashSet<URL>();
+    /**
+     * 订阅 URL 的监听器集合
+     * key : 消费者的URL ,例如： 消费者的URL
+     */
     private final ConcurrentMap<URL, Set<NotifyListener>> subscribed = new ConcurrentHashMap<URL, Set<NotifyListener>>();
+    /**
+     * 被通知的URL集合
+     * key1: 消费者的URL,例如消费者的URL，和 {@link #subscribed} 的键一致
+     * key2: 分类，例如： providers,consumers,routes,configurators。【实际上无consumers,因为消费者不会去订阅另外的消费者的列表】，在{@link Constants}中，以 "_CATEGORY"结尾
+     * ---
+     * 从数据上看，和properties比较相似，但有两点差异：
+     * 1 数据格式上，notified 根据分类做了聚合
+     * 2 不从file 中读取，都是从注册中心读取的数据
+     */
     private final ConcurrentMap<URL, Map<String, List<URL>>> notified = new ConcurrentHashMap<URL, Map<String, List<URL>>>();
+    /**
+     * 注册中心 URL
+     */
     private URL registryUrl;
-    // Local disk cache file
+
+    /**
+     * 本地磁盘缓存文件，缓存注册中心的数据
+     */
     private File file;
 
     public AbstractRegistry(URL url) {
         setUrl(url);
         // Start file save timer
         syncSaveFile = url.getParameter(Constants.REGISTRY_FILESAVE_SYNC_KEY, false);
+        // 获得 file
         String filename = url.getParameter(Constants.FILE_KEY, System.getProperty("user.home") + "/.dubbo/dubbo-registry-" + url.getParameter(Constants.APPLICATION_KEY) + "-" + url.getAddress() + ".cache");
         File file = null;
         if (ConfigUtils.isNotEmpty(filename)) {
@@ -90,7 +139,9 @@ public abstract class AbstractRegistry implements Registry {
             }
         }
         this.file = file;
+        // 加载本地磁盘缓存文件到内存缓存，即 properties.load(in)，到properties属性中
         loadProperties();
+        // 通知监听器，URL 变化结果 todo 为什么构造方法要通知，连监听器都没有注册
         notify(url.getBackupUrls());
     }
 
@@ -190,6 +241,9 @@ public abstract class AbstractRegistry implements Registry {
         }
     }
 
+    /**
+     * 加载本地磁盘缓存文件到内存缓存
+     */
     private void loadProperties() {
         if (file != null && file.exists()) {
             InputStream in = null;
@@ -213,6 +267,7 @@ public abstract class AbstractRegistry implements Registry {
         }
     }
 
+
     public List<URL> getCacheUrls(URL url) {
         for (Map.Entry<Object, Object> entry : properties.entrySet()) {
             String key = (String) entry.getKey();
@@ -230,6 +285,7 @@ public abstract class AbstractRegistry implements Registry {
         }
         return null;
     }
+
 
     @Override
     public List<URL> lookup(URL url) {
@@ -264,6 +320,11 @@ public abstract class AbstractRegistry implements Registry {
         return result;
     }
 
+    /**
+     * 从这里看，并没有向注册中心发起注册，仅仅是添加到 registered 缓存中，进行状态的维护。实际上，真正的实现是在其子类 FailbackRegistry类 中
+     *
+     * @param url Registration information , is not allowed to be empty, e.g: dubbo://10.20.153.10/com.alibaba.foo.BarService?version=1.0.0&application=kylin
+     */
     @Override
     public void register(URL url) {
         if (url == null) {
@@ -275,6 +336,11 @@ public abstract class AbstractRegistry implements Registry {
         registered.add(url);
     }
 
+    /**
+     * 先从 registered 缓存中移除，再由子类 FailbackRegistry 真正取消注册
+     *
+     * @param url Registration information , is not allowed to be empty, e.g: dubbo://10.20.153.10/com.alibaba.foo.BarService?version=1.0.0&application=kylin
+     */
     @Override
     public void unregister(URL url) {
         if (url == null) {
@@ -286,6 +352,12 @@ public abstract class AbstractRegistry implements Registry {
         registered.remove(url);
     }
 
+    /**
+     * 先缓存到 subscribed 中，再通过子类 FailbackRegistry 具体执行订阅逻辑
+     *
+     * @param url      Subscription condition, not allowed to be empty, e.g. consumer://10.20.153.10/com.alibaba.foo.BarService?version=1.0.0&application=kylin
+     * @param listener A listener of the change event, not allowed to be empty
+     */
     @Override
     public void subscribe(URL url, NotifyListener listener) {
         if (url == null) {
@@ -305,6 +377,12 @@ public abstract class AbstractRegistry implements Registry {
         listeners.add(listener);
     }
 
+    /**
+     * 先从缓存中移除，再通过子类 FailbackRegistry 具体执行取消订阅的逻辑
+     *
+     * @param url      Subscription condition, not allowed to be empty, e.g. consumer://10.20.153.10/com.alibaba.foo.BarService?version=1.0.0&application=kylin
+     * @param listener A listener of the change event, not allowed to be empty
+     */
     @Override
     public void unsubscribe(URL url, NotifyListener listener) {
         if (url == null) {
@@ -322,6 +400,10 @@ public abstract class AbstractRegistry implements Registry {
         }
     }
 
+    /**
+     * 在注册中心断开，重连成功会调用该方法，进行恢复注册和订阅
+     * @throws Exception
+     */
     protected void recover() throws Exception {
         // register
         Set<URL> recoverRegistered = new HashSet<URL>(getRegistered());
@@ -348,6 +430,7 @@ public abstract class AbstractRegistry implements Registry {
         }
     }
 
+
     protected void notify(List<URL> urls) {
         if (urls == null || urls.isEmpty()) return;
 
@@ -371,6 +454,16 @@ public abstract class AbstractRegistry implements Registry {
         }
     }
 
+    /**
+     * 通知监听器，URL变化结果，需要注意的是：
+     * 1 向注册中心发起订阅后，会获取到全量数据，此时会被调用 #notify(...)方法，即Registry获取到了全量数据
+     * 2 每次注册中心发生变更时，会调用 #notify(...)方法，虽然变化是增量，调用这个方法的调用方，已经进行处理，传入的 urls 依然是全量的
+     * 3 数据流向： urls => {@link #notified} => {@link #properties} => {@link #file}
+     *
+     * @param url      消费者 URL
+     * @param listener 监听器
+     * @param urls     通知的URL变化结果（全量数据）【todo 注意：每次传入的 urls 的“全量”，指的是至少要是一个分类的全量，而不一定是全部数据】
+     */
     protected void notify(URL url, NotifyListener listener, List<URL> urls) {
         if (url == null) {
             throw new IllegalArgumentException("notify url == null");
@@ -386,6 +479,8 @@ public abstract class AbstractRegistry implements Registry {
         if (logger.isInfoEnabled()) {
             logger.info("Notify urls for subscribe url " + url + ", urls: " + urls);
         }
+
+        // 将 `urls` 按照 `url.parameter.category` 分类，添加到集合result集合中
         Map<String, List<URL>> result = new HashMap<String, List<URL>>();
         for (URL u : urls) {
             if (UrlUtils.isMatch(url, u)) {
@@ -401,16 +496,23 @@ public abstract class AbstractRegistry implements Registry {
         if (result.size() == 0) {
             return;
         }
+
+        // 获得消费者 URL 对应的在 `notified` 中，通知的 URL 变化结果（全量数据），会把result中的值放入到 categoryNotified中
         Map<String, List<URL>> categoryNotified = notified.get(url);
         if (categoryNotified == null) {
             notified.putIfAbsent(url, new ConcurrentHashMap<String, List<URL>>());
             categoryNotified = notified.get(url);
         }
+
+        // 处理通知的 URL 变化结果（全量数据），即按照分类，循环处理通知的URL变化结果（全量数据）
         for (Map.Entry<String, List<URL>> entry : result.entrySet()) {
             String category = entry.getKey();
             List<URL> categoryList = entry.getValue();
+            // 将result 覆盖到 `notified`，需要注意：当某个分类的数据为空时，会依然有 urls 。其中 `urls[0].protocol = empty` ，通过这样的方式，处理所有服务提供者为空的情况。
             categoryNotified.put(category, categoryList);
+            // 保存到文件
             saveProperties(url);
+            // 通知监听器处理。例如，有新的服务提供者启动时，被通知，创建新的 Invoker 对象。
             listener.notify(categoryList);
         }
     }

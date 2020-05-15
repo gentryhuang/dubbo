@@ -47,10 +47,10 @@ public class ProtocolFilterWrapper implements Protocol {
      * 创建带Filter链的Invoker 对象
      *
      * @param invoker Invoker对象
-     * @param key 获取URL参数名 【用于获得ServiceConfig或ReferenceConfig配置的自定义过滤器】
-     * @param group 分组 【暴露服务时：group=provider; 引用服务时：group=consumer】
+     * @param key     获取URL参数名 【用于获得ServiceConfig或ReferenceConfig配置的自定义过滤器】
+     * @param group   分组 【暴露服务时：group=provider; 引用服务时：group=consumer】
      * @param <T>
-     * @return   在执行的时候执行Filter 
+     * @return 在执行的时候执行Filter 
      */
     private static <T> Invoker<T> buildInvokerChain(final Invoker<T> invoker, String key, String group) {
         Invoker<T> last = invoker;
@@ -115,9 +115,15 @@ public class ProtocolFilterWrapper implements Protocol {
 
     @Override
     public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
+        // 当invoker.url.protocol=registry就直接执行RegistryProtocol的refer方法。本地引用服务不符合这个判断，远程引用服务符合判断
         if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) {
             return protocol.refer(type, url);
         }
+        /**
+         * 1 引用服务，返回 Invoker 对象
+         * 2 引用服务完成后，调用 buildInvokerChain(invoker,key,group)方法，创建带有Filter过滤器的Invoker对象。和服务暴露区别在group的值上
+         */
+
         return buildInvokerChain(protocol.refer(type, url), Constants.REFERENCE_FILTER_KEY, Constants.CONSUMER);
     }
 

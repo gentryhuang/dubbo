@@ -38,20 +38,32 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * AbstractInvoker.
+ * AbstractInvoker. 实现Invoker接口，抽象Invoker类，主要提供了Invoker的通用属性和#invoke(Invocation)方法的通用实现
  */
 public abstract class AbstractInvoker<T> implements Invoker<T> {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
-
+    /**
+     * 接口类型
+     */
     private final Class<T> type;
-
+    /**
+     * 服务URL
+     */
     private final URL url;
-
+    /**
+     * 共用的隐式传参，在{@link #invoke(Invocation)}方法中使用
+     */
     private final Map<String, String> attachment;
 
+    /**
+     * 是否可用
+     */
     private volatile boolean available = true;
 
+    /**
+     * 是否销毁
+     */
     private AtomicBoolean destroyed = new AtomicBoolean(false);
 
     public AbstractInvoker(Class<T> type, URL url) {

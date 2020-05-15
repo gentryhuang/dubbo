@@ -70,6 +70,10 @@ public class RegistryProtocol implements Protocol {
      * 绑定关系集合，key是服务提供者的URL字符串形式。用于解决rmi 重复暴露端口冲突的问题，已经暴露过的服务不再重新暴露
      */
     private final Map<String, ExporterChangeableWrapper<?>> bounds = new ConcurrentHashMap<String, ExporterChangeableWrapper<?>>();
+
+    /**
+     * Cluster 自适应拓展实现类对象
+     */
     private Cluster cluster;
     /**
      * Protocol 自适应拓展实现类，通过Dubbo SPI自动注入
@@ -133,22 +137,43 @@ public class RegistryProtocol implements Protocol {
         return overrideListeners;
     }
 
+    /**
+     * 包含两步操作：
+     * 1 获取注册中心
+     * 2 向注册中心注册服务
+     *
+     * @param registryUrl
+     * @param registedProviderUrl
+     */
     public void register(URL registryUrl, URL registedProviderUrl) {
+        // 获取Registry
         Registry registry = registryFactory.getRegistry(registryUrl);
+        // 注册服务，本质上是将服务配置数据写入到注册中心上。如Zookeeper注册中心，以某个路径节点形式写入到Zookeeper上。这个方法定义在 FailbackRegistry 抽象类中
         registry.register(registedProviderUrl);
     }
 
+    /**
+     * 该方法包含：
+     * 1 服务导出
+     * 2 服务注册
+     * 3 数据订阅
+     *
+     * @param originInvoker
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
         //export invoker
         // 暴露服务 【此处Local指的是，本地启动服务(不同协议会启动不动的服务Server，如：NettyServer，tomcat等)，打开端口，但是不包括向注册中心注册服务】
         final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker);
-        // 获得注册中心 URL
+        // 获得注册中心 URL，如，以zk为例：zookeeper://127.0.0.1/com.xxx...XxxService?kev=value&kev=value...
         URL registryUrl = getRegistryUrl(originInvoker);
 
-        //registry provider  获得（创建）注册中心对象
+        //registry provider  获得（创建）注册中心对象，如ZookeeperRegistry
         final Registry registry = getRegistry(originInvoker);
-        // 获得真正要注册到注册中心的URL(服务提供者URL去除无用信息）
+        // 获得真正要注册到注册中心的URL【服务提供者URL去除无用信息】
         final URL registeredProviderUrl = getRegisteredProviderUrl(originInvoker);
 
         //to judge to delay publish whether or not  // 服务提供者URL参数项 register ,服务提供者是否注册到配置中心。默认是true
@@ -157,7 +182,12 @@ public class RegistryProtocol implements Protocol {
         // 向本地注册表中记录服务提供者信息（包含服务对应的注册中心地址）
         ProviderConsumerRegTable.registerProvider(originInvoker, registryUrl, registeredProviderUrl);
 
-        // 向注册中心注册服务提供者（自己）
+        /**
+         * 根据register的值决定是否注册
+         * 注意：
+         *   服务注册对于Dubbo 来说不是必需的，通过服务直连的方式就可以绕过注册中心。但是一般不这样做，直连方式不利于服务治理，仅推荐在测试环境测试服务时使用。
+         *
+         */
         if (register) {
             // 将服务提供者地址注册写入到注册中心【如：使用zk会先创建服务提供者的节点路径】
             register(registryUrl, registeredProviderUrl);
@@ -167,18 +197,17 @@ public class RegistryProtocol implements Protocol {
 
         // 使用OverrideListener 对象，订阅配置规则（todo 集群容错）
         // Subscribe the override data
-        // FIXME When the provider subscribes, it will affect the scene : a certain JVM exposes the service and call the same service. Because the subscribed is cached key with the name of the service, it causes the subscription information to cover.
 
-        // 1）根据registeredProviderUrl来获取overrideSubscribeUrl 【provider://...?...&category=configurators&check=false】
+        // 1）根据registeredProviderUrl来获取 订阅URL : overrideSubscribeUrl 【provider://...?...&category=configurators&check=false】
         final URL overrideSubscribeUrl = getSubscribedOverrideUrl(registeredProviderUrl);
-        // 2) 创建OverrideListener
+        // 2) 创建OverrideListener 监听器
         final OverrideListener overrideSubscribeListener = new OverrideListener(overrideSubscribeUrl, originInvoker);
         // 3）将订阅放入缓存
         overrideListeners.put(overrideSubscribeUrl, overrideSubscribeListener);
-        // 4）监听服务接口下configurators节点，实现真正的订阅与通知
+        // 4）向注册中心进行订阅override数据，监听服务接口下configurators节点，实现真正的订阅与通知
         registry.subscribe(overrideSubscribeUrl, overrideSubscribeListener);
 
-        //Ensure that a new exporter instance is returned every time export
+        //Ensure that a new exporter instance is returned every time export // 创建并返回DestroyableExporter
         return new DestroyableExporter<T>(exporter, originInvoker, overrideSubscribeUrl, registeredProviderUrl);
     }
 
@@ -283,10 +312,13 @@ public class RegistryProtocol implements Protocol {
                 .removeParameter(VALIDATION_KEY); // validation
     }
 
+
     private URL getSubscribedOverrideUrl(URL registedProviderUrl) {
-        return registedProviderUrl.setProtocol(Constants.PROVIDER_PROTOCOL)
-                .addParameters(Constants.CATEGORY_KEY, Constants.CONFIGURATORS_CATEGORY,
-                        Constants.CHECK_KEY, String.valueOf(false));
+        return registedProviderUrl
+                // 设置协议为 'provider'
+                .setProtocol(Constants.PROVIDER_PROTOCOL)
+                // 追加 parameters 参数： category:configurators,check:false
+                .addParameters(Constants.CATEGORY_KEY, Constants.CONFIGURATORS_CATEGORY, Constants.CHECK_KEY, String.valueOf(false));
     }
 
     /**
@@ -317,24 +349,38 @@ public class RegistryProtocol implements Protocol {
         return key;
     }
 
+    /**
+     * @param type Service class
+     * @param url  URL address for the remote service
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     @SuppressWarnings("unchecked")
     public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
+        // 获得真实的注册中心的URL
         url = url.setProtocol(url.getParameter(Constants.REGISTRY_KEY, Constants.DEFAULT_REGISTRY)).removeParameter(Constants.REGISTRY_KEY);
+        // 获得注册中心
         Registry registry = registryFactory.getRegistry(url);
+
         if (RegistryService.class.equals(type)) {
             return proxyFactory.getInvoker((T) registry, type, url);
         }
 
+        // 获得服务引用配置参数集合
         // group="a,b" or group="*"
         Map<String, String> qs = StringUtils.parseQueryString(url.getParameterAndDecoded(Constants.REFER_KEY));
         String group = qs.get(Constants.GROUP_KEY);
+        // 分组聚合
         if (group != null && group.length() > 0) {
             if ((Constants.COMMA_SPLIT_PATTERN.split(group)).length > 1
                     || "*".equals(group)) {
+                // 执行服务引用 【不同下面的，这里调用#getMergeableCluster()方法，获得可合并的Cluster对象】
                 return doRefer(getMergeableCluster(), registry, type, url);
             }
         }
+        // 执行服务引用
         return doRefer(cluster, registry, type, url);
     }
 
@@ -342,24 +388,43 @@ public class RegistryProtocol implements Protocol {
         return ExtensionLoader.getExtensionLoader(Cluster.class).getExtension("mergeable");
     }
 
+    /**
+     * 执行服务引用，返回Invoker对象
+     *
+     * @param cluster  Cluster 对象
+     * @param registry 注册中心对象
+     * @param type     服务接口类型
+     * @param url      注册中心URL
+     * @param <T>      泛型
+     * @return Invoker 对象
+     */
     private <T> Invoker<T> doRefer(Cluster cluster, Registry registry, Class<T> type, URL url) {
+        // 创建RegistryDirectory对象【服务目录】，并设置注册中心到它的属性
         RegistryDirectory<T> directory = new RegistryDirectory<T>(type, url);
         directory.setRegistry(registry);
         directory.setProtocol(protocol);
+
+
         // all attributes of REFER_KEY
+        // 获得服务引用配置集合。注意：url传入RegistryDirectory后，经过处理并重新创建，所以 url != directory.url，所以获得的是服务引用配置集合
         Map<String, String> parameters = new HashMap<String, String>(directory.getUrl().getParameters());
+        // 创建订阅URL
         URL subscribeUrl = new URL(Constants.CONSUMER_PROTOCOL, parameters.remove(Constants.REGISTER_IP_KEY), 0, type.getName(), parameters);
+        // 向注册中心注册自己（服务消费者）
         if (!Constants.ANY_VALUE.equals(url.getServiceInterface())
                 && url.getParameter(Constants.REGISTER_KEY, true)) {
             registry.register(subscribeUrl.addParameters(Constants.CATEGORY_KEY, Constants.CONSUMERS_CATEGORY,
                     Constants.CHECK_KEY, String.valueOf(false)));
         }
+        // 向注册中心订阅服务提供者 + 路由规则 + 配置规则
         directory.subscribe(subscribeUrl.addParameter(Constants.CATEGORY_KEY,
                 Constants.PROVIDERS_CATEGORY
                         + "," + Constants.CONFIGURATORS_CATEGORY
                         + "," + Constants.ROUTERS_CATEGORY));
 
+        // 创建Invoker对象
         Invoker invoker = cluster.join(directory);
+        // 向本地注册表，注册消费者
         ProviderConsumerRegTable.registerConsumer(invoker, url, subscribeUrl, directory);
         return invoker;
     }

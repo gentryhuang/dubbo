@@ -214,7 +214,10 @@ public abstract class AbstractConfig implements Serializable {
     }
 
     /**
-     * 将配置对象的属性添加到参数集合
+     * 将配置对象的属性添加到参数集合，主要逻辑：
+     * <p>
+     * 1 通过反射获取目标对象的getter方法，并调用该方法获取属性值，然后再通过getter方法名解析出属性名，如：从方法名getName中可解析出属性name，如果用户传入了属性名前缀，此时需要将属性名加入前缀内容。
+     * 2 将 属性名-属性值 键值对存入到map中就可以了
      *
      * @param parameters 参数集合，该集合会用于URL
      * @param config     配置对象
@@ -275,7 +278,7 @@ public abstract class AbstractConfig implements Serializable {
                                 str = pre + "," + str;
                             }
                         }
-                        // 如果指定了属性前缀就拼接上去
+                        // 如果指定了属性前缀就拼接上去，就在属性名前面加上前缀
                         if (prefix != null && prefix.length() > 0) {
                             key = prefix + "." + key;
                         }

@@ -34,16 +34,22 @@ import java.util.concurrent.locks.ReentrantLock;
  * AbstractRegistryFactory. (SPI, Singleton, ThreadSafe)
  *
  * @see com.alibaba.dubbo.registry.RegistryFactory
+ * <p>
+ * 实现 RegistryFactory 接口，RegistryFactory 抽象类，实现了 Registry 的容器管理
  */
 public abstract class AbstractRegistryFactory implements RegistryFactory {
 
     // Log output
     private static final Logger LOGGER = LoggerFactory.getLogger(AbstractRegistryFactory.class);
 
-    // The lock for the acquisition process of the registry
+    /**
+     * LOCK 静态属性，锁，用于 #destroyAll() 和 #getRegistry(url) 方法，对 REGISTRIES 访问的竞争。
+     */
     private static final ReentrantLock LOCK = new ReentrantLock();
 
-    // Registry Collection Map<RegistryAddress, Registry>
+    /**
+     * Registry 集合
+     */
     private static final Map<String, Registry> REGISTRIES = new ConcurrentHashMap<String, Registry>();
 
     /**
@@ -56,9 +62,8 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
     }
 
     /**
-     * Close all created registries
+     * 销毁所有的Registry对象
      */
-    // TODO: 2017/8/30 to move somewhere else better
     public static void destroyAll() {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Close all registries " + getRegistries());
@@ -89,14 +94,17 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
         // Lock the registry access process to ensure a single instance of the registry
         LOCK.lock();
         try {
+            // 访问缓存
             Registry registry = REGISTRIES.get(key);
             if (registry != null) {
                 return registry;
             }
+            // 缓存未命中，创建Registry 实例
             registry = createRegistry(url);
             if (registry == null) {
                 throw new IllegalStateException("Can not create registry " + url);
             }
+            // 写入缓存
             REGISTRIES.put(key, registry);
             return registry;
         } finally {
@@ -105,6 +113,14 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
         }
     }
 
+    /**
+     * 创建注册中心的模版方法，由具体子类实现，过程包括：
+     * 1 创建注册中心客户端
+     * 2 启动客户端
+     *
+     * @param url 注册中心地址
+     * @return Registry 对象
+     */
     protected abstract Registry createRegistry(URL url);
 
 }

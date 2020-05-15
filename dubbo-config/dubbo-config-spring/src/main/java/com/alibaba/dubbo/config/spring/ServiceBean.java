@@ -46,7 +46,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ServiceFactoryBean
+ * ServiceBean：是 Dubbo 与 Spring 框架进行整合的关键，可以看做是两个框架之间的桥梁。具有同样作用的类还有 ReferenceBean。
+ * ServiceBean 实现了 Spring 的一些拓展接口，有 FactoryBean、ApplicationContextAware、ApplicationListener、DisposableBean 和 BeanNameAware
  *
  * @export
  */
@@ -122,8 +123,13 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
         return service;
     }
 
+    /**
+     * 服务暴露的入口，非延迟暴露 。收到 Spring 容器的刷新事件，
+     * @param event
+     */
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
+        // 是否有延迟导出 && 是否已导出 && 是不是已被取消导出 【注意这里的 isDelay 方法，当方法返回 true 时，表示无需延迟导出。返回 false 时，表示需要延迟导出。与字面意思恰恰相反】
         if (isDelay() && !isExported() && !isUnexported()) {
             if (logger.isInfoEnabled()) {
                 logger.info("The service ready on spring started. service: " + getInterface());
@@ -133,14 +139,25 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
     }
 
     private boolean isDelay() {
+        // 获取 delay
         Integer delay = getDelay();
         ProviderConfig provider = getProvider();
         if (delay == null && provider != null) {
+            // 如果前面获取的 delay 为空，这里继续获取
             delay = provider.getDelay();
         }
+        /**
+         * 1 判断 delay 是否为空，或者等于 -1，当 delay 为空，或者等于-1时，该方法返回 true，而不是 false
+         * 2 supportedApplicationListener 变量含义，该变量用于表示当前的 Spring 容器是否支持 ApplicationListener，这个值初始为 false。
+         * 在 Spring 容器将自己设置到 ServiceBean 中时，ServiceBean 的 setApplicationContext 方法会检测 Spring 容器是否支持 ApplicationListener,若支持，则将 supportedApplicationListener 置为 true
+         */
         return supportedApplicationListener && (delay == null || delay == -1);
     }
 
+    /**
+     * 服务暴露的入口，延迟暴露
+     * @throws Exception
+     */
     @Override
     @SuppressWarnings({"unchecked", "deprecation"})
     public void afterPropertiesSet() throws Exception {
@@ -268,6 +285,8 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
                 setPath(beanName);
             }
         }
+
+        // 延迟导出
         if (!isDelay()) {
             export();
         }

@@ -301,13 +301,18 @@ public final class StringUtils {
     }
 
     public static String join(Collection<String> coll, String split) {
-        if (coll.isEmpty()) return "";
+        if (coll.isEmpty()) {
+            return "";
+        }
 
         StringBuilder sb = new StringBuilder();
         boolean isFirst = true;
         for (String s : coll) {
-            if (isFirst) isFirst = false;
-            else sb.append(split);
+            if (isFirst) {
+                isFirst = false;
+            } else {
+                sb.append(split);
+            }
             sb.append(s);
         }
         return sb.toString();

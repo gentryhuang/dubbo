@@ -171,7 +171,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @return URL数组
      */
     protected List<URL> loadRegistries(boolean provider) {
-        // 校验RegistryConfig 配置数组，该方法会初始化RegistryConfig的配置属性
+        // 校验RegistryConfig 配置数组，不存在会抛出异常，并且该方法会初始化RegistryConfig的配置属性
         checkRegistry();
         // 创建注册中心URL数组
         List<URL> registryList = new ArrayList<URL>();
@@ -189,6 +189,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                 if (sysaddress != null && sysaddress.length() > 0) {
                     address = sysaddress;
                 }
+
                 // 选择有效的注册中心地址
                 if (address.length() > 0 && !RegistryConfig.NO_AVAILABLE.equalsIgnoreCase(address)) {
 
@@ -222,16 +223,17 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                         }
                     }
 
-                    // 解析地址，创建Dubbo URL数组 【数组大小可以为一】
+                    // 解析地址，创建Dubbo URL数组，注意address可能包含多个注册中心ip, 【数组大小可以为一】
                     List<URL> urls = UrlUtils.parseURLs(address, map);
 
                     // 循环 dubbo url
                     for (URL url : urls) {
                         // 设置 registry=${protocol}参数,设置到注册中心的 URL的参数部分的位置上，并且是追加式的添加
                         url = url.addParameter(Constants.REGISTRY_KEY, url.getProtocol());
-                        // 重置Dubbo URL中的 protocol属性为 'registry'
+                        // 重置Dubbo URL中的 protocol属性为 'registry',即将URL的协议头设置为'registry'
                         url = url.setProtocol(Constants.REGISTRY_PROTOCOL);
                         /**
+                         * 通过判断条件，决定是否添加url到registryList中，条件如下：
                          * 1 如果是服务提供者,是否只订阅不注册，如果是就不添加到注册中心URL数组中
                          * 2 如果是服务消费者，是否是只注册不订阅，如果是就不添加到注册中心URL数组中
                          *

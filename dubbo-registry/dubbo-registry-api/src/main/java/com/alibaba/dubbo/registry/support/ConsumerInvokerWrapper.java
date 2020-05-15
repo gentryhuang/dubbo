@@ -25,6 +25,8 @@ import com.alibaba.dubbo.rpc.RpcException;
 
 /**
  * @date 2017/11/23
+ * 1 实现Invoker 接口，服务消费者InvokerWrapper
+ * 2 相比存粹的Invoker 对象，又多了运维命令需要的属性。例如：registryDirectory属性，可以在使用列出消费者和提供者命令后，输出消费者可调用的服务提供者数量
  */
 public class ConsumerInvokerWrapper<T> implements Invoker {
     private Invoker<T> invoker;

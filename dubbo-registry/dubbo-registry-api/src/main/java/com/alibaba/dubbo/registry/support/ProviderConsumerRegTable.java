@@ -28,9 +28,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @date 2017/11/23
+ * 服务提供者和消费者注册表，存储JVM进程内自己的服务提供者和消费者的Invoker。该信息用于Dubbo QOS,例如：将JVM进程中，自己的服务提供者下线，又或者查询自己的服务提供者和消费者列表
  */
 public class ProviderConsumerRegTable {
+    /**
+     * 服务提供者 Invoker 集合， key : 服务提供者URL服务键
+     */
     public static ConcurrentHashMap<String, Set<ProviderInvokerWrapper>> providerInvokers = new ConcurrentHashMap<String, Set<ProviderInvokerWrapper>>();
+    /**
+     * 服务消费者Invoker 集合，key: 服务消费者URL服务键
+     */
     public static ConcurrentHashMap<String, Set<ConsumerInvokerWrapper>> consumerInvokers = new ConcurrentHashMap<String, Set<ConsumerInvokerWrapper>>();
 
     public static void registerProvider(Invoker invoker, URL registryUrl, URL providerUrl) {

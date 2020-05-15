@@ -75,15 +75,25 @@ public class ProtocolListenerWrapper implements Protocol {
         return new ListenerExporterWrapper<T>(export, exporterListeners);
     }
 
+    /**
+     * @param type Service class
+     * @param url  URL address for the remote service
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
+        // 如果是注册中心协议，直接进入 ProtocolFilterWrapper#refer方法，本地引用服务不符合这个判断。远程引用服务会符合这个条件
         if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) {
             return protocol.refer(type, url);
         }
-        return new ListenerInvokerWrapper<T>(protocol.refer(type, url),
-                Collections.unmodifiableList(
-                        ExtensionLoader.getExtensionLoader(InvokerListener.class)
-                                .getActivateExtension(url, Constants.INVOKER_LISTENER_KEY)));
+        // 引用服务
+        Invoker<T> invoker = protocol.refer(type, url);
+        // 获得 InvokerListener 监听器数组。我们可以自定义 InvokerListener 实现，并配置 @Activate注解或者xml中listener属性
+        List<InvokerListener> listeners = Collections.unmodifiableList(ExtensionLoader.getExtensionLoader(InvokerListener.class).getActivateExtension(url, Constants.INVOKER_LISTENER_KEY));
+        // 创建带 InvokerListener的 ListenerInvokerWrapper对象。在这个过程会执行 com.alibaba.dubbo.rpc.InvokerListener.referred(invoker)方法
+        return new ListenerInvokerWrapper<T>(invoker, listeners);
     }
 
     @Override

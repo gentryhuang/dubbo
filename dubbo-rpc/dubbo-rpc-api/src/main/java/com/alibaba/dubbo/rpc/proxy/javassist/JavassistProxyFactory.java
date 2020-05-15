@@ -40,18 +40,21 @@ public class JavassistProxyFactory extends AbstractProxyFactory {
         // Wrapper类不能正确处理类名包含$的类
         /**
          * JavassistProxyFactory 模式原理：
-         * 1 创建Wrapper类，实现invokeMethod方法。该类记录了实例的属性名，方法名等信息
+         * 1 为目标类创建Wrapper类，实现invokeMethod方法。该类记录了实例的属性名，方法名等信息
          * 2 在方法invokeMethod体中会为每个ref的方法都做方法名和方法参数匹配校验，匹配直接调用调用。相比较JdkProxyFactory省去了反射调用的开销【JdkProxyFactory通过反射
          * 获取真实对象的方法，然后调用】
          */
         final Wrapper wrapper = Wrapper.getWrapper(proxy.getClass().getName().indexOf('$') < 0 ? proxy.getClass() : type);
-        // 创建 AbstractProxyInvoker
+        /**
+         * 创建 继承自AbstractProxyInvoker类的匿名对象，并实现 doInvoke方法：将调用请求转发给了 Wrapper 类的 invokeMethod 方法，
+         *
+         */
         return new AbstractProxyInvoker<T>(proxy, type, url) {
             @Override
             protected Object doInvoke(T proxy, String methodName,
                                       Class<?>[] parameterTypes,
                                       Object[] arguments) throws Throwable {
-
+                // 调用 Wrapper 的 invokeMethod 方法，invokeMethod 最终会调用目标方法
                 return wrapper.invokeMethod(proxy, methodName, parameterTypes, arguments);
             }
         };

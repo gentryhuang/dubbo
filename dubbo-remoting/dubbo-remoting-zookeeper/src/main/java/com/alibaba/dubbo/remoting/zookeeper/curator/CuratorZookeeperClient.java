@@ -40,19 +40,34 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
 
     private final CuratorFramework client;
 
+    /**
+     * CuratorZookeeperClient 构造方法主要用于创建和启动 CuratorFramework 实例
+     * @param url
+     */
     public CuratorZookeeperClient(URL url) {
         super(url);
         try {
+            // 创建 CuratorFramework 构造器
             CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder()
+                    // 连接地址
                     .connectString(url.getBackupAddress())
+                    // 重试策略，1 次，间隔 1000 ms
                     .retryPolicy(new RetryNTimes(1, 1000))
+                    // 连接超时时间
                     .connectionTimeoutMs(5000);
             String authority = url.getAuthority();
             if (authority != null && authority.length() > 0) {
                 builder = builder.authorization("digest", authority.getBytes());
             }
+            // 构建 CuratorFramework 实例
             client = builder.build();
+            // 添加连接监听器。在连接状态发生变化时，调用#stateChange(state)方法，进行StateListener的回调
             client.getConnectionStateListenable().addListener(new ConnectionStateListener() {
+                /**
+                 * 在连接状态发生变化时，调用 #stateChange(state) 方法，进行 StateListener 的回调。
+                 * @param client
+                 * @param state
+                 */
                 @Override
                 public void stateChanged(CuratorFramework client, ConnectionState state) {
                     if (state == ConnectionState.LOST) {
@@ -64,6 +79,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
                     }
                 }
             });
+            // 启动客户端
             client.start();
         } catch (Exception e) {
             throw new IllegalStateException(e.getMessage(), e);
@@ -173,7 +189,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
                         // if client connect or disconnect to server, zookeeper will queue
                         // watched event(Watcher.Event.EventType.None, .., path = null).
                         StringUtils.isNotEmpty(path)
-                                ? client.getChildren().usingWatcher(this).forPath(path)
+                                ? client.getChildren().usingWatcher(this).forPath(path) // 重新发起连接，并传入最新的子节点列表
                                 : Collections.<String>emptyList());
             }
         }

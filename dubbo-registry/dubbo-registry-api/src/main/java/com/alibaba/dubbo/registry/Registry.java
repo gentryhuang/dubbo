@@ -20,6 +20,8 @@ import com.alibaba.dubbo.common.Node;
 
 /**
  * Registry. (SPI, Prototype, ThreadSafe)
+ * 1 继承了RegistryService 接口，拥有注册、订阅、查询三种操作操作
+ * 2 继承了dubbo 的 Node 接口，拥有节点相关的方法
  *
  * @see com.alibaba.dubbo.registry.RegistryFactory#getRegistry(com.alibaba.dubbo.common.URL)
  * @see com.alibaba.dubbo.registry.support.AbstractRegistry

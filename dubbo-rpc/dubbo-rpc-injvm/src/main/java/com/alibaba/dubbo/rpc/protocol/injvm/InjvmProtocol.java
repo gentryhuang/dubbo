@@ -108,30 +108,53 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
         return new InjvmExporter<T>(invoker, invoker.getUrl().getServiceKey(), exporterMap);
     }
 
+    /**
+     * 引用本地服务
+     *
+     * @param serviceType
+     * @param url         URL address for the remote service
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Invoker<T> refer(Class<T> serviceType, URL url) throws RpcException {
+        // 创建InjvmInvoker对象，注意，传入的exporterMap参数，包含所有的InjvmExporter对象
         return new InjvmInvoker<T>(serviceType, url, url.getServiceKey(), exporterMap);
     }
 
+    /**
+     * 是否本地引用
+     *
+     * @param url
+     * @return
+     */
     public boolean isInjvmRefer(URL url) {
         final boolean isJvmRefer;
+        // 获取scope
         String scope = url.getParameter(Constants.SCOPE_KEY);
         // Since injvm protocol is configured explicitly, we don't need to set any extra flag, use normal refer process.
+        // 当 protocol = injvm 时，本身已经是jvm协议了，走正常流程即可。【这个比较特殊，因为isInjvmRefer(URL url)方法仅在com.alibaba.dubbo.config.ReferenceConfig.createProxy方法中调用，因此实际上不会触发该逻辑】
         if (Constants.LOCAL_PROTOCOL.toString().equals(url.getProtocol())) {
             isJvmRefer = false;
+            // 当 scope = local 或者 配置了配置项injvm=true时，就使用本地引用
         } else if (Constants.SCOPE_LOCAL.equals(scope) || (url.getParameter("injvm", false))) {
             // if it's declared as local reference
             // 'scope=local' is equivalent to 'injvm=true', injvm will be deprecated in the future release
             isJvmRefer = true;
+            // 当 scope = remote 时，远程引用
         } else if (Constants.SCOPE_REMOTE.equals(scope)) {
             // it's declared as remote reference
             isJvmRefer = false;
+            // 当 generic = true 时，即使用泛化调用，远程引用
         } else if (url.getParameter(Constants.GENERIC_KEY, false)) {
             // generic invocation is not local reference
             isJvmRefer = false;
+            // 当本地已经有该 Exporter 时，就直接引用。不必要使用远程服务，减少网络开销，提升性能
         } else if (getExporter(exporterMap, url) != null) {
             // by default, go through local reference if there's the service exposed locally
             isJvmRefer = true;
+            // 默认远程引用
         } else {
             isJvmRefer = false;
         }
