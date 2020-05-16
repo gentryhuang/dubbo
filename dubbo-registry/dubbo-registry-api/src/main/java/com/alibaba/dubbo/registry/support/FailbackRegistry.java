@@ -87,7 +87,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         super(url);
         // 重试频率，单位 毫秒
         this.retryPeriod = url.getParameter(Constants.REGISTRY_RETRY_PERIOD_KEY, Constants.DEFAULT_REGISTRY_RETRY_PERIOD);
-        // 创建失败重试定时器
+        // 创建失败重试定时器【就是将一堆失败记录进行对应的重试操作】
         this.retryFuture = retryExecutor.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
@@ -324,6 +324,11 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         super.notify(url, listener, urls);
     }
 
+    /**
+     * 完全覆盖父类方法(即不像前几个方法，会调用父类的方法)，将需要注册和订阅的URL添加到 {@link #failedRegistered} ,{@link #failedSubscribed} 属性中。这样在{@link #retry()}方法中会重试进行连接
+     *
+     * @throws Exception
+     */
     @Override
     protected void recover() throws Exception {
         // register
@@ -355,6 +360,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
      * 遍历缓存中 五个 failedXxx属性，重试对应的操作
      */
     protected void retry() {
+        //重新注册没有注册成功的URL集合
         if (!failedRegistered.isEmpty()) {
             Set<URL> failed = new HashSet<URL>(failedRegistered);
             if (failed.size() > 0) {
@@ -375,6 +381,8 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                 }
             }
         }
+
+        // 重新取消注册没有取消注册成功的URL集合
         if (!failedUnregistered.isEmpty()) {
             Set<URL> failed = new HashSet<URL>(failedUnregistered);
             if (!failed.isEmpty()) {
@@ -395,6 +403,17 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                 }
             }
         }
+
+        /**
+         *
+         * 重新订阅之前订阅失败的URL
+         *1 把要订阅的URL映射的路径与监听器绑定
+         *2 创建该监听器的关联的ChildListener，底层又会使用TargetChildListener去包裹ChildListener，注意，TargetChildListener的实现因ZookeeperClient不同而不同
+         *3 TargetChildListener直接监听订阅的URL映射路径的子路径，当子路径有变化，先触发TargetChildListener的方法，然后该方法会调用ChildListener的childChanged方法，接着调用监听的notify方法
+         *
+         * TargetChildListener
+         */
+
         if (!failedSubscribed.isEmpty()) {
             Map<URL, Set<NotifyListener>> failed = new HashMap<URL, Set<NotifyListener>>(failedSubscribed);
             for (Map.Entry<URL, Set<NotifyListener>> entry : new HashMap<URL, Set<NotifyListener>>(failed).entrySet()) {
@@ -424,6 +443,8 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                 }
             }
         }
+
+        // 重新移除URL映射路径下的子路径关联的监听器
         if (!failedUnsubscribed.isEmpty()) {
             Map<URL, Set<NotifyListener>> failed = new HashMap<URL, Set<NotifyListener>>(failedUnsubscribed);
             for (Map.Entry<URL, Set<NotifyListener>> entry : new HashMap<URL, Set<NotifyListener>>(failed).entrySet()) {
@@ -453,6 +474,8 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                 }
             }
         }
+
+        // 重新通知【看通知的URL列表（发生改变的URL列表）和原始的URL列表对比，看是否改变，改变了就需要重新暴露服务】
         if (!failedNotified.isEmpty()) {
             Map<URL, Map<NotifyListener, List<URL>>> failed = new HashMap<URL, Map<NotifyListener, List<URL>>>(failedNotified);
             for (Map.Entry<URL, Map<NotifyListener, List<URL>>> entry : new HashMap<URL, Map<NotifyListener, List<URL>>>(failed).entrySet()) {
