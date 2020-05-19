@@ -28,6 +28,7 @@ public class Consumer {
         IDemoService consumerService = (IDemoService) context.getBean("resourceDemoService");
         String hello = consumerService.ping();
         System.out.println(hello);
+        System.in.read();
     }
 
 }
