@@ -162,7 +162,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
     }
 
     /**
-     * 为path节点绑定CuratorWatcher监听器
+     * 为path节点绑定CuratorWatcher监听器，并返回path的子路径
      *
      * @param path
      * @param listener

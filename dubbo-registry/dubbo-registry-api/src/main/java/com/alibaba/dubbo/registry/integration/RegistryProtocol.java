@@ -179,7 +179,7 @@ public class RegistryProtocol implements Protocol {
         //to judge to delay publish whether or not  // 服务提供者URL参数项 register ,服务提供者是否注册到配置中心。默认是true
         boolean register = registeredProviderUrl.getParameter("register", true);
 
-        // 向本地注册表中记录服务提供者信息（包含服务对应的注册中心地址）
+        // 向本地注册表中记录服务提供者信息（包含服务对应的注册中心地址），该信息用于Dubbo QOS
         ProviderConsumerRegTable.registerProvider(originInvoker, registryUrl, registeredProviderUrl);
 
         /**
@@ -195,8 +195,7 @@ public class RegistryProtocol implements Protocol {
             ProviderConsumerRegTable.getProviderWrapper(originInvoker).setReg(true);
         }
 
-        // 使用OverrideListener 对象，订阅配置规则（todo 集群容错）
-        // Subscribe the override data
+        /** 使用OverrideListener 对象，服务暴露时会订阅配置规则 configurators[为了在服务配置发生变化时，重新导出服务。具体的使用场景应该当我们通过 Dubbo 管理后台修改了服务配置后，Dubbo 得到服务配置被修改的通知，然后重新导出服务] */
 
         // 1）根据registeredProviderUrl来获取 订阅URL : overrideSubscribeUrl 【provider://...?...&category=configurators&check=false】
         final URL overrideSubscribeUrl = getSubscribedOverrideUrl(registeredProviderUrl);
@@ -489,7 +488,7 @@ public class RegistryProtocol implements Protocol {
         /**
          * 对原本注册的subscribeUrl进行校验，如果url发生了变化，那么要重新export
          *
-         * @param urls 已注册信息列表，总不能为空，含义同 {@link com.alibaba.dubbo.registry.RegistryService#lookup(URL)}的返回值
+         * @param urls 已注册信息列表，总不能为空【没有匹配的就是创建一个empty：//...】，含义同 {@link com.alibaba.dubbo.registry.RegistryService#lookup(URL)}的返回值
          */
         @Override
         public synchronized void notify(List<URL> urls) {
@@ -502,7 +501,7 @@ public class RegistryProtocol implements Protocol {
                 return;
             }
 
-            List<Configurator> configurators = RegistryDirectory.toConfigurators(matchedUrls); // todo ??? 这里是一个空列表
+            List<Configurator> configurators = RegistryDirectory.toConfigurators(matchedUrls); // todo materchedUrls 中的URL协议为empty,这里就是一个空列表
 
             final Invoker<?> invoker;
             if (originInvoker instanceof InvokerDelegete) {

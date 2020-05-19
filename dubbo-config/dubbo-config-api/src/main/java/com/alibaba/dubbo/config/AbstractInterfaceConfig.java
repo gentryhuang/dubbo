@@ -226,7 +226,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                     // 解析地址，创建Dubbo URL数组，注意address可能包含多个注册中心ip, 【数组大小可以为一】
                     List<URL> urls = UrlUtils.parseURLs(address, map);
 
-                    // 循环 dubbo url
+                    // 循环 dubbo Register url
                     for (URL url : urls) {
                         // 设置 registry=${protocol}参数,设置到注册中心的 URL的参数部分的位置上，并且是追加式的添加
                         url = url.addParameter(Constants.REGISTRY_KEY, url.getProtocol());

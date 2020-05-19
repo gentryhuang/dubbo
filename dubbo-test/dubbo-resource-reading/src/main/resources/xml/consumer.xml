@@ -8,13 +8,20 @@
        http://dubbo.apache.org/schema/dubbo
        http://dubbo.apache.org/schema/dubbo/dubbo.xsd">
 
-    <dubbo:application name="xml-demo-consumer"/>  <!-- 两个以上会报错。 协议，注册中心可以多个，以及服务提供者可以多个 -->
+    <!-- 两个以上会报错。 协议，注册中心可以多个，以及服务提供者可以多个 -->
+    <dubbo:application name="xml-demo-consumer"/>
 
     <!-- 注册中心 -->
     <dubbo:registry address="zookeeper://127.0.0.1:2181"/>
 
+    <!-- <dubbo:registry protocol="redis" address="127.0.0.1:6379"/> -->
+
     <!-- 引入服务-->
-    <dubbo:reference interface="com.code.resource.reading.api.DemoService" id="consumerService" check="false"/>
+   <!--
+      <dubbo:reference interface="com.code.resource.reading.api.DemoService" id="consumerService" check="false"/>
+    -->
+
+    <dubbo:reference interface="com.code.reading.service.IDemoService" id="resourceDemoService" check="false"/>
 
 
 </beans>

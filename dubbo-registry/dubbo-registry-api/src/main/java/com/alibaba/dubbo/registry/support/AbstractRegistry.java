@@ -141,7 +141,7 @@ public abstract class AbstractRegistry implements Registry {
         this.file = file;
         // 加载本地磁盘缓存文件到内存缓存，即 properties.load(in)，到properties属性中
         loadProperties();
-        // 通知监听器，URL 变化结果 todo 为什么构造方法要通知，连监听器都没有注册
+        // 通知监听器，URL 变化结果 todo 为什么构造方法要通知，连监听器都没有注册，即 subscribed 里面还没有值
         notify(url.getBackupUrls());
     }
 
@@ -475,9 +475,9 @@ public abstract class AbstractRegistry implements Registry {
      * 2 每次注册中心发生变更时，会调用 #notify(...)方法，虽然变化是增量，调用这个方法的调用方，已经进行处理，传入的 urls 依然是全量的
      * 3 数据流向： urls => {@link #notified} => {@link #properties} => {@link #file}
      *
-     * @param url      消费者 URL
+     * @param url      订阅URL
      * @param listener 监听器
-     * @param urls     通知的URL变化结果（全量数据）【todo 注意：每次传入的 urls 的“全量”，指的是至少要是一个分类的全量，而不一定是全部数据】
+     * @param urls     通知的URL变化结果（全量数据）【todo 注意：每次传入的 urls 的“全量”，指的是至少要是一个分类的全量[动态类型的]，而不一定是全部数据】
      */
     protected void notify(URL url, NotifyListener listener, List<URL> urls) {
         if (url == null) {

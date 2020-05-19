@@ -12,6 +12,11 @@
 
     <!-- 注册中心 -->
     <dubbo:registry address="zookeeper://127.0.0.1:2181"/>
+
+   <!-- <dubbo:registry protocol="redis" address="127.0.0.1:6379"/> -->
+
+
+
     <!-- 协议 -->
     <dubbo:protocol name="dubbo" port="20880"/>
     <!-- 模块 -->

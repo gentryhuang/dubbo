@@ -1,7 +1,9 @@
 package com.code.resource.reading.consumer.xml;
 
-import com.code.resource.reading.api.DemoService;
+
+import com.code.reading.service.IDemoService;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.core.env.ConfigurableEnvironment;
 
 import java.io.IOException;
 
@@ -23,8 +25,8 @@ public class Consumer {
     public static void main(String[] args) throws IOException {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(consumerPath);
 
-        DemoService consumerService = (DemoService) context.getBean("consumerService");
-        String hello = consumerService.hello();
+        IDemoService consumerService = (IDemoService) context.getBean("resourceDemoService");
+        String hello = consumerService.ping();
         System.out.println(hello);
     }
 
