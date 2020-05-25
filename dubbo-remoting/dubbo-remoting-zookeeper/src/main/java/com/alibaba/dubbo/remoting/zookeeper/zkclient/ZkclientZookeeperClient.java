@@ -46,6 +46,11 @@ public class ZkclientZookeeperClient extends AbstractZookeeperClient<IZkChildLis
         client = new ZkClientWrapper(url.getBackupAddress(), 30000);
         // 添加监听器
         client.addListener(new IZkStateListener() {
+            /**
+             * 处理状态变化
+             * @param state
+             * @throws Exception
+             */
             @Override
             public void handleStateChanged(KeeperState state) throws Exception {
                 ZkclientZookeeperClient.this.state = state;
@@ -56,6 +61,10 @@ public class ZkclientZookeeperClient extends AbstractZookeeperClient<IZkChildLis
                 }
             }
 
+            /**
+             * 处理新会话 （处理失败重连），最终会回调{@link StateListener#stateChanged(int)}
+             * @throws Exception
+             */
             @Override
             public void handleNewSession() throws Exception {
                 stateChanged(StateListener.RECONNECTED);

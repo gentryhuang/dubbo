@@ -12,6 +12,6 @@
     <!-- 服务提供者 -->
     <bean id="demoService" class="com.code.resource.reading.xml.provider.DemoServiceImpl"/>
     <!-- 服务暴露 -->
-    <dubbo:service interface="com.code.resorce.api.DemoService" ref="demoService"/>
+    <dubbo:service interface="com.code.resorce.api.DemoService" ref="demoService" scope="local"/>
 
 </beans>

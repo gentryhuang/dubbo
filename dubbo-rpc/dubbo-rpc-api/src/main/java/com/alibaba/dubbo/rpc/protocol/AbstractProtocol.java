@@ -33,9 +33,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * abstract ProtocolSupport.
- *
+ * <p>
  * 协议抽象类
- *
  */
 public abstract class AbstractProtocol implements Protocol {
 
@@ -44,13 +43,15 @@ public abstract class AbstractProtocol implements Protocol {
     /**
      * Exporter集合
      * 1 key: 服务键，{@link #serviceKey(URL)} 或者 {@link URL#getServiceKey()},不同协议会有所差别：
-     *   （1）InjvmProtocol使用URL#getServicekey()方法
-     *   （2）DubboProtocol使用#serviceKey(URL)方法
+     * （1）InjvmProtocol使用URL#getServicekey()方法
+     * （2）DubboProtocol使用#serviceKey(URL)方法
      * 2 该集合拥有当前协议中所有暴露中的Exporter对象
      */
     protected final Map<String, Exporter<?>> exporterMap = new ConcurrentHashMap<String, Exporter<?>>();
 
-    //TODO SOFEREFENCE
+    /**
+     * Invoker 集合
+     */
     protected final Set<Invoker<?>> invokers = new ConcurrentHashSet<Invoker<?>>();
 
     protected static String serviceKey(URL url) {

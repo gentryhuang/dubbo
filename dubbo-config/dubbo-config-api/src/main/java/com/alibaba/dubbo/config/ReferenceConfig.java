@@ -86,7 +86,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
     // client type
     private String client;
 
-    // url for peer-to-peer invocation
+
     /**
      * 直连服务提供者地址
      * 1 可以是注册中心，也可以是服务提供者
@@ -206,7 +206,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
      */
     private void init() {
         // 已经初始化过，直接返回
-        if (initialized) {
+       if (initialized) {
             return;
         }
         initialized = true;
@@ -236,17 +236,20 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             // 校验接口和方法
             checkInterfaceAndMethods(interfaceClass, methods);
         }
-        // 直连提供者，第一优先级，通过 -D 参数指定 ，例如 java -Dcom.alibaba.xxx.XxxService=dubbo://localhost:20890
+
+        // 直连提供者，第一优先级，通过 -D 参数（系统变量）指定 ，例如 java -Dcom.alibaba.xxx.XxxService=dubbo://localhost:20890
         String resolve = System.getProperty(interfaceName);
         String resolveFile = null;
 
         // 直连提供者第二优先级，通过文件映射，例如 com.alibaba.xxx.XxxService=dubbo://localhost:20890
         if (resolve == null || resolve.length() == 0) {
-            // 默认先加载 ${user.home}/dubbo-resolve.properties 文件，无需配置，自动加载
+            // 从系统属性中获取解析文件路径
             resolveFile = System.getProperty("dubbo.resolve.file");
             if (resolveFile == null || resolveFile.length() == 0) {
+                // 默认先加载 ${user.home}/dubbo-resolve.properties 文件，无需配置，自动加载
                 File userResolveFile = new File(new File(System.getProperty("user.home")), "dubbo-resolve.properties");
                 if (userResolveFile.exists()) {
+                    // 获取文件绝对路径
                     resolveFile = userResolveFile.getAbsolutePath();
                 }
             }
@@ -256,6 +259,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 FileInputStream fis = null;
                 try {
                     fis = new FileInputStream(new File(resolveFile));
+                    // 从文件中加载配置
                     properties.load(fis);
                 } catch (IOException e) {
                     throw new IllegalStateException("Unload " + resolveFile + ", cause: " + e.getMessage(), e);
@@ -283,6 +287,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 }
             }
         }
+
         // 尝试从ConsumerConfig 对象中，读取 application,module,registries,monitor 配置对象
         if (consumer != null) {
             if (application == null) {
@@ -316,6 +321,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 monitor = application.getMonitor();
             }
         }
+
         // 校验ApplicationConfig配置
         checkApplication();
         // 校验 Stub和 Mock 相关的配置
@@ -334,13 +340,13 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             map.put(Constants.PID_KEY, String.valueOf(ConfigUtils.getPid()));
         }
 
-        // 设置revision,methods,interface加入到map集合中
+        // 非泛化服务，设置revision,methods,interface加入到map集合中
         if (!isGeneric()) {
             String revision = Version.getVersion(interfaceClass, version);
             if (revision != null && revision.length() > 0) {
                 map.put("revision", revision);
             }
-
+            // 获取接口方法列表，并添加到map中
             String[] methods = Wrapper.getWrapper(interfaceClass).getMethodNames();
             if (methods.length == 0) {
                 logger.warn("NO method found in service interface " + interfaceClass.getName());
@@ -359,8 +365,10 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 
         // 获得服务键，作为前缀 格式：group/interface:version
         String prefix = StringUtils.getServiceKey(map);
+
         // 将MethodConfig 对象数组中每个MethodConfig中的属性添加到map中
         if (methods != null && !methods.isEmpty()) {
+            // 遍历 MethodConfig 列表
             for (MethodConfig method : methods) {
                 appendParameters(map, method, method.getName());
                 // 当配置了 MethodConfig.retry=false 时，强制禁用重试
@@ -368,6 +376,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 if (map.containsKey(retryKey)) {
                     String retryValue = map.remove(retryKey);
                     if ("false".equals(retryValue)) {
+                        // 添加重试次数配置 methodName.retries
                         map.put(method.getName() + ".retries", "0");
                     }
                 }
@@ -378,7 +387,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             }
         }
 
-        // 以系统环境变量（DUBBO_IP_TO_REGISTRY）作为服务注册地址,没有设置再取主机地址
+        // 以系统环境变量（DUBBO_IP_TO_REGISTRY）的值作为服务消费者ip地址,没有设置再取主机地址
         String hostToRegistry = ConfigUtils.getSystemProperty(Constants.DUBBO_IP_TO_REGISTRY);
         if (hostToRegistry == null || hostToRegistry.length() == 0) {
             hostToRegistry = NetUtils.getLocalHost();
@@ -387,13 +396,13 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         }
         map.put(Constants.REGISTER_IP_KEY, hostToRegistry);
 
-        // 把参数集合添加到StaticContext进行缓存，为了以后的事件通知
-        //attributes are stored by system context.
+        // 把attributes集合添加到StaticContext进行缓存，为了以后的事件通知
         StaticContext.getSystemContext().putAll(attributes);
 
         // 创建Service 代理对象
         ref = createProxy(map);
 
+        // 根据服务名，ReferenceConfig，代理类构建ConsumerModel，并将ConsumerModel存入到ApplicationModel
         ConsumerModel consumerModel = new ConsumerModel(getUniqueServiceName(), this, ref, interfaceClass.getMethods());
         ApplicationModel.initConsumerModel(getUniqueServiceName(), consumerModel);
     }
@@ -410,44 +419,49 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         URL tmpUrl = new URL("temp", "localhost", 0, map);
         // 是否本地引用
         final boolean isJvmRefer;
-        // isInjvm()方法返回非空，说明配置了injvm配置项，直接使用该配置项。
+        // isInjvm()方法返回非空，说明配置了injvm配置项，那么就使用本地引用。
         if (isInjvm() == null) {
             // 如果配置了url配置项【直连服务提供者地址】，说明使用直连服务提供者的功能，而不使用本地引用
             if (url != null && url.length() > 0) { // if a url is specified, don't do local reference
                 isJvmRefer = false;
-                // 调用InjvmProtocol#isInjvmRefer(url)方法， 通过 tempUrl 判断，是否需要本地引用。 使用tempUrl，相当于使用服务引用配置对象的配置项
+                // 调用InjvmProtocol#isInjvmRefer(url)方法， 通过 tempUrl 判断，是否需要本地引用。 即根据url的协议，scope以及injvm等参数检测是否需要本地引用
             } else if (InjvmProtocol.getInjvmProtocol().isInjvmRefer(tmpUrl)) {
-                // by default, reference local service if there is
                 isJvmRefer = true;
                 // 默认不是
             } else {
                 isJvmRefer = false;
             }
+            // 通过injvm属性值判断
         } else {
             isJvmRefer = isInjvm().booleanValue();
         }
-        // 本地引用 【 注意：本地引用服务时，不是使用服务提供者的URL，而是服务消费者的URL】
+
+        // 本地引用 【 todo 注意：本地引用服务时，不是使用服务提供者的URL，而是服务消费者的URL】
         if (isJvmRefer) {
-            // 创建服务引用 URL 对象
+            // 创建服务引用 URL 对象，协议为injvm
             URL url = new URL(Constants.LOCAL_PROTOCOL, NetUtils.LOCALHOST, 0, interfaceClass.getName()).addParameters(map);
             /**
-             * 引用服务，返回Invoker 对象：
+             * 引用服务，返回Invoker 对象【这里返回的就是InjvmInvoker对象】：
              * 此处 Dubbo SPI 自适应的特性的好处就出来了，可以自动根据 URL 参数，获得对应的拓展实现。例如，invoker 传入后，根据 invoker.url 自动获得对应 Protocol 拓展实现为 InjvmProtocol 。
-             * 实际上，Protocol 有两个 Wrapper 拓展实现类： ProtocolFilterWrapper、ProtocolListenerWrapper 。所以，#refer(...) 方法的调用顺序是：Protocol$Adaptive =>ProtocolListenerWrapper=>=> InjvmProtocol 。
+             * 实际上，Protocol 有两个 Wrapper 拓展实现类： ProtocolFilterWrapper、ProtocolListenerWrapper 。
+             * 所以，#refer(...) 方法的调用顺序是：Protocol$Adaptive =>ProtocolListenerWrapper=>=> InjvmProtocol 。
              */
             invoker = refprotocol.refer(interfaceClass, url);
             if (logger.isInfoEnabled()) {
                 logger.info("Using injvm service " + interfaceClass.getName());
             }
+
+
             /**
+             *
              * 1 正常流程，一般为远程引用 【为什么是一般？ 如果我们配置 <dubbo:reference protocol="injvm"> ，实际走的还是本地引用】。一般情况下，如果真的需要本地引用，建议配置scope=local，这样，会更加明确和清晰
              * 2 相比本地引用，远程引用会多做如下几件事：
              * 1）向注册中心订阅，从而发现服务提供者列表
              * 2）启动通信客户端，通过它进行远程调用
              */
         } else {
-            // 定义直连地址，可以是服务提供者的地址，也可以是注册中心的地址
-            if (url != null && url.length() > 0) { // user specified URL, could be peer-to-peer address, or register center's address.
+            // url不为空，表示使用直连方式，可以是服务提供者的地址，也可以是注册中心的地址
+            if (url != null && url.length() > 0) {
                 // 拆分地址成数组，使用 "；" 分割
                 String[] us = Constants.SEMICOLON_SPLIT_PATTERN.split(url);
                 // 循环数组，添加到 'url' 中
@@ -464,12 +478,14 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                             urls.add(url.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
                             // 服务提供者的地址
                         } else {
+                            // 合并url,移除服务提供者的一些不必要的配置，
                             urls.add(ClusterUtils.mergeUrl(url, map));
                         }
                     }
                 }
                 // 没有定义直连，就拿注册中心地址
-            } else { // assemble URL from register center's configuration
+            } else {
+
                 // 加载注册中心 URL 数组
                 List<URL> us = loadRegistries(false);
                 // 循环数组，添加到 urls 中
@@ -485,12 +501,13 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                         urls.add(u.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
                     }
                 }
+                // 未配置注册中心，抛出异常
                 if (urls.isEmpty()) {
                     throw new IllegalStateException("No such any registry to reference " + interfaceName + " on the consumer " + NetUtils.getLocalHost() + " use dubbo version " + Version.getVersion() + ", please config <dubbo:registry address=\"...\" /> to your spring config.");
                 }
             }
 
-            // 单个 服务引用URL， 直接引用服务，返回Invoker对象
+            // 单个注册中心或服务提供者
             if (urls.size() == 1) {
                 /**
                  * 引用服务：（以Dubbo协议为例）
@@ -501,27 +518,30 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                  * =>
                  * Protocol$Adaptive =>ProtocolListenerWrapper=> ProtocolFilterWrapper => DubboProtocol
                  * 也就是说，这一条大的调用链，包含两条小的调用链。原因是：
-                 * 首先，传入的是注册中心的 URL ，通过 Protocol$Adaptive 获取到的是 RegistryProtocol 对象。
+                 * 首先，传入的是注册中心的 URL ，通过 Protocol$Adaptive 获取到的是 RegistryProtocol 对象，使用RegistryProtocol的refer构建Invoker实例
                  * 其次，RegistryProtocol 会在其 #refer(...) 方法中，使用服务提供者的 URL ( 即注册中心的 URL 的 refer 参数值)，再次调用 Protocol$Adaptive 获取到的是 DubboProtocol 对象，进行服务暴露。
                  */
                 invoker = refprotocol.refer(interfaceClass, urls.get(0));
+
+                // 多个注册中心或多个服务提供者，或者两者的混合
             } else {
-                // 循环 urls，引用服务，返回Invoker 对象。此时会有多个Invoker对象，需要进行合并。【在使用多注册中心注册时】
+                // 循环 urls，引用服务，返回Invoker 对象。此时会有多个Invoker对象，需要进行合并。
                 List<Invoker<?>> invokers = new ArrayList<Invoker<?>>();
                 URL registryURL = null;
+
                 for (URL url : urls) {
-                    // 引用服务，并把服务加入到Invoker集合中
+                    // 引用服务，返回Invoker对象并把服务加入到Invoker集合中
                     invokers.add(refprotocol.refer(interfaceClass, url));
                     // 使用最后一个注册中心的URL
                     if (Constants.REGISTRY_PROTOCOL.equals(url.getProtocol())) {
-                        registryURL = url; // use last registry url
+                        registryURL = url;
                     }
                 }
                 // 有注册中心
-                if (registryURL != null) { // registry url is available
-                    // use AvailableCluster only when register's cluster is available
-                    // 对有注册中心的Cluster只用 AvailableCluster 【todo 集群容错】
+                if (registryURL != null) {
+                    // 对有注册中心的只用 AvailableCluster进行Invoker的合并 【todo 集群容错】
                     URL u = registryURL.addParameter(Constants.CLUSTER_KEY, AvailableCluster.NAME);
+                    // 创建StaticDirectory实例，并由Cluster对多个Invoker进行合并
                     invoker = cluster.join(new StaticDirectory(u, invokers));
                     // 无注册中心
                 } else { // not a registry url
@@ -539,14 +559,20 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         if (c == null) {
             c = true; // default true
         }
-        // 若配置check = true 配置项时，调用Invker#isAvailable()方法，启动时检查
+        // 若配置check = true 配置项时，调用Invker#isAvailable()方法，启动时检查，即就是判断当前创建的invoker是否有对应的Exporter
         if (c && !invoker.isAvailable()) {
             throw new IllegalStateException("Failed to check the status of the service " + interfaceName + ". No provider available for the service " + (group == null ? "" : group + "/") + interfaceName + (version == null ? "" : ":" + version) + " from the url " + invoker.getUrl() + " to the consumer " + NetUtils.getLocalHost() + " use dubbo version " + Version.getVersion());
         }
         if (logger.isInfoEnabled()) {
             logger.info("Refer dubbo service " + interfaceClass.getName() + " from url " + invoker.getUrl());
         }
-        // create service proxy // 创建Service 代理对象 【该代理对象的内部，会调用 Invoker#invoke(Invocation) 方法，进行 Dubbo 服务的调用】
+
+        /**
+         * 1 创建Service 代理对象 【该代理对象的内部，会调用 Invoker#invoke(Invocation) 方法，进行 Dubbo 服务的调用】
+         * 2 getProxy内部最终得到是一个被StuProxyFactoryWrapper包装后的JavassistProxyFactory
+         * 3 把invoker转换成接口代理，代理都会创建InvokerInvocationHandler，InvokerInvocationHandler实现了JDK的InvocationHandler接口，所以服务暴露的Dubbo接口都会委托给这个代理去发起远程调用（injvm协议除外）
+         *
+         */
         return (T) proxyFactory.getProxy(invoker);
     }
 

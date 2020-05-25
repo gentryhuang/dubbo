@@ -596,7 +596,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         URL url = new URL(name, host, port, (contextPath == null || contextPath.length() == 0 ? "" : contextPath + "/") + path, map);
 
         if (ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class).hasExtension(url.getProtocol())) {
-            // 加载ConfiguratorFactory ，并生成Configurator 配置 url
+            // 加载ConfiguratorFactory ，并生成Configurator 配置 url    todo 不知道有啥用
             url = ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class).getExtension(url.getProtocol()).getConfigurator(url).configure(url);
         }
 

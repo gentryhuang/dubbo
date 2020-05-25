@@ -24,6 +24,8 @@ import com.alibaba.dubbo.rpc.cluster.Directory;
 /**
  * {@link FailoverClusterInvoker}
  *
+ * 失败转移，当出现失败时，重试其他服务器，通常用于读操作，但重试会带来更长延迟
+ *
  */
 public class FailoverCluster implements Cluster {
 
@@ -31,6 +33,7 @@ public class FailoverCluster implements Cluster {
 
     @Override
     public <T> Invoker<T> join(Directory<T> directory) throws RpcException {
+        // 创建FailoverClusterInvoker实例
         return new FailoverClusterInvoker<T>(directory);
     }
 

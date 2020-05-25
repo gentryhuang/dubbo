@@ -370,19 +370,20 @@ public class RegistryProtocol implements Protocol {
         // 获得注册中心
         Registry registry = registryFactory.getRegistry(url);
 
+        // todo 这是干嘛的？为什么要给RegistryService 类型生成Invoker
         if (RegistryService.class.equals(type)) {
             return proxyFactory.getInvoker((T) registry, type, url);
         }
 
-        // 获得服务引用配置参数集合
-        // group="a,b" or group="*"
+        // 获得服务引用配置参数集合Map
         Map<String, String> qs = StringUtils.parseQueryString(url.getParameterAndDecoded(Constants.REFER_KEY));
+        // 获取group属性
         String group = qs.get(Constants.GROUP_KEY);
-        // 分组聚合
+        // 分组聚合 group="a,b" or group="*"
         if (group != null && group.length() > 0) {
             if ((Constants.COMMA_SPLIT_PATTERN.split(group)).length > 1
                     || "*".equals(group)) {
-                // 执行服务引用 【不同下面的，这里调用#getMergeableCluster()方法，获得可合并的Cluster对象】
+                // 通过SPI加载MergeableCluster实例，并调用doRefer继续执行引用服务逻辑。【不同下面的，这里调用#getMergeableCluster()方法，获得可合并的Cluster对象】
                 return doRefer(getMergeableCluster(), registry, type, url);
             }
         }
@@ -407,29 +408,42 @@ public class RegistryProtocol implements Protocol {
     private <T> Invoker<T> doRefer(Cluster cluster, Registry registry, Class<T> type, URL url) {
         // 创建RegistryDirectory对象【服务目录】，并设置注册中心到它的属性
         RegistryDirectory<T> directory = new RegistryDirectory<T>(type, url);
+        // 设置注册中心和协议
         directory.setRegistry(registry);
         directory.setProtocol(protocol);
 
 
-        // all attributes of REFER_KEY
-        // 获得服务引用配置集合。注意：url传入RegistryDirectory后，经过处理并重新创建，所以 url != directory.url，所以获得的是服务引用配置集合
+        // 获得服务引用配置集合parameters。注意：url传入RegistryDirectory后，经过处理并重新创建，所以 url != directory.url，所以获得的是服务引用配置集合
         Map<String, String> parameters = new HashMap<String, String>(directory.getUrl().getParameters());
-        // 创建订阅URL
+
+        // 生成消费者URL
         URL subscribeUrl = new URL(Constants.CONSUMER_PROTOCOL, parameters.remove(Constants.REGISTER_IP_KEY), 0, type.getName(), parameters);
-        // 向注册中心注册自己（服务消费者）
+
+        // 注册服务消费者，在consumers目录下新节点
         if (!Constants.ANY_VALUE.equals(url.getServiceInterface())
                 && url.getParameter(Constants.REGISTER_KEY, true)) {
             registry.register(subscribeUrl.addParameters(Constants.CATEGORY_KEY, Constants.CONSUMERS_CATEGORY,
                     Constants.CHECK_KEY, String.valueOf(false)));
         }
-        // 向注册中心订阅服务提供者 + 路由规则 + 配置规则
+
+        /** 向注册中心订阅服务提供者 + 路由规则 + 配置规则节点下的数据，完成订阅后，RegistryDirectory会收到这几个子节点信息
+         * 注意：
+         *   第一次发起订阅时会进行一次数据拉取，同时触发RegistryDirectory#notify方法，这里的通知数据是某一个类目的全量数据，如：providers,router，configurators类目数据。
+         *   并且当通知providers数据时，在RegistryDirectory#toInvokers方法内完成Invoker转换
+         *
+         */
         directory.subscribe(subscribeUrl.addParameter(Constants.CATEGORY_KEY,
                 Constants.PROVIDERS_CATEGORY
                         + "," + Constants.CONFIGURATORS_CATEGORY
                         + "," + Constants.ROUTERS_CATEGORY));
 
-        // 创建Invoker对象
+        /**创建Invoker对象 ，可能有多个服务提供者，因此需要将多个服务提供者合并为一个// todo 集群容错
+         * 
+         * 由于一个服务可能部署在多台服务器上，这样就会在 providers 产生多个节点，这个时候就需要 Cluster 将多个服务节点合并为一个，并生成一个 Invoker。
+         * Cluster默认为FailoverCluster实例，支持服务调用重试
+         */
         Invoker invoker = cluster.join(directory);
+
         // 向本地注册表，注册消费者
         ProviderConsumerRegTable.registerConsumer(invoker, url, subscribeUrl, directory);
         return invoker;

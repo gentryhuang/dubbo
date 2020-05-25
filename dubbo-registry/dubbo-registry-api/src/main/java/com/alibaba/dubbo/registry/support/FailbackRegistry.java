@@ -169,7 +169,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         } catch (Exception e) {
             Throwable t = e;
 
-            // If the startup detection is opened, the Exception is thrown directly.
+            // 如果开启了启动时检测，则直接抛出异常
             boolean check = getUrl().getParameter(Constants.CHECK_KEY, true)
                     && url.getParameter(Constants.CHECK_KEY, true)
                     && !Constants.CONSUMER_PROTOCOL.equals(url.getProtocol());
@@ -183,7 +183,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
                 logger.error("Failed to register " + url + ", waiting for retry, cause: " + t.getMessage(), t);
             }
 
-            // Record a failed registration request to a failed list, retry regularly  // 记录注册失败的链接
+            // 记录注册失败的URL到注册失败的列表中，为了以后定时重试
             failedRegistered.add(url);
         }
     }
@@ -222,7 +222,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     public void subscribe(URL url, NotifyListener listener) {
         /** 调用父类AbstractRegistry的方法，将listener实例加入到url所对应的监听器集合中 {@link #subscribed } 中 */
         super.subscribe(url, listener);
-        // 从failedSubscribed/failedUnsubscribed中 url所对应的监听器集合中删除listener，接着从failedNotified获取当前url的通知失败map，然后从中删除掉listener以及其需要通知的所有url
+        // 将failedSubscribed/failedUnsubscribed中 url所对应的监听器集合中删除listener，接着从failedNotified获取当前url的通知失败map，然后从中删除掉listener以及其需要通知的所有url
         removeFailedSubscribed(url, listener);
         try {
             // 向服务端发送订阅请求,具体请求处理由子类实现
@@ -325,7 +325,8 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     }
 
     /**
-     * 完全覆盖父类方法(即不像前几个方法，会调用父类的方法)，将需要注册和订阅的URL添加到 {@link #failedRegistered} ,{@link #failedSubscribed} 属性中。这样在{@link #retry()}方法中会重试进行连接
+     * 完全覆盖父类方法(即不像前几个方法，会调用父类的方法)，将需要注册和订阅的URL添加到 {@link #failedRegistered} ,{@link #failedSubscribed} 属性中。
+     * 这样在{@link #retry()}方法中会重试进行连接
      *
      * @throws Exception
      */

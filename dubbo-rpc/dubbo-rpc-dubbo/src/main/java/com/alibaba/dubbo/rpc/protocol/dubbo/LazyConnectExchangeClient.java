@@ -35,44 +35,79 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * dubbo protocol support class.
+ * dubbo protocol support class. 实现 ExchangeClient 接口，支持懒连接服务器的信息交换客户端实现类。
  */
 @SuppressWarnings("deprecation")
 final class LazyConnectExchangeClient implements ExchangeClient {
 
+    private final static Logger logger = LoggerFactory.getLogger(LazyConnectExchangeClient.class);
+
     // when this warning rises from invocation, program probably have bug.
     static final String REQUEST_WITH_WARNING_KEY = "lazyclient_request_with_warning";
-    private final static Logger logger = LoggerFactory.getLogger(LazyConnectExchangeClient.class);
+
+
+    /**
+     * 请求时，是否检查告警
+     */
     protected final boolean requestWithWarning;
+    /**
+     * URL
+     */
     private final URL url;
+    /**
+     * 通道处理器
+     */
     private final ExchangeHandler requestHandler;
+    /**
+     * 连接锁
+     */
     private final Lock connectLock = new ReentrantLock();
-    // lazy connect, initial state for connection
+    /**
+     * lazy connect, initial state for connection
+     * 懒连接初始化状态
+     */
     private final boolean initialState;
+    /**
+     * 通信客户端
+     */
     private volatile ExchangeClient client;
+    /**
+     * 警告计数器。每超过一定次数，打印告警日志。参见 {@link #warning(Object)}
+     */
     private AtomicLong warningcount = new AtomicLong(0);
 
     public LazyConnectExchangeClient(URL url, ExchangeHandler requestHandler) {
         // lazy connect, need set send.reconnect = true, to avoid channel bad status.
         this.url = url.addParameter(Constants.SEND_RECONNECT_KEY, Boolean.TRUE.toString());
         this.requestHandler = requestHandler;
+        // 懒连接初始化状态默认值为 true
         this.initialState = url.getParameter(Constants.LAZY_CONNECT_INITIAL_STATE_KEY, Constants.DEFAULT_LAZY_CONNECT_INITIAL_STATE);
         this.requestWithWarning = url.getParameter(REQUEST_WITH_WARNING_KEY, false);
     }
 
-
+    /**
+     * 初始化客户端
+     * @throws RemotingException
+     */
     private void initClient() throws RemotingException {
-        if (client != null)
+        // 已初始化，跳过
+        if (client != null) {
             return;
+        }
         if (logger.isInfoEnabled()) {
             logger.info("Lazy connect to " + url);
         }
+        // 获得锁
         connectLock.lock();
         try {
-            if (client != null)
+            // 已初始化，跳过
+            if (client != null) {
                 return;
+            }
+            // 创建Client,连接服务器
             this.client = Exchangers.connect(url, requestHandler);
         } finally {
+            // 释放锁
             connectLock.unlock();
         }
     }
@@ -127,6 +162,7 @@ final class LazyConnectExchangeClient implements ExchangeClient {
 
     @Override
     public boolean isConnected() {
+        // 客户端没有初始化
         if (client == null) {
             return initialState;
         } else {
@@ -148,6 +184,11 @@ final class LazyConnectExchangeClient implements ExchangeClient {
         return requestHandler;
     }
 
+    /**
+     * 发送消息/请求前，都会调用该方法，确保客户端已经初始化
+     * @param message
+     * @throws RemotingException
+     */
     @Override
     public void send(Object message) throws RemotingException {
         initClient();

@@ -42,14 +42,27 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public class DubboInvoker<T> extends AbstractInvoker<T> {
 
+    /**
+     * 远程通信客户端数组
+     */
     private final ExchangeClient[] clients;
-
+    /**
+     * 使用的 {@link #clients} 的位置
+     */
     private final AtomicPositiveInteger index = new AtomicPositiveInteger();
-
+    /**
+     * 版本
+     */
     private final String version;
 
+    /**
+     * 销毁方法中使用的jvm 锁
+     */
     private final ReentrantLock destroyLock = new ReentrantLock();
 
+    /**
+     * Invoker 集合，从{@link DubboProtocol#invokers} 获取
+     */
     private final Set<Invoker<?>> invokers;
 
     public DubboInvoker(Class<T> serviceType, URL url, ExchangeClient[] clients) {
@@ -70,7 +83,7 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
         final String methodName = RpcUtils.getMethodName(invocation);
         inv.setAttachment(Constants.PATH_KEY, getUrl().getPath());
         inv.setAttachment(Constants.VERSION_KEY, version);
-
+        // 远程通信客户端
         ExchangeClient currentClient;
         if (clients.length == 1) {
             currentClient = clients[0];
@@ -92,6 +105,7 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
                 return new RpcResult();
             } else {
                 RpcContext.getContext().setFuture(null);
+                // 使用客户端处理请求
                 return (Result) currentClient.request(inv, timeout).get();
             }
         } catch (TimeoutException e) {

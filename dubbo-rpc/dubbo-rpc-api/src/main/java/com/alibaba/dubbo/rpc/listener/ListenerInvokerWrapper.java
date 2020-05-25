@@ -44,7 +44,8 @@ public class ListenerInvokerWrapper<T> implements Invoker<T> {
     private final List<InvokerListener> listeners;
 
     /**
-     * 构造方法，循环 listeners，执行InvokerListener#referred(invoker) 方法，和ListenerExporterWrapper 不同，若执行过程中发生异常 RuntimeException ，仅打印错误日志，继续执行，最终不抛出异常。
+     * 构造方法，循环 listeners，执行InvokerListener#referred(invoker) 方法，和ListenerExporterWrapper 不同，
+     * 若执行过程中发生异常 RuntimeException ，仅打印错误日志，继续执行，最终不抛出异常。
      * @param invoker
      * @param listeners
      */
@@ -59,6 +60,7 @@ public class ListenerInvokerWrapper<T> implements Invoker<T> {
             for (InvokerListener listener : listeners) {
                 if (listener != null) {
                     try {
+                        // 当服务引用完成时会被调用
                         listener.referred(invoker);
                     } catch (Throwable t) {
                         logger.error(t.getMessage(), t);

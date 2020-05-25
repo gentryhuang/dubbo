@@ -1,4 +1,4 @@
-package com.code.reading.service.service;
+package com.code.reading.service;
 
 /**
  * IDemoService

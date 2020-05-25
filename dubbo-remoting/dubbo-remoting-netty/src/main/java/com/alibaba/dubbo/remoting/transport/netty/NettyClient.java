@@ -59,6 +59,11 @@ public class NettyClient extends AbstractClient {
         super(url, wrapChannelHandler(url, handler));
     }
 
+    /**
+     * 打开netty客户端
+     *
+     * @throws Throwable
+     */
     @Override
     protected void doOpen() throws Throwable {
         NettyHelper.setNettyLoggerFactory();
@@ -82,6 +87,11 @@ public class NettyClient extends AbstractClient {
         });
     }
 
+    /**
+     * 连接Netty服务端
+     *
+     * @throws Throwable
+     */
     @Override
     protected void doConnect() throws Throwable {
         long start = System.currentTimeMillis();
@@ -93,7 +103,7 @@ public class NettyClient extends AbstractClient {
                 Channel newChannel = future.getChannel();
                 newChannel.setInterestOps(Channel.OP_READ_WRITE);
                 try {
-                    // Close old channel
+                    // 关闭旧的连接
                     Channel oldChannel = NettyClient.this.channel; // copy reference
                     if (oldChannel != null) {
                         try {

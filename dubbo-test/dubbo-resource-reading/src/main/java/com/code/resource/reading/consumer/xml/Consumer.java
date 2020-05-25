@@ -2,8 +2,8 @@ package com.code.resource.reading.consumer.xml;
 
 
 import com.code.reading.service.IDemoService;
+import com.code.resource.reading.api.DemoService;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
-import org.springframework.core.env.ConfigurableEnvironment;
 
 import java.io.IOException;
 
@@ -22,13 +22,20 @@ public class Consumer {
     public static String[] consumerPath = {"xml/consumer.xml"};
     public static String[] multiProtocolPath = {"xml/multi-protocol-provider.xml"};
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(consumerPath);
 
-        IDemoService consumerService = (IDemoService) context.getBean("resourceDemoService");
-        String hello = consumerService.ping();
+        /*
+        IDemoService consumerService = (IDemoService) context.getBean("proxyDemoService");
+        String hello = consumerService.ping("ping");
         System.out.println(hello);
-        System.in.read();
+         */
+        while (true) {
+            DemoService demoService = (DemoService) context.getBean("xmlConsumerService");
+            demoService.hello();
+            Thread.sleep(5000);
+        }
+        //System.in.read();
     }
 
 }

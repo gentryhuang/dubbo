@@ -54,7 +54,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * RegistryDirectory
+ * RegistryDirectory，实现了NotifyListener接口，服务变更会触发回掉notify方法，用于重新引入服务
  *
  */
 public class RegistryDirectory<T> extends AbstractDirectory<T> implements NotifyListener {
@@ -180,6 +180,10 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
         }
     }
 
+    /**
+     * 服务变更时会触发这个类会回调该方法，用于重新引入服务
+     * @param urls 已注册信息列表，总不为空，含义同{@link com.alibaba.dubbo.registry.RegistryService#lookup(URL)}的返回值。
+     */
     @Override
     public synchronized void notify(List<URL> urls) {
         List<URL> invokerUrls = new ArrayList<URL>();
@@ -250,6 +254,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             if (invokerUrls.isEmpty()) {
                 return;
             }
+            // 将URL列表转成Invoker列表
             Map<String, Invoker<T>> newUrlInvokerMap = toInvokers(invokerUrls);// Translate url list to Invoker map
             Map<String, List<Invoker<T>>> newMethodInvokerMap = toMethodInvokers(newUrlInvokerMap); // Change method name to map Invoker Map
             // state change
@@ -347,6 +352,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             if (queryProtocols != null && queryProtocols.length() > 0) {
                 boolean accept = false;
                 String[] acceptProtocols = queryProtocols.split(",");
+                // 根据消费方protocol配置过滤不匹配协议，因为Dubbo允许在消费方配置只消费指定协议的服务
                 for (String acceptProtocol : acceptProtocols) {
                     if (providerUrl.getProtocol().equals(acceptProtocol)) {
                         accept = true;
@@ -365,9 +371,11 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                         + ", supported protocol: " + ExtensionLoader.getExtensionLoader(Protocol.class).getSupportedExtensions()));
                 continue;
             }
+            // 合并provider端配置数据，如：服务端ip和port等
             URL url = mergeUrl(providerUrl);
 
             String key = url.toFullString(); // The parameter urls are sorted
+           // 忽略重复推送的服务列表，防止重复引用
             if (keys.contains(key)) { // Repeated url
                 continue;
             }
@@ -384,6 +392,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                         enabled = url.getParameter(Constants.ENABLED_KEY, true);
                     }
                     if (enabled) {
+                        // 使用具体协议创建远程连接，注意，远程连接建立后会发起拦截器构建操作，具体触发在 ProtocolFilterWrapper#refer方法中
                         invoker = new InvokerDelegate<T>(protocol.refer(serviceType, url), url, providerUrl);
                     }
                 } catch (Throwable t) {

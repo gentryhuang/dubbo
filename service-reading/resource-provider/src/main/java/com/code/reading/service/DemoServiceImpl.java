@@ -1,6 +1,5 @@
 package com.code.reading.service;
 
-import com.code.reading.service.service.IDemoService;
 import org.apache.dubbo.config.annotation.Service;
 
 /**
@@ -16,6 +15,6 @@ public class DemoServiceImpl implements IDemoService {
 
     @Override
     public String ping(String pg) {
-        return pg + "is running";
+        return pg + " is running";
     }
 }

@@ -100,7 +100,7 @@ public abstract class AbstractRegistry implements Registry {
     private final Set<URL> registered = new ConcurrentHashSet<URL>();
     /**
      * 订阅 URL 的监听器集合
-     * key : 消费者的URL ,例如： 消费者的URL
+     * key : `消费者的URL` [此消费者非消费者] ,例如： 消费者的URL
      */
     private final ConcurrentMap<URL, Set<NotifyListener>> subscribed = new ConcurrentHashMap<URL, Set<NotifyListener>>();
     /**
@@ -527,7 +527,7 @@ public abstract class AbstractRegistry implements Registry {
             List<URL> categoryList = entry.getValue();
             // 1 将result 覆盖到 `notified`【填充notified集合】，需要注意：当某个分类的数据为空时，会依然有 urls 。其中 `urls[0].protocol = empty` ，通过这样的方式，处理所有服务提供者为空的情况。
             categoryNotified.put(category, categoryList);
-            // 2 保存传入的url到properties和文件保存 // todo 这个操作为什么要在循环体内
+            // 2 保存传入的url对应的被通知的URL到properties和文件保存 // todo 这个操作为什么要在循环体内
             saveProperties(url);
             // 3 调用传入的listener的notify()方法
             listener.notify(categoryList);

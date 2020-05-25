@@ -86,9 +86,9 @@ public class ZookeeperRegistry extends FailbackRegistry {
         }
         // 确定根路径，以组名作为根路径
         this.root = group;
-        // 创建 Zookeeper 客户端，默认为 CuratorZookeeperTransporter，由SPI确定具体的实例。创建好Zookeeper客户端，意味着注册中心的创建完成【Zookeeper服务端必需先启动，Dubbo应用作为Zookeeper的客户端进行连，然后操作Zookeeper】
+        // 创建 Zookeeper 客户端，默认为 CuratorZookeeperTransporter，由SPI确定具体的实例。创建好Zookeeper客户端，意味着注册中心的创建完成【Zookeeper服务端必需先启动，Dubbo应用作为Zookeeper的客户端进行连接，然后操作Zookeeper】
         zkClient = zookeeperTransporter.connect(url);
-        // 添加 StateListener 状态监听器，该监听器，在重连时，调用恢复方法 recover()，重新发起注册和订阅
+        // 添加 StateListener 状态监听器【这里知针对失败重连】，该监听器，在重连时，调用恢复方法 recover()，重新发起注册和订阅
         zkClient.addStateListener(new StateListener() {
             @Override
             public void stateChanged(int state) {
@@ -215,7 +215,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
                     }
                 }
 
-                // ---- 处理指定Service 层的发起订阅，例如服务消费这的订阅 ----------
+                // ---- 处理指定Service 层的发起订阅，例如服务消费者的订阅 ----------
             } else {
 
                 /**
@@ -228,7 +228,8 @@ public class ZookeeperRegistry extends FailbackRegistry {
 
                 // 子节点数据数组
                 List<URL> urls = new ArrayList<URL>();
-                // 循环分类数组，其中，调用toCategoriesPath(url)方法，获得分类数组
+                
+                // 循环分类数组，其中，调用toCategoriesPath(url)方法，获得分类数组，如：/dubbo/com.alibaba.dubbo.demo.DemoService/configurators
                 for (String path : toCategoriesPath(url)) {
                     // 获得订阅的url 对应的监听器集合
                     ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.get(url);
@@ -267,8 +268,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
                     }
                 }
                 /**
-                 * 首次全量数据获取完成时，调用NofityListener#notify(url,listener,currentChilds)方法，回调NotifyListener的逻辑，这样，服务消费者可以创建所有的Invoker对象，
-                 * 用于调用服务提供者们
+                 * 首次全量数据获取完成时，调用NofityListener#notify(url,listener,currentChilds)方法，回调NotifyListener的逻辑
                  */
                 notify(url, listener, urls); // 全量
             }

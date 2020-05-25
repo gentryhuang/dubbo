@@ -63,6 +63,12 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
         return INSTANCE;
     }
 
+    /**
+     * 判断本地已经有url对应的InjvmExporter时，直接引用
+     * @param map
+     * @param key
+     * @return
+     */
     static Exporter<?> getExporter(Map<String, Exporter<?>> map, URL key) {
         Exporter<?> result = null;
 
@@ -95,7 +101,7 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
     }
 
     /**
-     * 进行服务暴露，创建InjvmExporter
+     * 进行服务暴露，创建InjvmExporter[并把自己->Exporter存入到父类的 {@link #exporterMap} 属性中，key:当前服务键，value:Exporter]
      *
      * @param invoker Service invoker
      * @param <T>
@@ -109,7 +115,7 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
     }
 
     /**
-     * 引用本地服务
+     * 引用本地服务，Invoker执行的时候会从父类中的 {@link #exporterMap} 属性中拿，根据key，即 url.getServiceKey
      *
      * @param serviceType
      * @param url         URL address for the remote service
@@ -150,7 +156,7 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
         } else if (url.getParameter(Constants.GENERIC_KEY, false)) {
             // generic invocation is not local reference
             isJvmRefer = false;
-            // 当本地已经有该 Exporter 时，就直接引用。不必要使用远程服务，减少网络开销，提升性能
+            // 当本地已经有该 Exporter 时，就直接引用。不必要使用远程服务，减少网络开销，提升性能。即直接从父类中的exporterMap属性中，取出url的服务键对应的的Exporter
         } else if (getExporter(exporterMap, url) != null) {
             // by default, go through local reference if there's the service exposed locally
             isJvmRefer = true;

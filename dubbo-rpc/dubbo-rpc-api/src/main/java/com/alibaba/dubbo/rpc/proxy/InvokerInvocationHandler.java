@@ -23,7 +23,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 
 /**
- * InvokerHandler
+ * InvokerHandler，实现了JDK的InvocationHandler
  */
 public class InvokerInvocationHandler implements InvocationHandler {
 
