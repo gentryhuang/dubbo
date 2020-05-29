@@ -35,6 +35,18 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
         return getProxy(invoker, false);
     }
 
+    /**
+     * 主要获取需要生成代理的接口列表
+     * <p>
+     * 注意：这里会在原有Invoker对应关联的接口之上增加EchoService接口，作用是回声测试，每个服务都会自动实现EchoService接口。
+     * 如果要使用回声测试，只需要将任意服务引用强制转型为EchoService即可使用： String status = echoService.$echo("OK");
+     *
+     * @param invoker
+     * @param generic
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> T getProxy(Invoker<T> invoker, boolean generic) throws RpcException {
         Class<?>[] interfaces = null;
@@ -45,7 +57,7 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
             String[] types = Constants.COMMA_SPLIT_PATTERN.split(config);
             if (types != null && types.length > 0) {
                 interfaces = new Class<?>[types.length + 2];
-                // 设置服务接口类和EchoService.class 到 interfaces 中
+                // 设置服务接口类和EchoService.class【用于回声测试】到 interfaces 中。这是在原有Invoker对应关联的接口之上，增加EchoService接口
                 interfaces[0] = invoker.getInterface();
                 interfaces[1] = EchoService.class;
                 for (int i = 0; i < types.length; i++) {
@@ -54,6 +66,8 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
                 }
             }
         }
+
+        // 如果interfaces为空，增加EchoService接口，用于回声测试
         if (interfaces == null) {
             interfaces = new Class<?>[]{invoker.getInterface(), EchoService.class};
         }
@@ -73,6 +87,14 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
         return getProxy(invoker, interfaces);
     }
 
+    /**
+     * 子类需要实现真正获取Proxy对象的逻辑
+     *
+     * @param invoker
+     * @param types
+     * @param <T>
+     * @return
+     */
     public abstract <T> T getProxy(Invoker<T> invoker, Class<?>[] types);
 
 }

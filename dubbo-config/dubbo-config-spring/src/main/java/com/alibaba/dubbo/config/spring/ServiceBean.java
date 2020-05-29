@@ -86,13 +86,13 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {// 当前加载的上下文
         this.applicationContext = applicationContext;
-        SpringExtensionFactory.addApplicationContext(applicationContext);
+        SpringExtensionFactory.addApplicationContext(applicationContext); // 为Spring拓展工厂注入上下文
         if (applicationContext != null) {
             SPRING_CONTEXT = applicationContext;
             try {
                 Method method = applicationContext.getClass().getMethod("addApplicationListener", new Class<?>[]{ApplicationListener.class}); // backward compatibility to spring 2.0.1
                 method.invoke(applicationContext, new Object[]{this});
-                supportedApplicationListener = true;
+                supportedApplicationListener = true; // 当前Spring容器是否支持上下文监听
             } catch (Throwable t) {
                 if (applicationContext instanceof AbstractApplicationContext) {
                     try {

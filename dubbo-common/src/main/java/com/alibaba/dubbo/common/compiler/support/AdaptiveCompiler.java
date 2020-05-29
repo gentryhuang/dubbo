@@ -23,12 +23,22 @@ import com.alibaba.dubbo.common.extension.ExtensionLoader;
 
 /**
  * AdaptiveCompiler. (SPI, Singleton, ThreadSafe)
+ * 实现Compiler接口，自适应Compiler实现类
  */
 @Adaptive
 public class AdaptiveCompiler implements Compiler {
 
+    /**
+     * 默认编辑器的拓展名
+     */
     private static volatile String DEFAULT_COMPILER;
 
+    /**
+     * 静态方法，设置默认编辑器的拓展名。该方法被 {@link com.alibaba.dubbo.config.ApplicationConfig#setCompiler(java.lang.String)}方法调用.
+     * 在<dubbo:application compiler=""/> 配置下可触发该方法
+     *
+     * @param compiler
+     */
     public static void setDefaultCompiler(String compiler) {
         DEFAULT_COMPILER = compiler;
     }
@@ -36,13 +46,18 @@ public class AdaptiveCompiler implements Compiler {
     @Override
     public Class<?> compile(String code, ClassLoader classLoader) {
         Compiler compiler;
+        // 获得Compiler的ExtensionLoader对象
         ExtensionLoader<Compiler> loader = ExtensionLoader.getExtensionLoader(Compiler.class);
-        String name = DEFAULT_COMPILER; // copy reference
+        // 声明 name 变量，引用 DEFAULT_COMPILER 的值，避免下面的值变了
+        String name = DEFAULT_COMPILER;
+        // 使用设置的拓展名，获得Compiler拓展对象
         if (name != null && name.length() > 0) {
             compiler = loader.getExtension(name);
+            // 获得默认的Compiler拓展对象
         } else {
             compiler = loader.getDefaultExtension();
         }
+        // 使用真正的Compiler对象，动态编译代码
         return compiler.compile(code, classLoader);
     }
 

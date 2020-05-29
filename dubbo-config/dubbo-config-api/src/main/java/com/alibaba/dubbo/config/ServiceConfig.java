@@ -340,7 +340,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             }
         }
 
-        // 处理服务接口客户端本地代理(stub 属性)相关，即本地存根
+        // 处理服务接口客户端本地代理(stub 属性)相关，即本地存根。目的：想在客户端【服务消费方】执行需要的逻辑，不局限服务提供的逻辑。本地存根类编写方式是固定。
         if (stub != null) {
             // 如果stub属性设置为ture，表示使用缺省代理类名，即：接口名 + Stub 后缀
             if ("true".equals(stub)) {
@@ -550,6 +550,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             }
             // 为接口生成包裹类 Wrapper，Wrapper 中包含了接口的详细信息，比如接口方法名数组，字段信息等【Dubbo 自定义功能类】
             String[] methods = Wrapper.getWrapper(interfaceClass).getMethodNames();
+
             // 添加方法名到 map 中，如果包含多个方法名，则用逗号隔开，比如：method=a,b
             if (methods.length == 0) {
                 logger.warn("NO method found in service interface " + interfaceClass.getName());
@@ -631,13 +632,14 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                         }
 
                         // For providers, this is used to enable custom proxy to generate invoker
-                        // todo ???
+                        // 使用`proxy`配置动态代理的生成方式 <dubbo:service proxy=""/>,可选jdk/javassist,默认使用javassist
                         String proxy = url.getParameter(Constants.PROXY_KEY);
                         if (StringUtils.isNotEmpty(proxy)) {
                             registryURL = registryURL.addParameter(Constants.PROXY_KEY, proxy);
                         }
                         /**
                          * 1 使用ProxyFactory 创建 Invoker 对象【执行Invoker#invoke方法时，内部会调用Service对象(ref)对应的调用方法】
+                         *
                          * 2 注意，这和本地暴露的参数不一样，本地暴露传入的直接是服务提供者的URL，而远程暴露需要传入注册中心URL及服务提供者URL的信息
                          * 3 在将服务实例ref转成Invoker后，如果有注册中心时，则会通过RegisterProtocol#export进行更细粒度的控制，如先进行服务暴露再注册服务元数据，这个过程注册中心依次进行：
                          * （1）委托具体协议进行服务暴露，如Dubbo协议进行服务暴露，创建NettyServer监听端口和保存服务实例
@@ -645,6 +647,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                          * （3）注册服务元数据到注册中心
                          * （4）订阅configurators节点，监听服务动态属性变更事件
                          * （5）服务销毁收尾工作，如关闭端口，移除注册的元数据
+                         * 4 Invoker 对象实际和ref是无法直接调用，需要有中间的一层 Wrapper 来代理分发请求到 ref 对应的方法
                          */
                         Invoker<?> invoker = proxyFactory.getInvoker(
                                 ref,

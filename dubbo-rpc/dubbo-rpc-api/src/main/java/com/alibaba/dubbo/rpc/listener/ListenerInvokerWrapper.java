@@ -29,6 +29,8 @@ import java.util.List;
 
 /**
  * ListenerInvoker ，实现Invoker接口，具有监听器功能的Invoker包装器
+ * <p>
+ * 目前该监听器只针对 #referred(invoker) #destroyed(invoker) 两个接口方法，并未对 #invoke(invocation) 的过程实现监听。
  */
 public class ListenerInvokerWrapper<T> implements Invoker<T> {
 
@@ -46,6 +48,7 @@ public class ListenerInvokerWrapper<T> implements Invoker<T> {
     /**
      * 构造方法，循环 listeners，执行InvokerListener#referred(invoker) 方法，和ListenerExporterWrapper 不同，
      * 若执行过程中发生异常 RuntimeException ，仅打印错误日志，继续执行，最终不抛出异常。
+     *
      * @param invoker
      * @param listeners
      */

@@ -331,7 +331,7 @@ public class DubboBeanDefinitionParser implements BeanDefinitionParser {
             }
         }
 
-        // 将XML元素没有遍历到的属性添加到Map集合中，然后整个集合加入到Bean定义的属性中（一般这种情况很少，这种情况是针对用户自定义的属性，不是Dubbo Schema 约定好的）
+        // 将XML元素没有遍历到的属性添加到Map集合中，然后整个集合加入到Bean定义的parameters属性中（一般这种情况很少，这种情况是针对用户自定义的属性，不是Dubbo Schema 约定好的）
         NamedNodeMap attributes = element.getAttributes();
         int len = attributes.getLength();
         for (int i = 0; i < len; i++) {

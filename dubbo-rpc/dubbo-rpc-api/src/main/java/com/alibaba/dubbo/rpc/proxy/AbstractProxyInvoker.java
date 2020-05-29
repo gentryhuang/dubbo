@@ -26,14 +26,23 @@ import com.alibaba.dubbo.rpc.RpcResult;
 import java.lang.reflect.InvocationTargetException;
 
 /**
- * InvokerWrapper
+ * 实现Invoker接口，代理Invoker对象的抽象类
  */
 public abstract class AbstractProxyInvoker<T> implements Invoker<T> {
 
+    /**
+     * 代理的对象，一般是服务接口的实现对象
+     */
     private final T proxy;
 
+    /**
+     * 接口类型，一般是服务接口
+     */
     private final Class<T> type;
 
+    /**
+     * URL对象，一般是暴露服务的URL对象
+     */
     private final URL url;
 
     public AbstractProxyInvoker(T proxy, Class<T> type, URL url) {
@@ -70,11 +79,20 @@ public abstract class AbstractProxyInvoker<T> implements Invoker<T> {
     public void destroy() {
     }
 
+    /**
+     * 主要逻辑在doInvoke模版方法中实现
+     *
+     * @param invocation
+     * @return
+     * @throws RpcException
+     */
     @Override
     public Result invoke(Invocation invocation) throws RpcException {
         try {
+            // 创建RpcResult对象，将结果包装返回
             return new RpcResult(doInvoke(proxy, invocation.getMethodName(), invocation.getParameterTypes(), invocation.getArguments()));
         } catch (InvocationTargetException e) {
+            // 发生InvocationTargetException 异常，创建RpcResult对象包装
             return new RpcResult(e.getTargetException());
         } catch (Throwable e) {
             throw new RpcException("Failed to invoke remote proxy method " + invocation.getMethodName() + " to " + getUrl() + ", cause: " + e.getMessage(), e);
@@ -84,12 +102,12 @@ public abstract class AbstractProxyInvoker<T> implements Invoker<T> {
     /**
      * 由创建的实例来复写
      *
-     * @param proxy
-     * @param methodName
-     * @param parameterTypes
-     * @param arguments
-     * @return
-     * @throws Throwable
+     * @param proxy          服务实例
+     * @param methodName     方法名
+     * @param parameterTypes 方法参数类型数组
+     * @param arguments      方法参数数组
+     * @return 调用结果
+     * @throws Throwable 发生异常
      */
     protected abstract Object doInvoke(T proxy, String methodName, Class<?>[] parameterTypes, Object[] arguments) throws Throwable;
 

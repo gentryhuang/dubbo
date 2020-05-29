@@ -18,14 +18,12 @@
 
     <!-- 引入服务-->
 
-
-    <dubbo:reference interface="com.code.resource.reading.api.DemoService" id="xmlConsumerService" injvm="true" check="false"/>
+    <dubbo:reference interface="com.code.reading.service.IDemoService" id="proxyDemoService" check="false"/>
 
 
     <!--
-      <dubbo:reference interface="com.code.resource.reading.api.DemoService" id="consumerService" check="false" injvm="true"/>
-
-      <dubbo:reference interface="com.code.reading.service.IDemoService" id="proxyDemoService" check="false"/>
-     -->
+     <dubbo:reference interface="com.code.resource.reading.api.DemoService" id="xmlConsumerService"  check="false"/>
+     <dubbo:reference interface="com.code.resource.reading.api.DemoService" id="consumerService" check="false" injvm="true"/>
+      -->
 
 </beans>

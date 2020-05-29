@@ -64,7 +64,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
     private final Set<String> anyServices = new ConcurrentHashSet<String>();
 
     /**
-     * 监听器集合，建立NotifyListener和ChildListener的映射关系
+     * 监听器集合，建立NotifyListener和ChildListener的映射关系，k1为订阅URL,k2为监听器,value为ChildListener【真正起作用的对象】
      */
     private final ConcurrentMap<URL, ConcurrentMap<NotifyListener, ChildListener>> zkListeners = new ConcurrentHashMap<URL, ConcurrentMap<NotifyListener, ChildListener>>();
 
@@ -215,7 +215,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
                     }
                 }
 
-                // ---- 处理指定Service 层的发起订阅，例如服务消费者的订阅 ----------
+                // ---- 处理指定Service 层 发起订阅，例如服务提供者订阅（订阅configurators,变化重新导出服务），服务消费者的订阅（订阅providers,configurators,routers，变化重新引入服务等） ----------
             } else {
 
                 /**
@@ -259,7 +259,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
                     zkClient.create(path, false);
                     /**
                      * 向Zookeeper path节点发起订阅，即使用AbstractZookeeperClient<TargetChildListener>的addChildListener(String path, final ChildListener listener)方法为path下的子节点
-                     * 添加上边创建出来的内部类ChildListener实例
+                     * 添加上边创建出来的内部类ChildListener实例，添加后返回子节点列表 【todo 重要，这里就是拉取类目下的全量数据】
                      */
                     List<String> children = zkClient.addChildListener(path, zkListener);
                     // 添加到urls 中

@@ -62,7 +62,7 @@ public class RegistryProtocol implements Protocol {
      * 单例，在dubbo SPI中，被初始化，有且仅有一次。
      */
     private static RegistryProtocol INSTANCE;
-
+    // 订阅URL与监听器的映射关系
     private final Map<URL, NotifyListener> overrideListeners = new ConcurrentHashMap<URL, NotifyListener>();
     //To solve the problem of RMI repeated exposure port conflicts, the services that have been exposed are no longer exposed.
     //providerurl <--> exporter
@@ -212,7 +212,7 @@ public class RegistryProtocol implements Protocol {
 
     @SuppressWarnings("unchecked")
     private <T> ExporterChangeableWrapper<T> doLocalExport(final Invoker<T> originInvoker) {
-        // 获得在 bounds 缓存中的key【就是生成key的逻辑，也是服务提供者暴露地址,即从Invoker的URL中Map属性集合中获取key为'export'的服务提供者暴露地址，该地址要写到注册中心上】
+        // 获得在 bounds 缓存中的key【就是生成key的逻辑，也是服务提供者暴露地址,即从Invoker的URL中Map属性集合中获取key为'export'的服务提供者暴露地址然后去除不需要的信息，该地址要写到注册中心上】
         String key = getCacheKey(originInvoker);
         // 从 bounds 缓存中获得，是否存在已经暴露过的服务
         ExporterChangeableWrapper<T> exporter = (ExporterChangeableWrapper<T>) bounds.get(key);
@@ -356,6 +356,8 @@ public class RegistryProtocol implements Protocol {
     }
 
     /**
+     * 多个Invoker也会被封装成一个
+     *
      * @param type Service class
      * @param url  URL address for the remote service
      * @param <T>
@@ -406,7 +408,7 @@ public class RegistryProtocol implements Protocol {
      * @return Invoker 对象
      */
     private <T> Invoker<T> doRefer(Cluster cluster, Registry registry, Class<T> type, URL url) {
-        // 创建RegistryDirectory对象【服务目录】，并设置注册中心到它的属性
+        // 创建RegistryDirectory对象【服务目录】，并设置注册中心到它的属性。其中在其父类AbstractDirectory中会创建List<Router>routers
         RegistryDirectory<T> directory = new RegistryDirectory<T>(type, url);
         // 设置注册中心和协议
         directory.setRegistry(registry);
@@ -439,7 +441,7 @@ public class RegistryProtocol implements Protocol {
 
         /**创建Invoker对象 ，可能有多个服务提供者，因此需要将多个服务提供者合并为一个// todo 集群容错
          * 
-         * 由于一个服务可能部署在多台服务器上，这样就会在 providers 产生多个节点，这个时候就需要 Cluster 将多个服务节点合并为一个，并生成一个 Invoker。
+         * 由于一个服务可能部署在多台服务器上，这样就会在 providers 产生多个节点，这个时候就需要 Cluster 将多个服务节点合并为一个，并生成一个 Invoker，这一个Invoker代表了多个。
          * Cluster默认为FailoverCluster实例，支持服务调用重试
          */
         Invoker invoker = cluster.join(directory);
@@ -485,7 +487,7 @@ public class RegistryProtocol implements Protocol {
     /**
      * 重新export
      * 1 protocol 中的exporter destroy 问题
-     * 2 要求registryprotocol返回的exporter 可以正常destroy
+     * 2 要求registryProtocol返回的exporter 可以正常destroy
      * 3 notify后不需要重新向注册中心注册
      * 4 export 方法传入的invoker最好能一直作为exporter的invoker
      */
@@ -515,7 +517,7 @@ public class RegistryProtocol implements Protocol {
                 return;
             }
 
-            List<Configurator> configurators = RegistryDirectory.toConfigurators(matchedUrls); // todo materchedUrls 中的URL协议为empty,这里就是一个空列表
+            List<Configurator> configurators = RegistryDirectory.toConfigurators(matchedUrls); // todo matchedUrls 中的URL协议为empty的话,返回的就是一个空列表
 
             final Invoker<?> invoker;
             if (originInvoker instanceof InvokerDelegete) {

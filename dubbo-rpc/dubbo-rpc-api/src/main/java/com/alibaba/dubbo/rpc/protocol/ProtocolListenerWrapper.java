@@ -60,7 +60,7 @@ public class ProtocolListenerWrapper implements Protocol {
      */
     @Override
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
-        // 远程暴露直接返回
+        // registry协议开头的服务暴露逻辑直接返回
         if (Constants.REGISTRY_PROTOCOL.equals(invoker.getUrl().getProtocol())) {
             return protocol.export(invoker);
         }

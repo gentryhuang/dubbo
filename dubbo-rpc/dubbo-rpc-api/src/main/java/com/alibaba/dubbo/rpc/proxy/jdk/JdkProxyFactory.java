@@ -26,24 +26,51 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
 /**
- * JavaassistRpcProxyFactory
+ * JdkProxyFactory，如果使用 JDK 生成代理，配置方式如下：
+ * <ul>
+ * <li>服务引用: <dubbo:reference proxy="jdk" /></li>
+ * <li>服务暴露: <dubbo:service proxy="jdk" /></li>
+ * </ul>
  */
 public class JdkProxyFactory extends AbstractProxyFactory {
 
+    /**
+     * 调用 java.lang.reflect.Proxy#getProxy(ClassLoader loader, Class<?>[] interfaces, InvocationHandler h) 方法，创建 Proxy 对象。
+     *
+     * @param invoker
+     * @param interfaces
+     * @param <T>
+     * @return
+     */
     @Override
     @SuppressWarnings("unchecked")
     public <T> T getProxy(Invoker<T> invoker, Class<?>[] interfaces) {
-        return (T) Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(), interfaces, new InvokerInvocationHandler(invoker));
+        return (T) Proxy.newProxyInstance(
+                Thread.currentThread().getContextClassLoader(),
+                interfaces,
+                new InvokerInvocationHandler(invoker)
+        );
     }
 
+    /**
+     * doInvoke方法调用是，直接通过反射，拿到实现类的Method，然后执行方法
+     * @param proxy
+     * @param type
+     * @param url
+     * @param <T>
+     * @return
+     */
     @Override
     public <T> Invoker<T> getInvoker(T proxy, Class<T> type, URL url) {
+
         return new AbstractProxyInvoker<T>(proxy, type, url) {
             @Override
             protected Object doInvoke(T proxy, String methodName,
                                       Class<?>[] parameterTypes,
                                       Object[] arguments) throws Throwable {
+                // 调用 Class#getMethod(String name, Class<?>... parameterTypes) 方法，反射获得方法。
                 Method method = proxy.getClass().getMethod(methodName, parameterTypes);
+                // 调用 Method#invoke(proxy, arguments) 方法，执行方法
                 return method.invoke(proxy, arguments);
             }
         };

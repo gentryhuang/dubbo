@@ -206,7 +206,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
      */
     private void init() {
         // 已经初始化过，直接返回
-       if (initialized) {
+        if (initialized) {
             return;
         }
         initialized = true;
@@ -287,6 +287,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 }
             }
         }
+        // 不通过系统属性指定，就使用配置的（在配置的前提下），如：<dubbo:reference id="xxxService" interface="com.alibaba.xxx.XxxService" url="dubbo://localhost:20890" />
 
         // 尝试从ConsumerConfig 对象中，读取 application,module,registries,monitor 配置对象
         if (consumer != null) {
@@ -483,7 +484,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                         }
                     }
                 }
-                // 没有定义直连，就拿注册中心地址
+                // 没有定义直连，就从注册中心中获取服务提供者
             } else {
 
                 // 加载注册中心 URL 数组
@@ -507,10 +508,10 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 }
             }
 
-            // 单个注册中心或服务提供者
+            // 单个注册中心或服务提供者【如果是服务提供者的话，就是直连的情况，那个refprotocol对应的拓展实现和是注册中心的是不同的】
             if (urls.size() == 1) {
                 /**
-                 * 引用服务：（以Dubbo协议为例）
+                 * 引用服务：（以Dubbo协议为例，并且此处的urls中的URL是注册中心地址包裹服务消费者地址）
                  *
                  * Protocol 有两个 Wrapper 拓展实现类： ProtocolFilterWrapper、ProtocolListenerWrapper，所以，#export(...) 方法的调用顺序是：
                  *

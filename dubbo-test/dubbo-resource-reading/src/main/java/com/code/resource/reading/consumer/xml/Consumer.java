@@ -22,20 +22,14 @@ public class Consumer {
     public static String[] consumerPath = {"xml/consumer.xml"};
     public static String[] multiProtocolPath = {"xml/multi-protocol-provider.xml"};
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(consumerPath);
 
-        /*
         IDemoService consumerService = (IDemoService) context.getBean("proxyDemoService");
         String hello = consumerService.ping("ping");
         System.out.println(hello);
-         */
-        while (true) {
-            DemoService demoService = (DemoService) context.getBean("xmlConsumerService");
-            demoService.hello();
-            Thread.sleep(5000);
-        }
-        //System.in.read();
+
+        System.in.read();
     }
 
 }

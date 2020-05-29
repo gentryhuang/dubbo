@@ -105,7 +105,7 @@ public abstract class AbstractRegistry implements Registry {
     private final ConcurrentMap<URL, Set<NotifyListener>> subscribed = new ConcurrentHashMap<URL, Set<NotifyListener>>();
     /**
      * 被通知的URL集合
-     * key1: 消费者的URL,例如消费者的URL，和 {@link #subscribed} 的键一致
+     * key1: 订阅的URL,例如消费者的URL，和 {@link #subscribed} 的键一致
      * key2: 分类，例如： providers,consumers,routes,configurators。【实际上无consumers,因为消费者不会去订阅另外的消费者的列表】，在{@link Constants}中，以 "_CATEGORY"结尾
      * ---
      * 从数据上看，和properties比较相似，但有两点差异：
@@ -512,7 +512,7 @@ public abstract class AbstractRegistry implements Registry {
             return;
         }
 
-        // 获得消费者URL对应的在 `notified` 中,通知的 URL 变化结果（全量数据），会把result中的值放入到 categoryNotified中
+        // 获得订阅URL对应的在 `notified` 中,通知的 URL 变化结果（全量数据），会把result中的值放入到 categoryNotified中
         Map<String, List<URL>> categoryNotified = notified.get(url);
         if (categoryNotified == null) {
             notified.putIfAbsent(url, new ConcurrentHashMap<String, List<URL>>());
@@ -525,9 +525,9 @@ public abstract class AbstractRegistry implements Registry {
             String category = entry.getKey();
             // 获得分类名对应的通知ULR列表
             List<URL> categoryList = entry.getValue();
-            // 1 将result 覆盖到 `notified`【填充notified集合】，需要注意：当某个分类的数据为空时，会依然有 urls 。其中 `urls[0].protocol = empty` ，通过这样的方式，处理所有服务提供者为空的情况。
+            // 1 将result 覆盖到 `notified`【更新notified集合中的通知ULR列表】，需要注意：当某个分类的数据为空时，会依然有 urls 。其中 `urls[0].protocol = empty` ，通过这样的方式，处理所有订阅URL对应的数据为空的情况。
             categoryNotified.put(category, categoryList);
-            // 2 保存传入的url对应的被通知的URL到properties和文件保存 // todo 这个操作为什么要在循环体内
+            // 2 保存传入的url对应的被通知的URL到properties和文件保存 // todo 这个操作为什么要在循环体内，是要不断更新吗？
             saveProperties(url);
             // 3 调用传入的listener的notify()方法
             listener.notify(categoryList);

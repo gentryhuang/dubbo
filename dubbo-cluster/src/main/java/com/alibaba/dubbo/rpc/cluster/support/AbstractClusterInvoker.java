@@ -46,6 +46,10 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
 
     private static final Logger logger = LoggerFactory
             .getLogger(AbstractClusterInvoker.class);
+
+    /**
+     * 重要-
+     */
     protected final Directory<T> directory;
 
     protected final boolean availablecheck;
@@ -59,8 +63,9 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
     }
 
     public AbstractClusterInvoker(Directory<T> directory, URL url) {
-        if (directory == null)
+        if (directory == null) {
             throw new IllegalArgumentException("service directory == null");
+        }
 
         this.directory = directory;
         //sticky: invoker.isAvailable() should always be checked before using when availablecheck is true.

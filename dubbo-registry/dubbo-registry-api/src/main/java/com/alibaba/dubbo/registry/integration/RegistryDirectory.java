@@ -55,7 +55,6 @@ import java.util.Set;
 
 /**
  * RegistryDirectory，实现了NotifyListener接口，服务变更会触发回掉notify方法，用于重新引入服务
- *
  */
 public class RegistryDirectory<T> extends AbstractDirectory<T> implements NotifyListener {
 
@@ -97,10 +96,12 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
     public RegistryDirectory(Class<T> serviceType, URL url) {
         super(url);
-        if (serviceType == null)
+        if (serviceType == null) {
             throw new IllegalArgumentException("service type is null.");
-        if (url.getServiceKey() == null || url.getServiceKey().length() == 0)
+        }
+        if (url.getServiceKey() == null || url.getServiceKey().length() == 0) {
             throw new IllegalArgumentException("registry serviceKey is null.");
+        }
         this.serviceType = serviceType;
         this.serviceKey = url.getServiceKey();
         this.queryMap = StringUtils.parseQueryString(url.getParameterAndDecoded(Constants.REFER_KEY));
@@ -182,6 +183,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
     /**
      * 服务变更时会触发这个类会回调该方法，用于重新引入服务
+     *
      * @param urls 已注册信息列表，总不为空，含义同{@link com.alibaba.dubbo.registry.RegistryService#lookup(URL)}的返回值。
      */
     @Override
@@ -204,11 +206,11 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                 logger.warn("Unsupported category " + category + " in notified url: " + url + " from registry " + getUrl().getAddress() + " to consumer " + NetUtils.getLocalHost());
             }
         }
-        // configurators
+        // configurators下的数据变更
         if (configuratorUrls != null && !configuratorUrls.isEmpty()) {
             this.configurators = toConfigurators(configuratorUrls);
         }
-        // routers
+        // routers下的数据变更
         if (routerUrls != null && !routerUrls.isEmpty()) {
             List<Router> routers = toRouters(routerUrls);
             if (routers != null) { // null - do nothing
@@ -223,7 +225,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                 this.overrideDirectoryUrl = configurator.configure(overrideDirectoryUrl);
             }
         }
-        // providers
+        // 重新引入服务
         refreshInvoker(invokerUrls);
     }
 
@@ -235,10 +237,14 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
      *
      * @param invokerUrls this parameter can't be null
      */
-    // TODO: 2017/8/31 FIXME The thread pool should be used to refresh the address, otherwise the task may be accumulated.
+    /**
+     * todo 终极目标就是初始化RegistryDirectory的两个属性： urlInvokerMap和methodInvokerMap
+     *
+     * @param invokerUrls
+     */
     private void refreshInvoker(List<URL> invokerUrls) {
-        if (invokerUrls != null && invokerUrls.size() == 1 && invokerUrls.get(0) != null
-                && Constants.EMPTY_PROTOCOL.equals(invokerUrls.get(0).getProtocol())) {
+        // 当订阅URL对应的没有数据变更时（没有数据变更也会创建一个empty协议的URL），不需要重新引入服务。把相关的缓存删除即可
+        if (invokerUrls != null && invokerUrls.size() == 1 && invokerUrls.get(0) != null && Constants.EMPTY_PROTOCOL.equals(invokerUrls.get(0).getProtocol())) {
             this.forbidden = true; // Forbid to access
             this.methodInvokerMap = null; // Set the method invoker map to null
             destroyAllInvokers(); // Close all invokers
@@ -254,9 +260,11 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             if (invokerUrls.isEmpty()) {
                 return;
             }
-            // 将URL列表转成Invoker列表
+            // 将变更的URL列表转成Invoker列表【key:合并后的url串，对应的Invoker】
             Map<String, Invoker<T>> newUrlInvokerMap = toInvokers(invokerUrls);// Translate url list to Invoker map
+            // 方法名映射Invoker列表
             Map<String, List<Invoker<T>>> newMethodInvokerMap = toMethodInvokers(newUrlInvokerMap); // Change method name to map Invoker Map
+
             // state change
             // If the calculation is wrong, it is not processed.
             if (newUrlInvokerMap == null || newUrlInvokerMap.size() == 0) {
@@ -264,6 +272,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                 return;
             }
             this.methodInvokerMap = multiGroup ? toMergeMethodInvokerMap(newMethodInvokerMap) : newMethodInvokerMap;
+            // 服务提供者Invoker的Map，这个属性中保存的Invoker在待用的时候就会取出
             this.urlInvokerMap = newUrlInvokerMap;
             try {
                 destroyUnusedInvokers(oldUrlInvokerMap, newUrlInvokerMap); // Close the unused Invoker
@@ -336,11 +345,14 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
     /**
      * Turn urls into invokers, and if url has been refer, will not re-reference.
+     * <p>
+     * 将URL转为Invoker，即使用protocol.refer方法把url转为Invoker
      *
      * @param urls
      * @return invokers
      */
     private Map<String, Invoker<T>> toInvokers(List<URL> urls) {
+        // 变更后的urls对应的 新的Invoker集合
         Map<String, Invoker<T>> newUrlInvokerMap = new HashMap<String, Invoker<T>>();
         if (urls == null || urls.isEmpty()) {
             return newUrlInvokerMap;
@@ -363,6 +375,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                     continue;
                 }
             }
+            // empty协议的不处理
             if (Constants.EMPTY_PROTOCOL.equals(providerUrl.getProtocol())) {
                 continue;
             }
@@ -371,11 +384,12 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                         + ", supported protocol: " + ExtensionLoader.getExtensionLoader(Protocol.class).getSupportedExtensions()));
                 continue;
             }
+
             // 合并provider端配置数据，如：服务端ip和port等
             URL url = mergeUrl(providerUrl);
-
+            // URL参数是排序的
             String key = url.toFullString(); // The parameter urls are sorted
-           // 忽略重复推送的服务列表，防止重复引用
+            // 忽略重复推送的服务列表，防止重复引用
             if (keys.contains(key)) { // Repeated url
                 continue;
             }
@@ -392,13 +406,19 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                         enabled = url.getParameter(Constants.ENABLED_KEY, true);
                     }
                     if (enabled) {
-                        // 使用具体协议创建远程连接，注意，远程连接建立后会发起拦截器构建操作，具体触发在 ProtocolFilterWrapper#refer方法中
+                        /**
+                         * 这里以Dubbo 协议为例 （listener->filter-DubboProtocol）
+                         * 1 创建客户端与服务端的长连接，然后封装为DubboInvoker,返回
+                         * 2 进行filter链包装该DubboInvoker实例，如：ConsumerContextFilter->FutureFilter->MonitorFilter->DubboInvoker
+                         * 3 使用InvokerDelegete包装带有Filter链的DubboInvoker实例
+                         */
                         invoker = new InvokerDelegate<T>(protocol.refer(serviceType, url), url, providerUrl);
                     }
                 } catch (Throwable t) {
                     logger.error("Failed to refer invoker for interface:" + serviceType + ",url:(" + url + ")" + t.getMessage(), t);
                 }
                 if (invoker != null) { // Put new invoker in cache
+                    // 将InvokerDelegate实例放入newUrlInvokerMap缓存中
                     newUrlInvokerMap.put(key, invoker);
                 }
             } else {
@@ -582,8 +602,8 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
         if (forbidden) {
             // 1. No service provider 2. Service providers are disabled
             throw new RpcException(RpcException.FORBIDDEN_EXCEPTION,
-                "No provider available from registry " + getUrl().getAddress() + " for service " + getConsumerUrl().getServiceKey() + " on consumer " +  NetUtils.getLocalHost()
-                        + " use dubbo version " + Version.getVersion() + ", please check status of providers(disabled, not registered or in blacklist).");
+                    "No provider available from registry " + getUrl().getAddress() + " for service " + getConsumerUrl().getServiceKey() + " on consumer " + NetUtils.getLocalHost()
+                            + " use dubbo version " + Version.getVersion() + ", please check status of providers(disabled, not registered or in blacklist).");
         }
         List<Invoker<T>> invokers = null;
         Map<String, List<Invoker<T>>> localMethodInvokerMap = this.methodInvokerMap; // local reference
