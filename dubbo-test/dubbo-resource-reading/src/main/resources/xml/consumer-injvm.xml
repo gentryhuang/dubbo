@@ -9,17 +9,20 @@
        http://dubbo.apache.org/schema/dubbo/dubbo.xsd">
 
     <!-- 两个以上会报错。 协议，注册中心可以多个，以及服务提供者可以多个 -->
-    <dubbo:application name="xml-demo-consumer"/>
+    <dubbo:application name="xml-demo-consumer-injvm"/>
 
-    <!-- 注册中心 - zk -->
-     <dubbo:registry address="zookeeper://127.0.0.1:2181"/>
 
-    <!-- 注册中心 - redis -->
-    <!-- <dubbo:registry protocol="redis" address="127.0.0.1:6379"/> -->
+    <!-- 注册中心 -->
+    <dubbo:registry address="N/A"/>
 
-    <!-- 引入服务-->
-    <!-- 引入远程服务 -->
-    <dubbo:reference interface="com.code.reading.service.IDemoService" id="proxyDemoService" check="false"/>
+    <!-- 同一个JVM进程暴露服务 -->
+    <bean id="xmlServiceImpl" class="com.code.resource.reading.consumer.xml.local.DemoServiceImpl"/>
+    <dubbo:service interface="com.code.resource.reading.api.DemoService" ref="xmlServiceImpl"
+                   scope="local"/>
+
+    <!-- 引入本地服务 -->
+    <dubbo:reference interface="com.code.resource.reading.api.DemoService" id="demoService"
+                     scope="local"/>
 
 
 </beans>

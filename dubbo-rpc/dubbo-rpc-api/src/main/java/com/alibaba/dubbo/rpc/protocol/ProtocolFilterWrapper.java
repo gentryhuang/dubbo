@@ -79,7 +79,7 @@ public class ProtocolFilterWrapper implements Protocol {
                     }
 
                     /**
-                     * 调用的时候会执行
+                     * 调用Invoker的invoke方法的时候会执行
                      *  1 调用Filter#invoke(invoker,invocation)方法，不断执行过滤器逻辑
                      *  2 在Filter中会调用Invoker#invoker(invocation)方法，最后会执行到Invoker【如：InjvmInvoker,DubboInvoker等】的invoke方法
                      *

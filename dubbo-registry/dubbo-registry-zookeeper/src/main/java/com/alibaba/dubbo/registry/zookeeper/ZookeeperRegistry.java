@@ -241,7 +241,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
                     /**
                      * 对监听器集合处理 ConcurrentMap<URL, ConcurrentMap<NotifyListener, ChildListener>> zkListeners。
                      * 获得listener(NotifyListener)对应的ChildListener对象，没有就会创建这里创建出来的ChildListener实例中的childChanged方法实际上
-                     * 就是最终当parentPath[即toCategoriesPath方法处理后的元素path]下的currentchilds发生变化时，执行的逻辑。其中会回调NotifyListener#notify方法
+                     * 就是最终当parentPath[即toCategoriesPath方法处理后的元素path]下的currentChilds发生变化时，执行的逻辑。其中会回调NotifyListener#notify方法
                      */
 
                     ChildListener zkListener = listeners.get(listener);
@@ -249,7 +249,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
                         listeners.putIfAbsent(listener, new ChildListener() {
                             @Override
                             public void childChanged(String parentPath, List<String> currentChilds) {
-                                // 变更时，调用 notity方法，回调 NotifyListener 【增量】,用来监听子节点列表的变化
+                                // 变更时，调用 notity方法，回调 NotifyListener 【增量】,用来监听子节点列表的变化。todo 注意：即使是变动的情况下，传过来的也是全量数据，回头验证一下
                                 ZookeeperRegistry.this.notify(url, listener, toUrlsWithEmpty(url, parentPath, currentChilds));
                             }
                         });

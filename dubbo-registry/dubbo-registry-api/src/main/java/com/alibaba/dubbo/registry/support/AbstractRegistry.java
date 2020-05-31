@@ -72,7 +72,7 @@ public abstract class AbstractRegistry implements Registry {
      * 2 其他的均为{@link #notified} 服务提供者列表
      * 3 数据流向： 启动时，从file读取数据到 properties中。注册中心数据发生变更时，通知到Registry后，修改properties对应的值，并写入file
      * 4 数据的键-值对
-     * （1）大多数情况下，键为服务消费者的URL的服务键 {@link URL#getServiceKey()},值为服务提供者列表/路由规则列表/配置规则列表
+     * （1）大多数情况下，键为`服务消费者的URL`【此消费者非消费者】的服务键 {@link URL#getServiceKey()},值为服务提供者列表/路由规则列表/配置规则列表
      * （2）特殊情况下， .registries
      * （3）值会存在为列表的情况，使用空格  URL_SEPARATOR
      */

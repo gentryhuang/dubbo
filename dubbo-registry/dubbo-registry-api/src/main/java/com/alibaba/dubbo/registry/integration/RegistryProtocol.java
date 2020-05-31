@@ -415,7 +415,9 @@ public class RegistryProtocol implements Protocol {
         directory.setProtocol(protocol);
 
 
-        // 获得服务引用配置集合parameters。注意：url传入RegistryDirectory后，经过处理并重新创建，所以 url != directory.url，所以获得的是服务引用配置集合
+        /** 获得服务引用配置集合parameters。注意：url传入RegistryDirectory后，经过处理并重新创建，所以 url != directory.url，
+         * directory.url获得的是服务引用配置的信息
+         */
         Map<String, String> parameters = new HashMap<String, String>(directory.getUrl().getParameters());
 
         // 生成消费者URL
@@ -440,7 +442,7 @@ public class RegistryProtocol implements Protocol {
                         + "," + Constants.ROUTERS_CATEGORY));
 
         /**创建Invoker对象 ，可能有多个服务提供者，因此需要将多个服务提供者合并为一个// todo 集群容错
-         * 
+         *
          * 由于一个服务可能部署在多台服务器上，这样就会在 providers 产生多个节点，这个时候就需要 Cluster 将多个服务节点合并为一个，并生成一个 Invoker，这一个Invoker代表了多个。
          * Cluster默认为FailoverCluster实例，支持服务调用重试
          */
@@ -519,13 +521,14 @@ public class RegistryProtocol implements Protocol {
 
             List<Configurator> configurators = RegistryDirectory.toConfigurators(matchedUrls); // todo matchedUrls 中的URL协议为empty的话,返回的就是一个空列表
 
+            // 最原始的invoker
             final Invoker<?> invoker;
             if (originInvoker instanceof InvokerDelegete) {
                 invoker = ((InvokerDelegete<?>) originInvoker).getInvoker();
             } else {
                 invoker = originInvoker;
             }
-            // 最原始的invoker
+            // 获取服务提供者的URL信息
             URL originUrl = RegistryProtocol.this.getProviderUrl(invoker);
             // 在doLocalExport方法中已经存放在这里
             String key = getCacheKey(originInvoker);
@@ -537,6 +540,7 @@ public class RegistryProtocol implements Protocol {
             }
             //当前的，可能经过了多次merge
             URL currentUrl = exporter.getInvoker().getUrl();
+
             //将配置合并到 originUrl
             URL newUrl = getConfigedInvokerUrl(configurators, originUrl);
 

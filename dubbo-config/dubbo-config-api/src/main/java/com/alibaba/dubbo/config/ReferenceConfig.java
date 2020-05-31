@@ -439,6 +439,15 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 
         // 本地引用 【 todo 注意：本地引用服务时，不是使用服务提供者的URL，而是服务消费者的URL】
         if (isJvmRefer) {
+
+            // ---  todo 为了调试本地引用临时代码，休眠一会 ------
+            try{
+                Thread.sleep(2000);
+            }catch (Exception ex){
+
+            }
+            //------ todo 为了调试本地引用临时代码  ----------
+
             // 创建服务引用 URL 对象，协议为injvm
             URL url = new URL(Constants.LOCAL_PROTOCOL, NetUtils.LOCALHOST, 0, interfaceClass.getName()).addParameters(map);
             /**
@@ -479,7 +488,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                             urls.add(url.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
                             // 服务提供者的地址
                         } else {
-                            // 合并url,移除服务提供者的一些不必要的配置，
+                            // 合并url
                             urls.add(ClusterUtils.mergeUrl(url, map));
                         }
                     }
@@ -524,7 +533,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                  */
                 invoker = refprotocol.refer(interfaceClass, urls.get(0));
 
-                // 多个注册中心或多个服务提供者，或者两者的混合
+                // 多个注册中心或多个服务提供者，或者两者的混合。 【todo: 上面的逻辑已经处理了，可以区分是注册中心还是服务提供者，urls列表中的URL如果是注册中心就会使用refer参数拼接消费者URL信息】
             } else {
                 // 循环 urls，引用服务，返回Invoker 对象。此时会有多个Invoker对象，需要进行合并。
                 List<Invoker<?>> invokers = new ArrayList<Invoker<?>>();

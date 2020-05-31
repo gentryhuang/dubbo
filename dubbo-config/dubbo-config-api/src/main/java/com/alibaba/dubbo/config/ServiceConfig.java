@@ -340,7 +340,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             }
         }
 
-        // 处理服务接口客户端本地代理(stub 属性)相关，即本地存根。目的：想在客户端【服务消费方】执行需要的逻辑，不局限服务提供的逻辑。本地存根类编写方式是固定。
+        // 处理服务接口客户端本地代理(stub 属性)相关，即本地存根。目的：想在客户端【服务消费方】执行需要的逻辑，不局限服务提供的逻辑。本地存根类编写方式是固定。todo 服务端有意义吗？
         if (stub != null) {
             // 如果stub属性设置为ture，表示使用缺省代理类名，即：接口名 + Stub 后缀
             if ("true".equals(stub)) {

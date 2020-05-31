@@ -88,6 +88,12 @@ public class ListenerInvokerWrapper<T> implements Invoker<T> {
         return invoker.isAvailable();
     }
 
+    /**
+     * 并未对 #invoke(invocation) 的过程实现监听
+     * @param invocation
+     * @return
+     * @throws RpcException
+     */
     @Override
     public Result invoke(Invocation invocation) throws RpcException {
         return invoker.invoke(invocation);

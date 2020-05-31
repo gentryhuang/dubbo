@@ -54,7 +54,7 @@ public class JavassistProxyFactory extends AbstractProxyFactory {
          * 2 在方法invokeMethod体中会为每个ref的方法都做方法名和方法参数匹配校验，匹配直接调用调用。相比较JdkProxyFactory省去了反射调用的开销【JdkProxyFactory通过反射
          * 获取真实对象的方法，然后调用】
          * 3 Invoker被调用的时候会触发doInvoke方法，然后调用Wrapper的invokeMethod方法。Wrapper的实现类是通过Javassist技术实现的
-         * 4 todo 注意：消费方在调用该Invoker的方法时， Wrapper实现的invokeMethod方法做了一次转发，然后才会真正调用Invoker中的ref的方法【Invoker封装了ref】
+         * 4 todo 注意：消费方在调用该Invoker的方法时， Wrapper实现的invokeMethod方法做了一次转发，然后才会真正调用Invoker【AbstractProxyInvoker】中的ref的方法【Invoker封装了ref】
          * 5 一个生成的Wrapper类，只对应一个Service
          */
         final Wrapper wrapper = Wrapper.getWrapper(proxy.getClass().getName().indexOf('$') < 0 ? proxy.getClass() : type);

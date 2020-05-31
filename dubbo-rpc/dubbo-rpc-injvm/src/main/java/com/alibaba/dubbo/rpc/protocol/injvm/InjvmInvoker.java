@@ -66,7 +66,7 @@ class InjvmInvoker<T> extends AbstractInvoker<T> {
     }
 
     /**
-     * 调用，本质上就是利用共用的 Map
+     * 调用，本质上就是利用公用的 Map
      *
      * @param invocation
      * @return
@@ -74,11 +74,16 @@ class InjvmInvoker<T> extends AbstractInvoker<T> {
      */
     @Override
     public Result doInvoke(Invocation invocation) throws Throwable {
+        /**
+         *  根据服务键从 {@link InjvmInvoker#exporterMap}缓存中 获取 Exporter
+         */
         Exporter<?> exporter = InjvmProtocol.getExporter(exporterMap, getUrl());
         if (exporter == null) {
             throw new RpcException("Service [" + key + "] not found.");
         }
+        // 设置服务提供者地址为本地
         RpcContext.getContext().setRemoteAddress(NetUtils.LOCALHOST, 0);
+        // 从Exporter中拿到Invoker，然后调用invoke方法,
         return exporter.getInvoker().invoke(invocation);
     }
 }

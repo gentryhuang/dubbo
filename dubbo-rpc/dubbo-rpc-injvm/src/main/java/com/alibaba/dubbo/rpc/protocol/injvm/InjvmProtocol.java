@@ -65,6 +65,7 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
 
     /**
      * 判断本地已经有url对应的InjvmExporter时，直接引用
+     *
      * @param map
      * @param key
      * @return
@@ -73,6 +74,7 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
         Exporter<?> result = null;
 
         if (!key.getServiceKey().contains("*")) {
+            // 根据服务键获取Exporter
             result = map.get(key.getServiceKey());
         } else {
             if (map != null && !map.isEmpty()) {

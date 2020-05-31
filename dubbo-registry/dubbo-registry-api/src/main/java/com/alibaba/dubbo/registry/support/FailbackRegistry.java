@@ -233,7 +233,11 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         } catch (Exception e) {
             Throwable t = e;
 
-            // 从Properties缓存文件中取出通知URL集合 【注意：这些URL是由注册中心维护的，每次由订阅URL请求订阅时，注册中心都会把它对应的要通知的URL列表记录到properties文件中，然后写入磁盘，注意 empty://的情况】
+            /**
+             * todo 注册中心维护的通知URL集合用在了这里，即当订阅发生异常时，会取出缓存中的通知ULR列表，调用notify进行通知
+             * 从Properties缓存文件中取出通知URL集合
+             * 【注意：这些URL是由注册中心维护的，每次由订阅URL请求订阅时，注册中心都会把它对应的要通知的URL列表记录到properties文件中，然后写入磁盘，注意 empty://的情况】
+             */
             List<URL> urls = getCacheUrls(url);
             if (urls != null && !urls.isEmpty()) {
                 notify(url, listener, urls);

@@ -272,7 +272,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                 return;
             }
             this.methodInvokerMap = multiGroup ? toMergeMethodInvokerMap(newMethodInvokerMap) : newMethodInvokerMap;
-            // 服务提供者Invoker的Map，这个属性中保存的Invoker在待用的时候就会取出
+            // todo 服务提供者Invoker的Map，这个属性中保存的Invoker在待用的时候就会取出
             this.urlInvokerMap = newUrlInvokerMap;
             try {
                 destroyUnusedInvokers(oldUrlInvokerMap, newUrlInvokerMap); // Close the unused Invoker
@@ -387,6 +387,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
             // 合并provider端配置数据，如：服务端ip和port等
             URL url = mergeUrl(providerUrl);
+
             // URL参数是排序的
             String key = url.toFullString(); // The parameter urls are sorted
             // 忽略重复推送的服务列表，防止重复引用
