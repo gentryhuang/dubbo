@@ -86,7 +86,9 @@ public class DubboProtocol extends AbstractProtocol {
     //servicekey-stubmethods
     private final ConcurrentMap<String, String> stubServiceMethodsMap = new ConcurrentHashMap<String, String>();
 
-    // 经过层层包装后，会成为最终的服务端处理器，如netty
+    /**
+     * 经过层层包装后，会成为最终的服务端处理器，如netty。该处理器负责将请求转发到对应的Invoker对象，执行逻辑，返回结果
+     */
     private ExchangeHandler requestHandler = new ExchangeHandlerAdapter() {
 
         @Override
@@ -95,6 +97,7 @@ public class DubboProtocol extends AbstractProtocol {
                 Invocation inv = (Invocation) message;
                 // 获取Invoker
                 Invoker<?> invoker = getInvoker(channel, inv);
+
                 // need to consider backward-compatibility if it's a callback  如果是callback 需要处理高版本调用低版本的问题
                 if (Boolean.TRUE.toString().equals(inv.getAttachments().get(IS_CALLBACK_SERVICE_INVOKE))) {
                     String methodsStr = invoker.getUrl().getParameters().get("methods");
@@ -227,8 +230,9 @@ public class DubboProtocol extends AbstractProtocol {
 
         DubboExporter<?> exporter = (DubboExporter<?>) exporterMap.get(serviceKey);
 
-        if (exporter == null)
+        if (exporter == null) {
             throw new RemotingException(channel, "Not found exported service: " + serviceKey + " in " + exporterMap.keySet() + ", may be version or group mismatch " + ", channel: consumer: " + channel.getRemoteAddress() + " --> provider: " + channel.getLocalAddress() + ", message:" + inv);
+        }
 
         return exporter.getInvoker();
     }
@@ -454,6 +458,7 @@ public class DubboProtocol extends AbstractProtocol {
                 referenceClientMap.remove(key);
             }
         }
+
         // 新增锁集合元素
         locks.putIfAbsent(key, new Object());
 

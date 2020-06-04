@@ -76,7 +76,7 @@ public class RegistryProtocol implements Protocol {
      */
     private Cluster cluster;
     /**
-     * Protocol 自适应拓展实现类，通过Dubbo SPI自动注入
+     * Protocol 自适应拓展实现类，通过Dubbo SPI自动注入 【Dubbo IOC ，Setter注入 】
      */
     private Protocol protocol;
     /**
