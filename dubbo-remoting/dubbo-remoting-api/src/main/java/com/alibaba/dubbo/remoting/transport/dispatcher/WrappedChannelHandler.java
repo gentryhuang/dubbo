@@ -32,28 +32,45 @@ import com.alibaba.dubbo.remoting.transport.ChannelHandlerDelegate;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * 实现了ChannelHandlerDelegate 接口，包装的 WrappedChannelHandler 实现类
+ */
 public class WrappedChannelHandler implements ChannelHandlerDelegate {
 
     protected static final Logger logger = LoggerFactory.getLogger(WrappedChannelHandler.class);
 
+    /**
+     * 共享线程池
+     */
     protected static final ExecutorService SHARED_EXECUTOR = Executors.newCachedThreadPool(new NamedThreadFactory("DubboSharedHandler", true));
-
+    /**
+     * 线程池
+     */
     protected final ExecutorService executor;
-
+    /**
+     * 通道处理器
+     */
     protected final ChannelHandler handler;
-
+    /**
+     * URL
+     */
     protected final URL url;
 
     public WrappedChannelHandler(ChannelHandler handler, URL url) {
         this.handler = handler;
         this.url = url;
+
+        // 基于SPI机制创建线程池
         executor = (ExecutorService) ExtensionLoader.getExtensionLoader(ThreadPool.class).getAdaptiveExtension().getExecutor(url);
 
         String componentKey = Constants.EXECUTOR_SERVICE_COMPONENT_KEY;
         if (Constants.CONSUMER_SIDE.equalsIgnoreCase(url.getParameter(Constants.SIDE_KEY))) {
             componentKey = Constants.CONSUMER_SIDE;
         }
+
+        // 基于SPI机制创建线程池
         DataStore dataStore = ExtensionLoader.getExtensionLoader(DataStore.class).getDefaultExtension();
+        // 添加线程池到 DataStore中  【注意： AbstractClient 或 AbstractServer 从 DataStore 获得线程池的方式】
         dataStore.put(componentKey, Integer.toString(url.getPort()), executor);
     }
 

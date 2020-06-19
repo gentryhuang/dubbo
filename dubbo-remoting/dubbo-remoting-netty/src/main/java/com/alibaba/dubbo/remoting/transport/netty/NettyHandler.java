@@ -33,15 +33,26 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * NettyHandler
+ * NettyHandler，继承 Netty的SimpleChannelHandler，供 Dubbo的NettyServer和NettyClient统一使用。 Netty4则不同，服务端和客户端使用不同的两个处理器，控制粒度更细。
  */
 @Sharable
 public class NettyHandler extends SimpleChannelHandler {
 
-    private final Map<String, Channel> channels = new ConcurrentHashMap<String, Channel>(); // <ip:port, channel>
+    /**
+     * Dubbo Channel 集合
+     * key: ip:port
+     * value: Dubbo的Channel
+     */
+    private final Map<String, Channel> channels = new ConcurrentHashMap<String, Channel>();
 
+    /**
+     * Dubbo URL
+     */
     private final URL url;
 
+    /**
+     * Dubbo ChannelHandler
+     */
     private final ChannelHandler handler;
 
     public NettyHandler(URL url, ChannelHandler handler) {
@@ -59,15 +70,21 @@ public class NettyHandler extends SimpleChannelHandler {
         return channels;
     }
 
+    //------------------------------ 每个实现方法，调用handler对应的方法 -------------------------------------------/
+
     @Override
     public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
+        // 创建 Dubbo 的NettyChannel 对象
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.getChannel(), url, handler);
         try {
+            // 不为空就加入到 channels 中
             if (channel != null) {
                 channels.put(NetUtils.toAddressString((InetSocketAddress) ctx.getChannel().getRemoteAddress()), channel);
             }
+            // 交给 `handler` 处理
             handler.connected(channel);
         } finally {
+            // 若断开，则移除关联的缓存
             NettyChannel.removeChannelIfDisconnected(ctx.getChannel());
         }
     }

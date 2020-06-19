@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 
 /**
  * Wrap netty dynamic channel buffer.
+ * <p>
+ * 实现 ChannelBufferFactory 接口，创建 NettyBackedChannelBuffer 的工厂
  */
 public class NettyBackedChannelBufferFactory implements ChannelBufferFactory {
 
@@ -43,8 +45,11 @@ public class NettyBackedChannelBufferFactory implements ChannelBufferFactory {
 
     @Override
     public ChannelBuffer getBuffer(byte[] array, int offset, int length) {
+        // 创建 Netty3 ChannelBuffer 对象
         org.jboss.netty.buffer.ChannelBuffer buffer = ChannelBuffers.dynamicBuffer(length);
+        // 写入数据
         buffer.writeBytes(array, offset, length);
+        // 创建 NettyBackedChannelBuffer 对象
         return new NettyBackedChannelBuffer(buffer);
     }
 

@@ -26,8 +26,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
+/**
+ * 实现 ChannelBuffer 接口，基于 Netty3 ChannelBuffer 的 ChannelBuffer 实现类
+ */
 public class NettyBackedChannelBuffer implements ChannelBuffer {
 
+    /**
+     * Netty3 的 buffer
+     */
     private org.jboss.netty.buffer.ChannelBuffer buffer;
 
     public NettyBackedChannelBuffer(org.jboss.netty.buffer.ChannelBuffer buffer) {
@@ -38,6 +44,8 @@ public class NettyBackedChannelBuffer implements ChannelBuffer {
     public org.jboss.netty.buffer.ChannelBuffer nettyChannelBuffer() {
         return buffer;
     }
+
+    // --------------  每个实现方法，直接调用 Netty3 ChannelBuffer 对应的方法 ----------------/
 
     @Override
     public int capacity() {
@@ -51,6 +59,11 @@ public class NettyBackedChannelBuffer implements ChannelBuffer {
     }
 
 
+    /**
+     * 工厂 - NettyBackedChannelBufferFactory
+     *
+     * @return
+     */
     @Override
     public ChannelBufferFactory factory() {
         return NettyBackedChannelBufferFactory.getInstance();

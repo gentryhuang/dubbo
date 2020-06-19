@@ -19,7 +19,7 @@ package com.alibaba.dubbo.remoting;
 import java.net.InetSocketAddress;
 
 /**
- * RemotingException. (API, Prototype, ThreadSafe)
+ * RemotingException. (API, Prototype, ThreadSafe)  // 基础异常
  *
  * @export
  * @see com.alibaba.dubbo.remoting.exchange.ResponseFuture#get()
@@ -33,9 +33,13 @@ import java.net.InetSocketAddress;
 public class RemotingException extends Exception {
 
     private static final long serialVersionUID = -3160452149606778709L;
-
+    /**
+     * 本地地址
+     */
     private InetSocketAddress localAddress;
-
+    /**
+     * 远程地址
+     */
     private InetSocketAddress remoteAddress;
 
     public RemotingException(Channel channel, String msg) {

@@ -24,14 +24,23 @@ import com.alibaba.dubbo.common.Resetable;
  * <a href="http://en.wikipedia.org/wiki/Client%E2%80%93server_model">Client/Server</a>
  *
  * @see com.alibaba.dubbo.remoting.Transporter#connect(com.alibaba.dubbo.common.URL, ChannelHandler)
+ * <p>
+ * 客户端接口
  */
 public interface Client extends Endpoint, Channel, Resetable {
 
     /**
-     * reconnect.
+     * 重连
+     *
+     * @throws RemotingException
      */
     void reconnect() throws RemotingException;
 
+    /**
+     * 重置
+     *
+     * @param parameters
+     */
     @Deprecated
     void reset(com.alibaba.dubbo.common.Parameters parameters);
 

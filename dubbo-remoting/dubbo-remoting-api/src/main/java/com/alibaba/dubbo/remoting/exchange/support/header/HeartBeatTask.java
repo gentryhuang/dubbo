@@ -26,14 +26,26 @@ import com.alibaba.dubbo.remoting.exchange.Request;
 
 import java.util.Collection;
 
+/**
+ * 实现Runnable 接口，心跳任务
+ */
 final class HeartBeatTask implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(HeartBeatTask.class);
 
+    /**
+     * 用于查询需要心跳的通道数组
+     */
     private ChannelProvider channelProvider;
 
+    /**
+     * 心跳间隔，单位： 毫秒
+     */
     private int heartbeat;
 
+    /**
+     * 心跳超时时间，单位：毫秒
+     */
     private int heartbeatTimeout;
 
     HeartBeatTask(ChannelProvider provider, int heartbeat, int heartbeatTimeout) {
@@ -42,6 +54,9 @@ final class HeartBeatTask implements Runnable {
         this.heartbeatTimeout = heartbeatTimeout;
     }
 
+    /**
+     * 执行任务
+     */
     @Override
     public void run() {
         try {
@@ -51,15 +66,19 @@ final class HeartBeatTask implements Runnable {
                     continue;
                 }
                 try {
-                    Long lastRead = (Long) channel.getAttribute(
-                            HeaderExchangeHandler.KEY_READ_TIMESTAMP);
-                    Long lastWrite = (Long) channel.getAttribute(
-                            HeaderExchangeHandler.KEY_WRITE_TIMESTAMP);
-                    if ((lastRead != null && now - lastRead > heartbeat)
-                            || (lastWrite != null && now - lastWrite > heartbeat)) {
+
+                    // 最后读时间
+                    Long lastRead = (Long) channel.getAttribute(HeaderExchangeHandler.KEY_READ_TIMESTAMP);
+                    // 最后写时间
+                    Long lastWrite = (Long) channel.getAttribute(HeaderExchangeHandler.KEY_WRITE_TIMESTAMP);
+
+                    // 最后读写的时间，任一超过心跳间隔 heartbeat，就发送心跳
+                    if ((lastRead != null && now - lastRead > heartbeat) || (lastWrite != null && now - lastWrite > heartbeat)) {
                         Request req = new Request();
                         req.setVersion(Version.getProtocolVersion());
+                        // 需要响应
                         req.setTwoWay(true);
+                        // 设置心跳事件
                         req.setEvent(Request.HEARTBEAT_EVENT);
                         channel.send(req);
                         if (logger.isDebugEnabled()) {
@@ -67,15 +86,21 @@ final class HeartBeatTask implements Runnable {
                                     + ", cause: The channel has no data-transmission exceeds a heartbeat period: " + heartbeat + "ms");
                         }
                     }
+
+                    // 最后读时间超过心跳超时时间 heartbeatTimeout
                     if (lastRead != null && now - lastRead > heartbeatTimeout) {
                         logger.warn("Close channel " + channel
                                 + ", because heartbeat read idle time out: " + heartbeatTimeout + "ms");
+
+                        // 客户端就重新连接服务端
                         if (channel instanceof Client) {
                             try {
                                 ((Client) channel).reconnect();
                             } catch (Exception e) {
                                 //do nothing
                             }
+
+                            // 服务端就关闭客户端连接
                         } else {
                             channel.close();
                         }
@@ -88,6 +113,7 @@ final class HeartBeatTask implements Runnable {
             logger.warn("Unhandled exception when heartbeat, cause: " + t.getMessage(), t);
         }
     }
+
 
     interface ChannelProvider {
         Collection<Channel> getChannels();

@@ -198,8 +198,11 @@ import java.nio.ByteBuffer;
  * <p/>
  * Please refer to {@link ChannelBufferInputStream} and {@link
  * ChannelBufferOutputStream}.
- *
- *
+ * <p>
+ * 实现 Comparable 接口，通道Buffer接口。
+ * 注意：
+ * 1 ChannelBuffer在接口方法的定义上，主要参考了Netty 的 ByteBuf 进行设计，所以接口和注释基本一致。
+ * 2 独有的接口方法 factory() 方法，用于逻辑中，需要创建 ChannelBuffer的情况，因为它返回的是 ChannelBuffer的工厂
  */
 public interface ChannelBuffer extends Comparable<ChannelBuffer> {
 

@@ -85,6 +85,8 @@ import java.util.Map;
  * See also {@link #format(String, Object)},
  * {@link #format(String, Object, Object)} and
  * {@link #arrayFormat(String, Object[])} methods for more details.
+ * <p>
+ * {@link FormattingTuple} 两者配合，用于格式化日志
  */
 final class MessageFormatter {
     static final char DELIM_START = '{';

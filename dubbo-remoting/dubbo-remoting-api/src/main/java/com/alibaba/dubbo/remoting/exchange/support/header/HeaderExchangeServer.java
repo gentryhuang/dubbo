@@ -41,22 +41,35 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * ExchangeServerImpl
+ * 实现 ExchangeServer 接口，基于消息头部( Header )的信息交换服务器实现类
  */
 public class HeaderExchangeServer implements ExchangeServer {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private final ScheduledExecutorService scheduled = Executors.newScheduledThreadPool(1,
-            new NamedThreadFactory(
-                    "dubbo-remoting-server-heartbeat",
-                    true));
+    /**
+     * 定时器线程池
+     */
+    private final ScheduledExecutorService scheduled = Executors.newScheduledThreadPool(1, new NamedThreadFactory("dubbo-remoting-server-heartbeat", true));
+    /**
+     * 服务器
+     */
     private final Server server;
-    // heartbeat timer
+    /**
+     * 心跳定时器 Future
+     */
     private ScheduledFuture<?> heartbeatTimer;
-    // heartbeat timeout (ms), default value is 0 , won't execute a heartbeat.
+    /**
+     * 心跳
+     */
     private int heartbeat;
+    /**
+     * 心跳间隔，单位： 毫秒
+     */
     private int heartbeatTimeout;
+    /**
+     * 是否关闭
+     */
     private AtomicBoolean closed = new AtomicBoolean(false);
 
     public HeaderExchangeServer(Server server) {
@@ -64,11 +77,14 @@ public class HeaderExchangeServer implements ExchangeServer {
             throw new IllegalArgumentException("server == null");
         }
         this.server = server;
+        // 读取心跳相关配置
         this.heartbeat = server.getUrl().getParameter(Constants.HEARTBEAT_KEY, 0);
         this.heartbeatTimeout = server.getUrl().getParameter(Constants.HEARTBEAT_TIMEOUT_KEY, heartbeat * 3);
         if (heartbeatTimeout < heartbeat * 2) {
             throw new IllegalStateException("heartbeatTimeout < heartbeatInterval * 2");
         }
+
+        // 发起心跳定时器
         startHeartbeatTimer();
     }
 
@@ -103,17 +119,29 @@ public class HeaderExchangeServer implements ExchangeServer {
         server.close();
     }
 
+    /**
+     * 优雅关闭,分两个阶段：
+     * 1 正在关闭
+     * 2 已经关闭
+     *
+     * @param timeout
+     */
     @Override
     public void close(final int timeout) {
+        // 标记正在关闭
         startClose();
         if (timeout > 0) {
-            final long max = (long) timeout;
+            final long max = timeout;
             final long start = System.currentTimeMillis();
+
+            // 发送 READONLY 事件给所有 Client ，表示 Server不再接收新的消息
             if (getUrl().getParameter(Constants.CHANNEL_SEND_READONLYEVENT_KEY, true)) {
+                // 广播客户端，READONLY_EVENT 事件
                 sendChannelReadOnlyEvent();
             }
-            while (HeaderExchangeServer.this.isRunning()
-                    && System.currentTimeMillis() - start < max) {
+
+            // 等待请求完成
+            while (HeaderExchangeServer.this.isRunning() && System.currentTimeMillis() - start < max) {
                 try {
                     Thread.sleep(10);
                 } catch (InterruptedException e) {
@@ -121,7 +149,10 @@ public class HeaderExchangeServer implements ExchangeServer {
                 }
             }
         }
+
+        // 关闭心跳定时器
         doClose();
+        // 关闭服务器
         server.close(timeout);
     }
 
@@ -130,23 +161,34 @@ public class HeaderExchangeServer implements ExchangeServer {
         server.startClose();
     }
 
+    /**
+     * 广播客户端，READONLY_EVENT 事件
+     */
     private void sendChannelReadOnlyEvent() {
+
+        // 创建 READONLY_EVENT 请求
         Request request = new Request();
         request.setEvent(Request.READONLY_EVENT);
+        // 无需响应
         request.setTwoWay(false);
         request.setVersion(Version.getProtocolVersion());
 
+        // 发送给所有 Client
         Collection<Channel> channels = getChannels();
         for (Channel channel : channels) {
             try {
-                if (channel.isConnected())
+                if (channel.isConnected()) {
                     channel.send(request, getUrl().getParameter(Constants.CHANNEL_READONLYEVENT_SENT_KEY, true));
+                }
             } catch (RemotingException e) {
                 logger.warn("send cannot write message error.", e);
             }
         }
     }
 
+    /**
+     * 关闭心跳定时器
+     */
     private void doClose() {
         if (!closed.compareAndSet(false, true)) {
             return;
@@ -208,8 +250,14 @@ public class HeaderExchangeServer implements ExchangeServer {
         return server.getChannelHandler();
     }
 
+    /**
+     * 重置属性
+     *
+     * @param url
+     */
     @Override
     public void reset(URL url) {
+        // 重置服务器
         server.reset(url);
         try {
             if (url.hasParameter(Constants.HEARTBEAT_KEY)
@@ -219,6 +267,8 @@ public class HeaderExchangeServer implements ExchangeServer {
                 if (t < h * 2) {
                     throw new IllegalStateException("heartbeatTimeout < heartbeatInterval * 2");
                 }
+
+                // 重置定时任务
                 if (h != heartbeat || t != heartbeatTimeout) {
                     heartbeat = h;
                     heartbeatTimeout = t;
@@ -252,21 +302,30 @@ public class HeaderExchangeServer implements ExchangeServer {
         server.send(message, sent);
     }
 
+    /**
+     * 发起心跳定时器
+     */
     private void startHeartbeatTimer() {
+        // 暂停原有定时任务
         stopHeartbeatTimer();
+
+        // 发起新的定时任务
         if (heartbeat > 0) {
             heartbeatTimer = scheduled.scheduleWithFixedDelay(
                     new HeartBeatTask(new HeartBeatTask.ChannelProvider() {
                         @Override
                         public Collection<Channel> getChannels() {
-                            return Collections.unmodifiableCollection(
-                                    HeaderExchangeServer.this.getChannels());
+                            // Server 持有多条Client 连接的Channel
+                            return Collections.unmodifiableCollection(HeaderExchangeServer.this.getChannels());
                         }
                     }, heartbeat, heartbeatTimeout),
                     heartbeat, heartbeat, TimeUnit.MILLISECONDS);
         }
     }
 
+    /**
+     * 暂停心跳定时任务
+     */
     private void stopHeartbeatTimer() {
         try {
             ScheduledFuture<?> timer = heartbeatTimer;

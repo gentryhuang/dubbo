@@ -24,13 +24,25 @@ import com.alibaba.dubbo.remoting.Dispatcher;
 import com.alibaba.dubbo.remoting.exchange.support.header.HeartbeatHandler;
 import com.alibaba.dubbo.remoting.transport.MultiMessageHandler;
 
+/**
+ * 通道处理器工厂
+ */
 public class ChannelHandlers {
 
+    /**
+     * 单例
+     */
     private static ChannelHandlers INSTANCE = new ChannelHandlers();
 
     protected ChannelHandlers() {
     }
 
+    /**
+     * 无论是Client还是Server，都是类似的，将传入的ChannelHandler使用ChannelHandlers进行一次包装
+     * @param handler
+     * @param url
+     * @return
+     */
     public static ChannelHandler wrap(ChannelHandler handler, URL url) {
         return ChannelHandlers.getInstance().wrapInternal(handler, url);
     }

@@ -23,6 +23,8 @@ import com.alibaba.dubbo.remoting.RemotingException;
 
 /**
  * AbstractChannel
+ * <p>
+ * 通道抽象类
  */
 public abstract class AbstractChannel extends AbstractPeer implements Channel {
 
@@ -30,12 +32,16 @@ public abstract class AbstractChannel extends AbstractPeer implements Channel {
         super(url, handler);
     }
 
+    /**
+     * 发送消息，具体的发送逻辑由子类实现，在这里只做状态检查
+     * @param message
+     * @param sent    true: 会等待消息发出，消息发送失败会抛出异常；  false: 不等待消息发出，将消息放入IO队列，即可返回
+     * @throws RemotingException
+     */
     @Override
     public void send(Object message, boolean sent) throws RemotingException {
         if (isClosed()) {
-            throw new RemotingException(this, "Failed to send message "
-                    + (message == null ? "" : message.getClass().getName()) + ":" + message
-                    + ", cause: Channel closed. channel: " + getLocalAddress() + " -> " + getRemoteAddress());
+            throw new RemotingException(this, "Failed to send message " + (message == null ? "" : message.getClass().getName()) + ":" + message + ", cause: Channel closed. channel: " + getLocalAddress() + " -> " + getRemoteAddress());
         }
     }
 

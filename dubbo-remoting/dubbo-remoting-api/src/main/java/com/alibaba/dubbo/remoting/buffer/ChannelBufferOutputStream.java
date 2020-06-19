@@ -20,9 +20,18 @@ package com.alibaba.dubbo.remoting.buffer;
 import java.io.IOException;
 import java.io.OutputStream;
 
+/**
+ * 实现 OutputStream 接口
+ */
 public class ChannelBufferOutputStream extends OutputStream {
 
+    /**
+     * Buffer
+     */
     private final ChannelBuffer buffer;
+    /**
+     * 开始位置
+     */
     private final int startIndex;
 
     public ChannelBufferOutputStream(ChannelBuffer buffer) {

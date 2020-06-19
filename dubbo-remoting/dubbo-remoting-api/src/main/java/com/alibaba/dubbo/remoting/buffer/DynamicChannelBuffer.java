@@ -22,12 +22,25 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
+/**
+ * 实现 AbstractChannelBuffer 抽象类，基于动态的 Buffer 实现类。【基于传入的 ChannelBufferFactory创建的Buffer 实现类】
+ */
 public class DynamicChannelBuffer extends AbstractChannelBuffer {
 
+    /**
+     * ChannelBuffer 工厂
+     */
     private final ChannelBufferFactory factory;
-
+    /**
+     * ChannelBuffer
+     */
     private ChannelBuffer buffer;
 
+    /**
+     * 默认 HeapChannelBufferFactory
+     *
+     * @param estimatedLength
+     */
     public DynamicChannelBuffer(int estimatedLength) {
         this(estimatedLength, HeapChannelBufferFactory.getInstance());
     }
@@ -39,7 +52,9 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
         if (factory == null) {
             throw new NullPointerException("factory");
         }
+        // 设置 factory
         this.factory = factory;
+        // 创建 buffer
         buffer = factory.getBuffer(estimatedLength);
     }
 

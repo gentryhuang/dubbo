@@ -21,26 +21,45 @@ import com.alibaba.dubbo.common.utils.StringUtils;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Request.
+ * 请求
  */
 public class Request {
 
+    /**
+     * 心跳事件
+     */
     public static final String HEARTBEAT_EVENT = null;
-
+    /**
+     * 只读事件
+     */
     public static final String READONLY_EVENT = "R";
-
+    /**
+     * 请求编号自增序列
+     */
     private static final AtomicLong INVOKE_ID = new AtomicLong(0);
-
+    /**
+     * 请求编号
+     */
     private final long mId;
-
+    /**
+     * Dubbo 版本
+     */
     private String mVersion;
-
+    /**
+     * 请求是否需要响应： true-> 需要  false-> 不需要
+     */
     private boolean mTwoWay = true;
-
+    /**
+     * 是否是事件，如心跳事件。 【内置了两种事件： 心跳事件和只读事件】
+     */
     private boolean mEvent = false;
-
+    /**
+     * 是否异常的请求。【在消息解析的时候可能出现】
+     */
     private boolean mBroken = false;
-
+    /**
+     * 请求具体数据
+     */
     private Object mData;
 
     public Request() {
@@ -51,6 +70,11 @@ public class Request {
         mId = id;
     }
 
+    /**
+     * JVM进程内唯一，原子增
+     *
+     * @return
+     */
     private static long newId() {
         // getAndIncrement() When it grows to MAX_VALUE, it will grow to MIN_VALUE, and the negative can be used as ID
         return INVOKE_ID.getAndIncrement();

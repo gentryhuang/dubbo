@@ -27,31 +27,38 @@ import java.util.Collection;
  * <a href="http://en.wikipedia.org/wiki/Client%E2%80%93server_model">Client/Server</a>
  *
  * @see com.alibaba.dubbo.remoting.Transporter#bind(com.alibaba.dubbo.common.URL, ChannelHandler)
+ * <p>
+ * 服务器端口
  */
 public interface Server extends Endpoint, Resetable {
 
     /**
-     * is bound.
+     * is bound. 是否绑定本地端口，即是否启动成功，可连接，接收消息
      *
      * @return bound
      */
     boolean isBound();
 
     /**
-     * get channels.
+     * get channels. 获取连接上服务器的通道列表 【客户端列表】
      *
      * @return channels
      */
     Collection<Channel> getChannels();
 
     /**
-     * get channel.
+     * get channel. 根据地址获取连接上服务器的通道 【客户端】
      *
      * @param remoteAddress
      * @return channel
      */
     Channel getChannel(InetSocketAddress remoteAddress);
 
+    /**
+     * 重置，已废弃
+     *
+     * @param parameters
+     */
     @Deprecated
     void reset(com.alibaba.dubbo.common.Parameters parameters);
 

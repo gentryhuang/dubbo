@@ -20,15 +20,16 @@ import com.alibaba.dubbo.remoting.RemotingException;
 import com.alibaba.dubbo.remoting.exchange.ExchangeChannel;
 
 /**
- * Replier. (API, Prototype, ThreadSafe)
+ * 目前仅用于 dubbo-remoting-p2p模块中。
+ * 说明：在 ExchangeHandler 中，我们看到的是，Request 对应统一的 ExchangeHandler 实现的对象。但是在一些场景下，我们希望实现，不同的数据类型，对应不同的处理器。Replier 就是来处理这种情况的。一个数据类型，对应一个 Replier 对象。
  */
 public interface Replier<T> {
 
     /**
-     * reply.
+     * 回复请求
      *
-     * @param channel
-     * @param request
+     * @param channel 通道
+     * @param request 泛型
      * @return response
      * @throws RemotingException
      */

@@ -31,8 +31,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+
 /**
- * NettyChannel.
+ * 实现 AbstractChannel 抽象类，封装 Netty Channel 的通道实现类。 和Netty4实现是一样的
  */
 final class NettyChannel extends AbstractChannel {
 

@@ -25,6 +25,8 @@ import java.net.InetSocketAddress;
 
 /**
  * ClientDelegate
+ *  实现 Client 接口，客户端装饰者实现类。在每个实现类的方法里，直接调用被装饰的Client属性的方法。
+ *  注意：ChannelWrapper继承了ClientDelegate类，但实际上，ChannelWrapper重新实现了所有的方法，ClientDelegate目前用途不大。
  */
 public class ClientDelegate implements Client {
 

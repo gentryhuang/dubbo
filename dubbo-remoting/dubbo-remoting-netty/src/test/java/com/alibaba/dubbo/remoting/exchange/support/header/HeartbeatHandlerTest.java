@@ -107,6 +107,7 @@ public class HeartbeatHandlerTest {
         public int disconnectCount = 0;
         public int connectCount = 0;
 
+        @Override
         public Object reply(ExchangeChannel channel, Object request) throws RemotingException {
             return request;
         }

@@ -78,6 +78,7 @@ public class PerformanceServerTest extends TestCase {
                 return "echo: " + message + "\r\ntelnet> ";
             }
 
+            @Override
             public Object reply(ExchangeChannel channel, Object request) throws RemotingException {
                 if ("environment".equals(request)) {
                     return PerformanceUtils.getEnvironment();

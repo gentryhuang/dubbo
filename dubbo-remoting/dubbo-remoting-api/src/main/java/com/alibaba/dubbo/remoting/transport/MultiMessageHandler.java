@@ -22,8 +22,7 @@ import com.alibaba.dubbo.remoting.RemotingException;
 import com.alibaba.dubbo.remoting.exchange.support.MultiMessage;
 
 /**
- *
- * @see MultiMessage
+ * 实现 AbstractChannelHandlerDelegate 抽象类，多消息处理器，处理一次性接收到多条消息的情况。
  */
 public class MultiMessageHandler extends AbstractChannelHandlerDelegate {
 
@@ -31,14 +30,24 @@ public class MultiMessageHandler extends AbstractChannelHandlerDelegate {
         super(handler);
     }
 
+    /**
+     * 覆写了 received方法
+     *
+     * @param channel
+     * @param message
+     * @throws RemotingException
+     */
     @SuppressWarnings("unchecked")
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
+        // 消息类型是MultiMessage，即多消息
         if (message instanceof MultiMessage) {
             MultiMessage list = (MultiMessage) message;
+            // 循环提交给handler处理
             for (Object obj : list) {
                 handler.received(channel, obj);
             }
+            // 如果是单消息时，直接提交给handler处理
         } else {
             handler.received(channel, message);
         }

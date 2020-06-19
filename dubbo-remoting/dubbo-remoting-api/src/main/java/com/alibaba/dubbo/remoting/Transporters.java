@@ -24,6 +24,7 @@ import com.alibaba.dubbo.remoting.transport.ChannelHandlerDispatcher;
 
 /**
  * Transporter facade. (API, Static, ThreadSafe)
+ * <span>Transporter的门面类</span>
  */
 public class Transporters {
 
@@ -36,6 +37,14 @@ public class Transporters {
     private Transporters() {
     }
 
+    /**
+     * 静态方法，绑定一个服务器，即创建一个服务器
+     *
+     * @param url
+     * @param handler
+     * @return
+     * @throws RemotingException
+     */
     public static Server bind(String url, ChannelHandler... handler) throws RemotingException {
         return bind(URL.valueOf(url), handler);
     }
@@ -47,11 +56,12 @@ public class Transporters {
         if (handlers == null || handlers.length == 0) {
             throw new IllegalArgumentException("handlers == null");
         }
+        // 创建handler
         ChannelHandler handler;
         if (handlers.length == 1) {
             handler = handlers[0];
         } else {
-            // 如果handlers 元素数量大于1，则创建 ChannelHandler分发器
+            // 如果handlers 元素数量大于1，则创建 ChannelHandler分发器【分发器会循环调用handlers，对应的方法】
             handler = new ChannelHandlerDispatcher(handlers);
         }
         /**
@@ -61,6 +71,14 @@ public class Transporters {
         return getTransporter().bind(url, handler);
     }
 
+    /**
+     * 静态方法，连接一个服务器，即创建一个客户端
+     *
+     * @param url
+     * @param handler
+     * @return
+     * @throws RemotingException
+     */
     public static Client connect(String url, ChannelHandler... handler) throws RemotingException {
         return connect(URL.valueOf(url), handler);
     }
@@ -80,6 +98,11 @@ public class Transporters {
         return getTransporter().connect(url, handler);
     }
 
+    /**
+     * 获取自适应 Transporter 实例
+     *
+     * @return
+     */
     public static Transporter getTransporter() {
         return ExtensionLoader.getExtensionLoader(Transporter.class).getAdaptiveExtension();
     }

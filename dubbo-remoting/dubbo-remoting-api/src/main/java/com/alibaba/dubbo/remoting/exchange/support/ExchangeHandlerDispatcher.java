@@ -26,14 +26,25 @@ import com.alibaba.dubbo.remoting.telnet.support.TelnetHandlerAdapter;
 import com.alibaba.dubbo.remoting.transport.ChannelHandlerDispatcher;
 
 /**
- * ExchangeHandlerDispatcher
+ * ExchangeHandlerDispatcher 实现 ExchangeHandler 接口，信息交换处理器调度器实现类
+ * 说明：
+ * 通过 ExchangeHandlerDispatcher ，将 ReplierDispatcher + ChannelHandlerDispatcher + TelnetHandler 三者结合在一起，将对应的事件调度到合适的处理器
  */
 public class ExchangeHandlerDispatcher implements ExchangeHandler {
 
+    /**
+     * 回复对象调度器
+     */
     private final ReplierDispatcher replierDispatcher;
 
+    /**
+     * 通道处理调度器
+     */
     private final ChannelHandlerDispatcher handlerDispatcher;
 
+    /**
+     * Telnet 命令处理器
+     */
     private final TelnetHandler telnetHandler;
 
     public ExchangeHandlerDispatcher() {

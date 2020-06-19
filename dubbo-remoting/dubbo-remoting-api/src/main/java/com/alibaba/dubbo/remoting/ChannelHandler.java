@@ -24,6 +24,8 @@ import com.alibaba.dubbo.common.extension.SPI;
  *
  * @see com.alibaba.dubbo.remoting.Transporter#bind(com.alibaba.dubbo.common.URL, ChannelHandler)
  * @see com.alibaba.dubbo.remoting.Transporter#connect(com.alibaba.dubbo.common.URL, ChannelHandler)
+ *
+ * <h1>通道处理器接口，和Netty ChannelHandler一致，负责Channel 中的逻辑处理。如：NettyServerHandler是Netty ChannelHandler的实现，内部调用Netty ChannelHandler的方法进行处理</h1>
  */
 @SPI
 public interface ChannelHandler {

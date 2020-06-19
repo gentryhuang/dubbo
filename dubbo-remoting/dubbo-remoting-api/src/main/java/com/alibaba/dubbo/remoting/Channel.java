@@ -20,8 +20,8 @@ import java.net.InetSocketAddress;
 
 /**
  * Channel. (API/SPI, Prototype, ThreadSafe)
- *
- *
+ * <p>
+ * 和Netty Channel 一致，通讯的载体。Dubbo Channel对Netty Channel封装了
  *
  * @see com.alibaba.dubbo.remoting.Client
  * @see com.alibaba.dubbo.remoting.Server#getChannels()
@@ -30,18 +30,20 @@ import java.net.InetSocketAddress;
 public interface Channel extends Endpoint {
 
     /**
-     * get remote address.
+     * get remote address.  获取远程地址
      *
      * @return remote address.
      */
     InetSocketAddress getRemoteAddress();
 
     /**
-     * is connected.
+     * is connected.  是否已经链接
      *
      * @return connected
      */
     boolean isConnected();
+
+    //------------- 属性相关接口 -----------------/
 
     /**
      * has attribute.

@@ -23,15 +23,39 @@ import com.alibaba.dubbo.remoting.RemotingException;
 import com.alibaba.dubbo.remoting.Server;
 import com.alibaba.dubbo.remoting.Transporter;
 
+/**
+ * 实现 Transporter接口，基于Netty4 的网络传输实现类
+ * 说明：
+ * NettyTransporter 基于 Dubbo SPI 机制加载，创建 NettyServer 和 NettyClient 对象。
+ */
 public class NettyTransporter implements Transporter {
 
+    /**
+     * 拓展名
+     */
     public static final String NAME = "netty4";
 
+    /**
+     * 绑定一个服务器
+     *
+     * @param url      服务器地址
+     * @param listener 通道处理器
+     * @return server 返回服务器
+     * @throws RemotingException
+     */
     @Override
     public Server bind(URL url, ChannelHandler listener) throws RemotingException {
         return new NettyServer(url, listener);
     }
 
+    /**
+     * 连接一个服务器，即创建一个客户端
+     *
+     * @param url      服务器地址
+     * @param listener 通道处理器
+     * @return client 客户端
+     * @throws RemotingException
+     */
     @Override
     public Client connect(URL url, ChannelHandler listener) throws RemotingException {
         return new NettyClient(url, listener);

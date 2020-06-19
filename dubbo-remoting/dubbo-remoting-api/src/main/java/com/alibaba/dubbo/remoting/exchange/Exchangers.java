@@ -27,7 +27,7 @@ import com.alibaba.dubbo.remoting.exchange.support.Replier;
 import com.alibaba.dubbo.remoting.transport.ChannelHandlerAdapter;
 
 /**
- * Exchanger facade. (API, Static, ThreadSafe)
+ * 数据交换Exchanger门面类，获取 Exchanger 是通过 SPI来完成的
  */
 public class Exchangers {
 
@@ -116,6 +116,7 @@ public class Exchangers {
 
     /**
      * 通过SPI加载HeaderExchangeClient实例
+     *
      * @param url
      * @return
      */

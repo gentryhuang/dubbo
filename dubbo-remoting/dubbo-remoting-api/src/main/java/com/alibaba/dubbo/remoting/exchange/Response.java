@@ -17,7 +17,7 @@
 package com.alibaba.dubbo.remoting.exchange;
 
 /**
- * Response
+ * 响应
  */
 public class Response {
 
@@ -80,16 +80,29 @@ public class Response {
      */
     public static final byte SERVER_THREADPOOL_EXHAUSTED_ERROR = 100;
 
+    /**
+     * 响应编号。【一个请求编号和响应编号一一对应】
+     */
     private long mId = 0;
-
+    /**
+     * Dubbo版本
+     */
     private String mVersion;
-
+    /**
+     * 状态
+     */
     private byte mStatus = OK;
-
+    /**
+     * 是否是事件 【只读事件不会使用，因为目前为止，只读事件不需要响应】
+     */
     private boolean mEvent = false;
-
+    /**
+     * 错误消息
+     */
     private String mErrorMsg;
-
+    /**
+     * 响应结果
+     */
     private Object mResult;
 
     public Response() {

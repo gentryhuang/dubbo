@@ -24,7 +24,7 @@ import com.alibaba.dubbo.remoting.RemotingException;
 import java.net.InetSocketAddress;
 
 /**
- * ChannelDelegate
+ * ChannelDelegate  实现Channel接口，通道装饰者实现类。在实现的方法里，直接调用被装饰的 Channel 属性的方法。不过，暂时没有用到
  */
 public class ChannelDelegate implements Channel {
 

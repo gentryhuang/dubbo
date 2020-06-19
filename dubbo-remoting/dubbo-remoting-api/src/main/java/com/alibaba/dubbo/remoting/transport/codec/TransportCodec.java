@@ -31,16 +31,19 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * TransportCodec
+ * TransportCodec 传输编解码器，使用 Serialization 进行序列化/反序列化，直接编解码。
  */
 public class TransportCodec extends AbstractCodec {
 
     @Override
     public void encode(Channel channel, ChannelBuffer buffer, Object message) throws IOException {
+        // 获得反序列化的ObjectOutput对象
         OutputStream output = new ChannelBufferOutputStream(buffer);
         ObjectOutput objectOutput = getSerialization(channel).serialize(channel.getUrl(), output);
+        // 写入 ObjectOutput
         encodeData(channel, objectOutput, message);
         objectOutput.flushBuffer();
+        // 释放
         if (objectOutput instanceof Cleanable) {
             ((Cleanable) objectOutput).cleanup();
         }

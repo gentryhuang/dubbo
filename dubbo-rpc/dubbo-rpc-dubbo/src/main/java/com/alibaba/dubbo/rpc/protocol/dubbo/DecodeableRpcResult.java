@@ -37,20 +37,36 @@ import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.util.Map;
 
+/**
+ * 可解码的 RpcResult 实现类
+ */
 public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable {
 
     private static final Logger log = LoggerFactory.getLogger(DecodeableRpcResult.class);
-
+    /**
+     * 通道
+     */
     private Channel channel;
-
+    /**
+     * Serialization 类型编号
+     */
     private byte serializationType;
-
+    /**
+     * 输入流
+     */
     private InputStream inputStream;
-
+    /**
+     * 请求
+     */
     private Response response;
-
+    /**
+     * Invocation 对象
+     */
     private Invocation invocation;
 
+    /**
+     * 是否已经解码完成
+     */
     private volatile boolean hasDecoded;
 
     public DecodeableRpcResult(Channel channel, Response response, InputStream is, Invocation invocation, byte id) {
@@ -73,11 +89,13 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
     public Object decode(Channel channel, InputStream input) throws IOException {
         ObjectInput in = CodecSupport.getSerialization(channel.getUrl(), serializationType)
                 .deserialize(channel.getUrl(), input);
-        
+
         byte flag = in.readByte();
         switch (flag) {
+            // 无返回值
             case DubboCodec.RESPONSE_NULL_VALUE:
                 break;
+            // 有返回值
             case DubboCodec.RESPONSE_VALUE:
                 try {
                     Type[] returnType = RpcUtils.getReturnTypes(invocation);
@@ -88,11 +106,13 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
                     throw new IOException(StringUtils.toString("Read response data failed.", e));
                 }
                 break;
+            // 有异常
             case DubboCodec.RESPONSE_WITH_EXCEPTION:
                 try {
                     Object obj = in.readObject();
-                    if (obj instanceof Throwable == false)
+                    if (obj instanceof Throwable == false) {
                         throw new IOException("Response data error, expect Throwable, but get " + obj);
+                    }
                     setException((Throwable) obj);
                 } catch (ClassNotFoundException e) {
                     throw new IOException(StringUtils.toString("Read response data failed.", e));

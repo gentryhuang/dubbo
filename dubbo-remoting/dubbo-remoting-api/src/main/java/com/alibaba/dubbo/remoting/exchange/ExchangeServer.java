@@ -23,18 +23,20 @@ import java.util.Collection;
 
 /**
  * ExchangeServer. (API/SPI, Prototype, ThreadSafe)
+ * <p>
+ * 继承Server 接口，信息交换服务接口
  */
 public interface ExchangeServer extends Server {
 
     /**
-     * get channels.
+     * 获得信息交换通道数组
      *
      * @return channels
      */
     Collection<ExchangeChannel> getExchangeChannels();
 
     /**
-     * get channel.
+     * 根据地址获取信息交换通道
      *
      * @param remoteAddress
      * @return channel

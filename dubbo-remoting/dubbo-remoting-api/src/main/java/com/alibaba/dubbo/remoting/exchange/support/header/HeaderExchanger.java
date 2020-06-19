@@ -26,19 +26,36 @@ import com.alibaba.dubbo.remoting.exchange.Exchanger;
 import com.alibaba.dubbo.remoting.transport.DecodeHandler;
 
 /**
- * DefaultMessenger
- *
- *
+ * 实现 Exchanger 接口，基于消息头部( Header )的信息交换者实现类
  */
 public class HeaderExchanger implements Exchanger {
 
     public static final String NAME = "header";
 
+    /**
+     * 通过 Transporters.connect(url,handler) 方法，创建通信Client，内嵌到 HeaderExchangeClient中
+     *
+     * @param url     服务器地址
+     * @param handler 数据交换处理器
+     * @return
+     * @throws RemotingException
+     */
     @Override
     public ExchangeClient connect(URL url, ExchangeHandler handler) throws RemotingException {
+        /**
+         * 处理器顺序：DecodeHandler => HeaderExchangeHandler => ExchangeHandler【handler】
+         */
         return new HeaderExchangeClient(Transporters.connect(url, new DecodeHandler(new HeaderExchangeHandler(handler))), true);
     }
 
+    /**
+     * 绑定服务器
+     *
+     * @param url     服务器地址
+     * @param handler 数据交换处理器
+     * @return
+     * @throws RemotingException
+     */
     @Override
     public ExchangeServer bind(URL url, ExchangeHandler handler) throws RemotingException {
         /**

@@ -24,19 +24,35 @@ import com.alibaba.dubbo.remoting.Endpoint;
 import com.alibaba.dubbo.remoting.RemotingException;
 
 /**
- * AbstractPeer
+ * AbstractPeer // 实现 Endpoint、ChannelHandler 接口,Peer抽象类
  */
 public abstract class AbstractPeer implements Endpoint, ChannelHandler {
 
+    /**
+     * 通道处理器
+     */
     private final ChannelHandler handler;
-
+    /**
+     * URL ，传递Dubbo服务暴露和服务引用的配置项
+     */
     private volatile URL url;
 
-    // closing closed means the process is being closed and close is finished
+    /**
+     * 正在关闭
+     * closing closed means the process is being closed and close is finished
+     */
     private volatile boolean closing;
-
+    /**
+     * 关闭完成
+     */
     private volatile boolean closed;
 
+    /**
+     * handler 属性，通道处理器，通过构造方法传入。使用 '装饰者模式'
+     *
+     * @param url
+     * @param handler
+     */
     public AbstractPeer(URL url, ChannelHandler handler) {
         if (url == null) {
             throw new IllegalArgumentException("url == null");

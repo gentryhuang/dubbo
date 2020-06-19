@@ -28,26 +28,29 @@ import com.alibaba.dubbo.remoting.exchange.support.header.HeaderExchanger;
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Message_Exchange_Pattern">Message Exchange Pattern</a>
  * <a href="http://en.wikipedia.org/wiki/Request-response">Request-Response</a>
+ * <p>
+ * 1. 数据交换者接口，Exchanger和Transporter类似
+ * 2. @SPI(HeaderExchanger.NAME)注解，Dubbo SPI拓展点，默认为 header，即 HeaderExchanger
  */
 @SPI(HeaderExchanger.NAME)
 public interface Exchanger {
 
     /**
-     * bind.
+     * 绑定一个服务器
      *
-     * @param url
-     * @param handler
-     * @return message server
+     * @param url     服务器地址
+     * @param handler 数据交换处理器
+     * @return message server  服务器
      */
     @Adaptive({Constants.EXCHANGER_KEY})
     ExchangeServer bind(URL url, ExchangeHandler handler) throws RemotingException;
 
     /**
-     * connect.
+     * 连接服务器，即创建一个客户端
      *
-     * @param url
-     * @param handler
-     * @return message channel
+     * @param url     服务器地址
+     * @param handler 数据交换处理器
+     * @return message channel  客户端
      */
     @Adaptive({Constants.EXCHANGER_KEY})
     ExchangeClient connect(URL url, ExchangeHandler handler) throws RemotingException;

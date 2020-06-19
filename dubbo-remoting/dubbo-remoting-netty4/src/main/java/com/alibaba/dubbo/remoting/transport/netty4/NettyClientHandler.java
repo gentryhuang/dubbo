@@ -24,13 +24,19 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
 /**
- * NettyClientHandler
+ * NettyClientHandler 继承 Netty的 ChannelDuplexHandler，是 Dubbo NettyClient 的处理器
  */
 @io.netty.channel.ChannelHandler.Sharable
 public class NettyClientHandler extends ChannelDuplexHandler {
 
+    /**
+     * Dubbo URL
+     */
     private final URL url;
 
+    /**
+     * Dubbo 的 ChannelHandler
+     */
     private final ChannelHandler handler;
 
     public NettyClientHandler(URL url, ChannelHandler handler) {
@@ -45,8 +51,10 @@ public class NettyClientHandler extends ChannelDuplexHandler {
     }
 
 
+
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        // 不同于NettyServerHandler的该方法，会提交给handler处理，客户端不会被连接，无需做连接处理
         ctx.fireChannelActive();
     }
 

@@ -23,12 +23,19 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ReplierDispatcher
+ * ReplierDispatcher  实现 Replier 接口，回复调度器实现类
  */
 public class ReplierDispatcher implements Replier<Object> {
 
+    /**
+     * 默认回复对象
+     */
     private final Replier<?> defaultReplier;
 
+    /**
+     * 回复对象集合
+     * key: 类
+     */
     private final Map<Class<?>, Replier<?>> repliers = new ConcurrentHashMap<Class<?>, Replier<?>>();
 
     public ReplierDispatcher() {
@@ -68,9 +75,21 @@ public class ReplierDispatcher implements Replier<Object> {
         throw new IllegalStateException("Replier not found, Unsupported message object: " + type);
     }
 
+    /**
+     * 回复请求
+     *
+     * @param channel 通道
+     * @param request 泛型
+     * @return
+     * @throws RemotingException
+     */
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Object reply(ExchangeChannel channel, Object request) throws RemotingException {
+        /**
+         * 1 调用 #getReplier(Class<?> type) 方法，获得回复者对象
+         * 2 调用 Repiler#reply(channel, request) 方法，回复请求结果
+         */
         return ((Replier) getReplier(request.getClass())).reply(channel, request);
     }
 

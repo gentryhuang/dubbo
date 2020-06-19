@@ -24,6 +24,7 @@ import com.alibaba.dubbo.remoting.RemotingException;
 import com.alibaba.dubbo.remoting.TimeoutException;
 import com.alibaba.dubbo.remoting.exchange.ExchangeClient;
 import com.alibaba.dubbo.remoting.exchange.ResponseFuture;
+import com.alibaba.dubbo.remoting.exchange.support.header.HeaderExchangeServer;
 import com.alibaba.dubbo.rpc.Invocation;
 import com.alibaba.dubbo.rpc.Invoker;
 import com.alibaba.dubbo.rpc.Result;
@@ -117,9 +118,15 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
 
     @Override
     public boolean isAvailable() {
-        if (!super.isAvailable())
+        if (!super.isAvailable()) {
             return false;
+        }
         for (ExchangeClient client : clients) {
+            /**
+             * 即使Client 处于连接中，但是Server 处于正在关闭中，也算不可用。
+             *
+             * {@link HeaderExchangeServer#sendChannelReadOnlyEvent()}
+             */
             if (client.isConnected() && !client.hasAttribute(Constants.CHANNEL_ATTRIBUTE_READONLY_KEY)) {
                 //cannot write == not Available ?
                 return true;

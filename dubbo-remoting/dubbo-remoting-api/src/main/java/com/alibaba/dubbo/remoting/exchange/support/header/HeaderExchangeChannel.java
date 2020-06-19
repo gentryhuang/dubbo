@@ -34,18 +34,30 @@ import com.alibaba.dubbo.remoting.exchange.support.DefaultFuture;
 import java.net.InetSocketAddress;
 
 /**
- * ExchangeReceiver
+ * ExchangeReceiver  实现ExchangeChannel接口，基于消息头部(Header)的信息交换通道实现类
  */
 final class HeaderExchangeChannel implements ExchangeChannel {
 
     private static final Logger logger = LoggerFactory.getLogger(HeaderExchangeChannel.class);
 
+    /**
+     * 作为通道的一个属性字段
+     */
     private static final String CHANNEL_KEY = HeaderExchangeChannel.class.getName() + ".CHANNEL";
-
+    /**
+     * 通道
+     */
     private final Channel channel;
-
+    /**
+     * 是否关闭
+     */
     private volatile boolean closed = false;
 
+    /**
+     * HeaderExchangeChannel是传入 channel 属性的装饰器
+     *
+     * @param channel
+     */
     HeaderExchangeChannel(Channel channel) {
         if (channel == null) {
             throw new IllegalArgumentException("channel == null");
@@ -53,10 +65,17 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         this.channel = channel;
     }
 
+    /**
+     * 创建HeaderExchangeChannel 对象。
+     *
+     * @param ch
+     * @return
+     */
     static HeaderExchangeChannel getOrAddChannel(Channel ch) {
         if (ch == null) {
             return null;
         }
+        // 通过 ch.getAttribute(CHANNEL_KEY) 键值，保证创建唯一的HeaderExchangeChannel对象 【必须是 已连接状态 】
         HeaderExchangeChannel ret = (HeaderExchangeChannel) ch.getAttribute(CHANNEL_KEY);
         if (ret == null) {
             ret = new HeaderExchangeChannel(ch);
@@ -67,7 +86,13 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         return ret;
     }
 
+    /**
+     * 本质上就是移除 HeaderExchangeChannel对象，因为把HeaderExchangeChannel的Channel属性中的 CHANNEL_KEY 字段key移除，下次会重新创建 HeaderExchangeChannel对象
+     *
+     * @param ch
+     */
     static void removeChannelIfDisconnected(Channel ch) {
+        // 未连接
         if (ch != null && !ch.isConnected()) {
             ch.removeAttribute(CHANNEL_KEY);
         }
@@ -101,23 +126,38 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         return request(request, channel.getUrl().getPositiveParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT));
     }
 
+    /**
+     * 发送请求
+     *
+     * @param request
+     * @param timeout
+     * @return
+     * @throws RemotingException
+     */
     @Override
     public ResponseFuture request(Object request, int timeout) throws RemotingException {
+        // 如果已经关闭，不能发起请求
         if (closed) {
             throw new RemotingException(this.getLocalAddress(), null, "Failed to send request " + request + ", cause: The channel " + this + " is closed!");
         }
-        // create request.
+        // 创建请求
         Request req = new Request();
         req.setVersion(Version.getProtocolVersion());
+        // 需要响应
         req.setTwoWay(true);
+        // 具体数据
         req.setData(request);
+        // 创建DefaultFuture 对象
         DefaultFuture future = new DefaultFuture(channel, req, timeout);
         try {
+            // 发送请求
             channel.send(req);
         } catch (RemotingException e) {
+            // 发送请求失败就取消 DefaultFuture
             future.cancel();
             throw e;
         }
+        // 返回 DefaultFuture 对象
         return future;
     }
 
@@ -126,6 +166,9 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         return closed;
     }
 
+    /**
+     * 关闭通道
+     */
     @Override
     public void close() {
         try {
@@ -135,17 +178,26 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         }
     }
 
-    // graceful close
+    /**
+     * 优雅关闭
+     *
+     * @param timeout
+     */
     @Override
     public void close(int timeout) {
+        // 如果已经关闭，就直接返回
         if (closed) {
             return;
         }
+
+        // 设置关闭标识，防止发起新的请求
         closed = true;
+
+        // 等待请求完成
         if (timeout > 0) {
             long start = System.currentTimeMillis();
-            while (DefaultFuture.hasFuture(channel)
-                    && System.currentTimeMillis() - start < timeout) {
+            // 有结果或者超时了，就结束
+            while (DefaultFuture.hasFuture(channel) && System.currentTimeMillis() - start < timeout) {
                 try {
                     Thread.sleep(10);
                 } catch (InterruptedException e) {
@@ -153,6 +205,7 @@ final class HeaderExchangeChannel implements ExchangeChannel {
                 }
             }
         }
+        // 关闭通道
         close();
     }
 
@@ -221,7 +274,9 @@ final class HeaderExchangeChannel implements ExchangeChannel {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
+        if (this == obj) {
+            return true;
+        }
         if (obj == null) return false;
         if (getClass() != obj.getClass()) return false;
         HeaderExchangeChannel other = (HeaderExchangeChannel) obj;

@@ -326,7 +326,9 @@ public class DubboProtocol extends AbstractProtocol {
         if (str != null && str.length() > 0 && !ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(str)) {
             throw new RpcException("Unsupported server type: " + str + ", url: " + url);
         }
-        // 设置编码解码器参数 ，默认为DubboCountCodec
+        /**
+         * 设置编码解码器参数 ，默认为DubboCountCodec {@link DubboCountCodec}
+         */
         url = url.addParameter(Constants.CODEC_KEY, DubboCodec.NAME);
 
         // 启动服务器
@@ -490,7 +492,9 @@ public class DubboProtocol extends AbstractProtocol {
 
         // 获取客户端类型，默认为netty
         String str = url.getParameter(Constants.CLIENT_KEY, url.getParameter(Constants.SERVER_KEY, Constants.DEFAULT_REMOTING_CLIENT));
-        // 设置编解码器为Dubbo,即DubboCountCodec
+        /**
+         * 设置编解码器为Dubbo,即DubboCountCodec {@link DubboCountCodec}
+         */
         url = url.addParameter(Constants.CODEC_KEY, DubboCodec.NAME);
         // 默认开启heartbeat
         url = url.addParameterIfAbsent(Constants.HEARTBEAT_KEY, String.valueOf(Constants.DEFAULT_HEARTBEAT));

@@ -31,18 +31,33 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * NettyCodecAdapter.
+ * NettyCodecAdapter ： 用来将 Dubbo 的编解码器 适配成 Netty4 的编码器和解码器
  */
 final class NettyCodecAdapter {
 
+    /**
+     * Netty 的 编码器
+     */
     private final ChannelHandler encoder = new InternalEncoder();
 
+    /**
+     * Netty 的 解码器
+     */
     private final ChannelHandler decoder = new InternalDecoder();
 
+    /**
+     * Dubbo 的 编解码器
+     */
     private final Codec2 codec;
 
+    /**
+     * Dubbo URL
+     */
     private final URL url;
 
+    /**
+     * Dubbo 的 ChannelHandler
+     */
     private final com.alibaba.dubbo.remoting.ChannelHandler handler;
 
     public NettyCodecAdapter(Codec2 codec, URL url, com.alibaba.dubbo.remoting.ChannelHandler handler) {
@@ -59,28 +74,39 @@ final class NettyCodecAdapter {
         return decoder;
     }
 
+    /**
+     * 编码器  - MessageToByteEncoder：编码器抽象类
+     */
     private class InternalEncoder extends MessageToByteEncoder {
 
         @Override
         protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+            // 创建 NettyBackedChannelBuffer
             com.alibaba.dubbo.remoting.buffer.ChannelBuffer buffer = new NettyBackedChannelBuffer(out);
+            // 获取 Netty的Channel 对象
             Channel ch = ctx.channel();
             NettyChannel channel = NettyChannel.getOrAddChannel(ch, url, handler);
             try {
+                // 编码
                 codec.encode(channel, buffer, msg);
             } finally {
+                // 移除 Netty的Channel关联的缓存
                 NettyChannel.removeChannelIfDisconnected(ch);
             }
         }
     }
 
+    /**
+     * 解码器 - ByteToMessageDecoder： 解码器抽象类
+     */
     private class InternalDecoder extends ByteToMessageDecoder {
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf input, List<Object> out) throws Exception {
 
+            // 创建 NettyBackedChannelBuffer 对象
             ChannelBuffer message = new NettyBackedChannelBuffer(input);
-
+            // 获得Dubbo 的 NettyChannel 对象
             NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
 
             Object msg;
@@ -88,19 +114,25 @@ final class NettyCodecAdapter {
             int saveReaderIndex;
 
             try {
-                // decode object.
+                // 循环解析数据，直到结束
                 do {
+                    // 记录当前读进度
                     saveReaderIndex = message.readerIndex();
                     try {
+                        // 解码
                         msg = codec.decode(channel, message);
                     } catch (IOException e) {
                         throw e;
                     }
+
+                    // 需要更多的输入，即消息不完整，标记回原有读进度，并结束
                     if (msg == Codec2.DecodeResult.NEED_MORE_INPUT) {
                         message.readerIndex(saveReaderIndex);
                         break;
+
+                        // 解码到消息，添加到 out集合中
                     } else {
-                        //is it possible to go here ?
+                        //is it possible to go here ? todo 会到这吗？应该不会把？
                         if (saveReaderIndex == message.readerIndex()) {
                             throw new IOException("Decode without read data.");
                         }
@@ -110,6 +142,7 @@ final class NettyCodecAdapter {
                     }
                 } while (message.readable());
             } finally {
+                // 移除 Netty的Channel 关联的缓存
                 NettyChannel.removeChannelIfDisconnected(ctx.channel());
             }
         }

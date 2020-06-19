@@ -19,6 +19,9 @@ package com.alibaba.dubbo.remoting.buffer;
 
 import java.nio.ByteBuffer;
 
+/**
+ * 实现 ChannelBufferFactory 接口，创建 DirectChannelBuffer 的工厂
+ */
 public class DirectChannelBufferFactory implements ChannelBufferFactory {
 
     private static final DirectChannelBufferFactory INSTANCE = new DirectChannelBufferFactory();

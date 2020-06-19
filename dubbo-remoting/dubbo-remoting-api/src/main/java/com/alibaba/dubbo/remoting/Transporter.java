@@ -28,16 +28,19 @@ import com.alibaba.dubbo.common.extension.SPI;
  * <a href="http://en.wikipedia.org/wiki/Client%E2%80%93server_model">Client/Server</a>
  *
  * @see com.alibaba.dubbo.remoting.Transporters
+ *
+ * <span>网络传输接口。@SPI("netty") -> Dubbo SPI 拓展点，默认为 "netty",注意，此处的 netty 对应的是 netty3 ，因为 Dubbo 项目在开发时，netty4 并未发布</span>
+ * <span>transport 网络传输层：抽象 mina 和 netty 为统一接口，以 Message 为中心</span>
  */
 @SPI("netty")
 public interface Transporter {
 
     /**
-     * Bind a server.
+     * 绑定一个服务器
      *
-     * @param url     server url
-     * @param handler
-     * @return server
+     * @param url     服务器地址
+     * @param handler 通道处理器
+     * @return server 返回服务器
      * @throws RemotingException
      * @see com.alibaba.dubbo.remoting.Transporters#bind(URL, ChannelHandler...)
      */
@@ -45,11 +48,11 @@ public interface Transporter {
     Server bind(URL url, ChannelHandler handler) throws RemotingException;
 
     /**
-     * Connect to a server.
+     * 连接一个服务器，即创建一个客户端
      *
-     * @param url     server url
-     * @param handler
-     * @return client
+     * @param url     服务器地址
+     * @param handler 通道处理器
+     * @return client 客户端
      * @throws RemotingException
      * @see com.alibaba.dubbo.remoting.Transporters#connect(URL, ChannelHandler...)
      */
