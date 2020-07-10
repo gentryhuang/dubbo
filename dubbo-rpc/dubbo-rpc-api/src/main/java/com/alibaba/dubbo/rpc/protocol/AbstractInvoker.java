@@ -137,7 +137,7 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
     }
 
     /**
-     * 服务调用
+     * 服务调用，重新设置了 Invocation 中的invoker 属性和 attachment 属性
      *
      * @param inv
      * @return
@@ -179,6 +179,7 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
 
         // 设置异步方法
         if (getUrl().getMethodParameter(invocation.getMethodName(), Constants.ASYNC_KEY, false)) {
+            // 设置异步信息到 RpcInvocation#attachment 中
             invocation.setAttachment(Constants.ASYNC_KEY, Boolean.TRUE.toString());
         }
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);

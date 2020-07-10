@@ -40,7 +40,7 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
      */
     private final URL url;
     /**
-     * 指向数量
+     * 引用计数变量： 每当该对象被引用一次refenceCount 都会进行自增。 每当close 方法被调用时，referenceCount 就会进行自减
      */
     private final AtomicInteger refenceCount = new AtomicInteger(0);
 
@@ -50,7 +50,7 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
      */
     private final ConcurrentMap<String, LazyConnectExchangeClient> ghostClientMap;
     /**
-     * 客户端
+     * 客户端 【类型是： HeaderExchangeClient】
      */
     private ExchangeClient client;
 
@@ -173,7 +173,7 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
      */
     @Override
     public void close(int timeout) {
-        // 计数减一，若无指向，进行真正的关闭
+        // 引用计数减一，若无指向，进行真正的关闭
         if (refenceCount.decrementAndGet() <= 0) {
             if (timeout == 0) {
                 client.close();
@@ -216,6 +216,9 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
         return client.isClosed();
     }
 
+    /**
+     * 引用计数自增，该方法由外部调用
+     */
     public void incrementAndGetCount() {
         refenceCount.incrementAndGet();
     }

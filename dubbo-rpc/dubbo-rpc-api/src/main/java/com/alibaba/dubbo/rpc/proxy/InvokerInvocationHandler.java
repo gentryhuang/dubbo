@@ -23,7 +23,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 
 /**
- * InvokerHandler，实现了JDK的InvocationHandler
+ * InvokerInvocationHandler，实现了JDK的InvocationHandler
  */
 public class InvokerInvocationHandler implements InvocationHandler {
 
@@ -36,6 +36,16 @@ public class InvokerInvocationHandler implements InvocationHandler {
         this.invoker = handler;
     }
 
+    /**
+     * 代理对象【Proxy创建的】发出请求，会执行到这里。
+     *
+     * @param proxy
+     * @param method
+     * @param args
+     * @return
+     * @throws Throwable
+     * @see com.alibaba.dubbo.rpc.proxy.javassist.JavassistProxyFactory#getProxy(com.alibaba.dubbo.rpc.Invoker, java.lang.Class[])
+     */
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         String methodName = method.getName();
@@ -57,8 +67,11 @@ public class InvokerInvocationHandler implements InvocationHandler {
         }
         /**
          * RPC调用
-         * 1 new RpcInvocation(method,args),创建调用信息，方法名，参数类型，参数
+         * 1 new RpcInvocation(method,args),创建调用信息[方法名、方法参数类型、方法参数值、附加从参数以及Invoker]，在执行的过程中 Invocation 中的属性会有变动
+         * 1.1 附加参数中的path：即接口名，将会用于服务端接收请求信息后从exportMap中选取Exporter实例，继而取出Exporter中的Invoker
+         * 1.2 方法名，方法参数类型，方法参数值：将用于JavassistProxyFactory$AbstractProxyInvoker方法，即 调用 Wrapper 的 invokeMethod 方法，其内部会为每个ref的方法都做方法名和方法参数匹配校验，匹配直接调用调用
          * 2 recreate()方法，回放调用结果
+         * 3 这里的invoker 是集群的Invoker
          */
         return invoker.invoke(new RpcInvocation(method, args)).recreate();
     }

@@ -42,6 +42,12 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
         super(handler);
     }
 
+    /**
+     * 连接完成时，设置通道的 最后读写时间
+     *
+     * @param channel
+     * @throws RemotingException
+     */
     @Override
     public void connected(Channel channel) throws RemotingException {
         setReadTimestamp(channel);
@@ -49,6 +55,12 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
         handler.connected(channel);
     }
 
+    /**
+     * 连接断开时，清空通道的 最后读写时间
+     *
+     * @param channel
+     * @throws RemotingException
+     */
     @Override
     public void disconnected(Channel channel) throws RemotingException {
         clearReadTimestamp(channel);
@@ -56,12 +68,26 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
         handler.disconnected(channel);
     }
 
+    /**
+     * 发送消息时，设置最后写的时间
+     *
+     * @param channel
+     * @param message
+     * @throws RemotingException
+     */
     @Override
     public void sent(Channel channel, Object message) throws RemotingException {
         setWriteTimestamp(channel);
         handler.sent(channel, message);
     }
 
+    /**
+     * 接收消息时，设置最后读时间
+     *
+     * @param channel
+     * @param message
+     * @throws RemotingException
+     */
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
         setReadTimestamp(channel);
@@ -88,6 +114,7 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
             }
             return;
         }
+
         handler.received(channel, message);
     }
 

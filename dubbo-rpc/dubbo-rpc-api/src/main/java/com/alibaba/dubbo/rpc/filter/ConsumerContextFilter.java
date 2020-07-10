@@ -34,6 +34,14 @@ import com.alibaba.dubbo.rpc.RpcResult;
 @Activate(group = Constants.CONSUMER, order = -10000)
 public class ConsumerContextFilter implements Filter {
 
+    /**
+     * 设置一些 RpcContext 属性，并且设置invocation 中的 invoker 属性
+     *
+     * @param invoker    service
+     * @param invocation invocation.
+     * @return
+     * @throws RpcException
+     */
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
         RpcContext.getContext()

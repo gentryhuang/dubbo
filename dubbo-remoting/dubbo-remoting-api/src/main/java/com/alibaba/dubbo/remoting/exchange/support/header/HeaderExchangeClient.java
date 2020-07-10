@@ -54,7 +54,7 @@ public class HeaderExchangeClient implements ExchangeClient {
      */
     private final Client client;
     /**
-     * 信息交换通道
+     * 信息交换通道 [类型：HeaderExchangeChannel]
      */
     private final ExchangeChannel channel;
     /**
@@ -94,6 +94,8 @@ public class HeaderExchangeClient implements ExchangeClient {
             startHeartbeatTimer();
         }
     }
+
+    // -------------------------- HeaderExchangeClient 中很多方法只有一行代码，即调用HeaderExchangeChannel 对象的同签名方法。它主要的作用是封装了一些关于心跳检测的逻辑  -------------/
 
     @Override
     public ResponseFuture request(Object request) throws RemotingException {
@@ -213,8 +215,16 @@ public class HeaderExchangeClient implements ExchangeClient {
         stopHeartbeatTimer();
         // 发起新的定时任务
         if (heartbeat > 0) {
+
             heartbeatTimer = scheduled.scheduleWithFixedDelay(
+                    /**
+                     * 创建心跳任务
+                     */
                     new HeartBeatTask(new HeartBeatTask.ChannelProvider() {
+                        /**
+                         * consumer只是获取当前的对象，即通道
+                         * @return
+                         */
                         @Override
                         public Collection<Channel> getChannels() {
                             return Collections.<Channel>singletonList(HeaderExchangeClient.this);

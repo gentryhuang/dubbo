@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * FutureAdapter
+ * FutureAdapter,实现 Future接口，适配 ResponseFuture。对上层调用方，透明化 ResponseFuture的存在
  */
 public class FutureAdapter<V> implements Future<V> {
 

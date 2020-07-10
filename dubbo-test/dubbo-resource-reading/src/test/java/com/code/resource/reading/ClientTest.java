@@ -1,22 +1,20 @@
-package com.code.resource.reading.consumer.xml.remote;
-
+package com.code.resource.reading;
 
 import com.code.resource.reading.api.DemoService;
+import org.junit.Test;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import java.io.IOException;
 
-
 /**
- * XmlProvider
+ * ClientTest
  *
  * @author <a href="mailto:libao.huang@yunhutech.com">shunhua</a>
- * @since 2020/04/12
+ * @since 2020/06/22
  * <p>
  * desc：
  */
-public class Consumer {
-
+public class ClientTest {
 
     /**
      * 引用 关联本地源码的服务提供者
@@ -34,7 +32,9 @@ public class Consumer {
 
 
 
-    public void test(){
+    @Test
+    public void testConsumerSourcePath(){
+
 
     }
 
@@ -46,4 +46,9 @@ public class Consumer {
         System.out.println(hello);
         System.in.read();
     }
+
+
+
+
+
 }

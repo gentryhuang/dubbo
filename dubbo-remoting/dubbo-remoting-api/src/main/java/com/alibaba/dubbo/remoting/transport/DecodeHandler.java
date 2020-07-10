@@ -25,9 +25,13 @@ import com.alibaba.dubbo.remoting.Decodeable;
 import com.alibaba.dubbo.remoting.RemotingException;
 import com.alibaba.dubbo.remoting.exchange.Request;
 import com.alibaba.dubbo.remoting.exchange.Response;
+import com.alibaba.dubbo.remoting.transport.dispatcher.ChannelEventRunnable;
 
 /**
- * 实现 AbstractChannelHandlerDelegate 抽象类，解码处理器，处理接收到的消息
+ * 实现 AbstractChannelHandlerDelegate 抽象类，解码处理器，处理接收到的消息。
+ * 说明：
+ * 1 DecodeHandler 存在的意义就是保证请求或响应对象可在线程池中被解码[该对象在线程池中工作{@link ChannelEventRunnable#handler}]
+ * 2 解码完毕后，完全解码后的 Request 对象会继续传给下一个Handler
  */
 public class DecodeHandler extends AbstractChannelHandlerDelegate {
 
@@ -39,37 +43,43 @@ public class DecodeHandler extends AbstractChannelHandlerDelegate {
 
     /**
      * 覆写了 received(channel,message)方法
+     *
      * @param channel
      * @param message
      * @throws RemotingException
      */
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
-        // 当消息是 Decodeable 类型时
+        // 当消息是 Decodeable 类型时 进行解码
         if (message instanceof Decodeable) {
             decode(message);
         }
 
-        // 当消息是Request类型时
+        // 当消息是Request类型时，对 data 字段进行解码
         if (message instanceof Request) {
             decode(((Request) message).getData());
         }
 
-        // 当消息是Response类型时
+        // 当消息是Response类型时，对 result 字段进行解码
         if (message instanceof Response) {
             decode(((Response) message).getResult());
         }
 
-        // 调用ChannelHandler#received(channel,message)方法，将消息交给委托的handler继续处理
+        // 解码后，调用ChannelHandler#received(channel,message)方法，将消息交给委托的handler继续处理
         handler.received(channel, message);
     }
 
     /**
      * 解析消息
+     *
      * @param message
      */
     private void decode(Object message) {
-        // 当类型是Decodeable时，调用 Decodeable#decode方法进行解析
+        /**
+         * Decodeable 接口目前有两个实现类：
+         * 1 DecodeableRpcInvocation
+         * 2 DecodeableRpcResult
+         */
         if (message != null && message instanceof Decodeable) {
             try {
                 // 解析消息

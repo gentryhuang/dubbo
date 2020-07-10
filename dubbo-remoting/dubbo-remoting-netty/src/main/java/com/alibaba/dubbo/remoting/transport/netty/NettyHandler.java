@@ -100,8 +100,16 @@ public class NettyHandler extends SimpleChannelHandler {
         }
     }
 
+    /**
+     * 接收消息，包括服务端接收请求消息和客户端接收响应消息
+     *
+     * @param ctx Netty 的通道处理上下文
+     * @param e   Request对象或者Response 对象
+     * @throws Exception
+     */
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+        // 获取封装了Netty的Channe的 Dubbo的NettyChannel
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.getChannel(), url, handler);
         try {
             handler.received(channel, e.getMessage());

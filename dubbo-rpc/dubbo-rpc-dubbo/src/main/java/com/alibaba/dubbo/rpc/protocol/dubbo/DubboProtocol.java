@@ -62,16 +62,20 @@ public class DubboProtocol extends AbstractProtocol {
     public static final int DEFAULT_PORT = 20880;
     private static final String IS_CALLBACK_SERVICE_INVOKE = "_isCallBackServiceInvoke";
     private static DubboProtocol INSTANCE;
+
     /**
-     * 通信服务器集合，key:服务器地址。格式：host:port
+     * 通信服务器集合
+     * key:服务器地址。格式：host:port
+     * value: ExchangeServer 信息交换服务接口
      */
-    private final Map<String, ExchangeServer> serverMap = new ConcurrentHashMap<String, ExchangeServer>(); // <host:port,Exchanger>
+    private final Map<String, ExchangeServer> serverMap = new ConcurrentHashMap<String, ExchangeServer>();
 
     /**
      * 通信客户端集合 【创建好Client对象，会添加到这个集合，用于后续的Client的共享】
      * key: 服务器地址 格式：host:port
+     * value: ReferenceCountExchangeClient 信息交换客户端实现类
      */
-    private final Map<String, ReferenceCountExchangeClient> referenceClientMap = new ConcurrentHashMap<String, ReferenceCountExchangeClient>(); // <host:port,Exchanger>
+    private final Map<String, ReferenceCountExchangeClient> referenceClientMap = new ConcurrentHashMap<String, ReferenceCountExchangeClient>();
     /**
      * todo ? 有什么用
      * key: 服务器地址 格式:host:port
@@ -81,24 +85,49 @@ public class DubboProtocol extends AbstractProtocol {
      * 用于jvm 锁集合
      */
     private final ConcurrentMap<String, Object> locks = new ConcurrentHashMap<String, Object>();
+
     private final Set<String> optimizers = new ConcurrentHashSet<String>();
     //consumer side export a stub service for dispatching event
     //servicekey-stubmethods
     private final ConcurrentMap<String, String> stubServiceMethodsMap = new ConcurrentHashMap<String, String>();
 
     /**
-     * 经过层层包装后，会成为最终的服务端处理器，如netty。该处理器负责将请求转发到对应的Invoker对象，执行逻辑，返回结果
+     * 经过层层包装后，会成为最终的服务端处理器，如netty。该处理器负责将请求转发到对应的Invoker对象，执行逻辑，返回结果。
+     * <p>
+     * 说明：
+     * 在 DubboProtocol 类中，实现了自己的 ExchangeHandler 对象，处理请求、消息、连接、断开连接等事件，
+     * 对于服务消费者的远程调用，通过 #reply(ExchangeChannel channel, Object message) 和 #reply(Channel channel, Object message) 方法来处理
      */
     private ExchangeHandler requestHandler = new ExchangeHandlerAdapter() {
 
+        /**
+         * 用于处理服务消费者的同步调用和异步调用的请求
+         *
+         * @param channel
+         * @param message
+         * @return
+         * @throws RemotingException
+         */
         @Override
         public Object reply(ExchangeChannel channel, Object message) throws RemotingException {
+            // 如果是 Invocation类型
             if (message instanceof Invocation) {
+                // 转成 Invocation
                 Invocation inv = (Invocation) message;
-                // 获取Invoker
+
+                /**
+                 * 获取请求对应的Invoker todo 远程调用使用服务端的Invoker
+                 *
+                 * 1 先获取 Exporter 【在服务暴露时就已经初始化好了】
+                 * 2 从exporter中获取 Invoker
+                 */
                 Invoker<?> invoker = getInvoker(channel, inv);
 
-                // need to consider backward-compatibility if it's a callback  如果是callback 需要处理高版本调用低版本的问题
+                /**
+                 * 如果是callback 参数回调：
+                 * 1 需要处理高版本调用低版本的问题
+                 * 2 校验服务消费者实际存在对应的回调方法，通过方法名判断
+                 */
                 if (Boolean.TRUE.toString().equals(inv.getAttachments().get(IS_CALLBACK_SERVICE_INVOKE))) {
                     String methodsStr = invoker.getUrl().getParameters().get("methods");
                     boolean hasMethod = false;
@@ -121,7 +150,14 @@ public class DubboProtocol extends AbstractProtocol {
                         return null;
                     }
                 }
+
+                // 设置调用方的地址
                 RpcContext.getContext().setRemoteAddress(channel.getRemoteAddress());
+                /**
+                 *  执行调用 【后续的逻辑和本地调用一致】
+                 *  1 执行 Filter链 ：EchoFilter->ClassLoaderFilter->GenericFilter->ContextFilter->TraceFilter->TimeoutFilter->MonitorFilter->ExceptionFilter -> Invoker逻辑
+                 *  2 然后执行真正的Invoker的调用逻辑：AbstractProxyInvoker.invoke -> JavassistProxyFactory$AbstractProxyInvoker.doInvoke -> Wrapper.invokeMethod(proxy, methodName, parameterTypes, arguments) -> ref.xxxYYY方法
+                 */
                 return invoker.invoke(inv);
             }
             throw new RemotingException(channel, "Unsupported request: "
@@ -129,8 +165,15 @@ public class DubboProtocol extends AbstractProtocol {
                     + ", channel: consumer: " + channel.getRemoteAddress() + " --> provider: " + channel.getLocalAddress());
         }
 
+        /**
+         * 用于处理服务消费者的单次调用的消息，通过判断消息类型是不是 Invocation
+         * @param channel
+         * @param message
+         * @throws RemotingException
+         */
         @Override
         public void received(Channel channel, Object message) throws RemotingException {
+            // 判断消息类型是不是 Invocation
             if (message instanceof Invocation) {
                 reply((ExchangeChannel) channel, message);
             } else {
@@ -138,11 +181,21 @@ public class DubboProtocol extends AbstractProtocol {
             }
         }
 
+        /**
+         * 在服务提供者上，有 'onconnect' 配置项，在服务提供者连接时调用该方法 【基本不用】
+         * @param channel
+         * @throws RemotingException
+         */
         @Override
         public void connected(Channel channel) throws RemotingException {
             invoke(channel, Constants.ON_CONNECT_KEY);
         }
 
+        /**
+         * 在服务提供者上，有 'ondisconnect' 配置项，在服务提供者连接断开时会调用该方法 【基本不用】
+         * @param channel
+         * @throws RemotingException
+         */
         @Override
         public void disconnected(Channel channel) throws RemotingException {
             if (logger.isInfoEnabled()) {
@@ -151,8 +204,18 @@ public class DubboProtocol extends AbstractProtocol {
             invoke(channel, Constants.ON_DISCONNECT_KEY);
         }
 
+        /**
+         * 进行调用，执行对应的方法
+         *
+         * @param channel 通道
+         * @param methodKey 方法名
+         */
         private void invoke(Channel channel, String methodKey) {
+
+            // 创建调用信息 Invocation 对象
             Invocation invocation = createInvocation(channel, channel.getUrl(), methodKey);
+
+            // 如果 invocation 不为空，执行received方法
             if (invocation != null) {
                 try {
                     received(channel, invocation);
@@ -162,6 +225,13 @@ public class DubboProtocol extends AbstractProtocol {
             }
         }
 
+        /**
+         * 创建 Invocation
+         * @param channel
+         * @param url
+         * @param methodKey
+         * @return
+         */
         private Invocation createInvocation(Channel channel, URL url, String methodKey) {
             String method = url.getParameter(methodKey);
             if (method == null || method.length() == 0) {
@@ -210,30 +280,52 @@ public class DubboProtocol extends AbstractProtocol {
                         .equals(NetUtils.filterLocalHost(address.getAddress().getHostAddress()));
     }
 
+    /**
+     * 获得请求对应的Invoker对象
+     *
+     * @param channel
+     * @param inv
+     * @return
+     * @throws RemotingException
+     */
     Invoker<?> getInvoker(Channel channel, Invocation inv) throws RemotingException {
+
         boolean isCallBackServiceInvoke = false;
         boolean isStubServiceInvoke = false;
+        /**
+         * 获取端口
+         */
         int port = channel.getLocalAddress().getPort();
+        /**
+         * 获取path
+         */
         String path = inv.getAttachments().get(Constants.PATH_KEY);
+
         // if it's callback service on client side
         isStubServiceInvoke = Boolean.TRUE.toString().equals(inv.getAttachments().get(Constants.STUB_EVENT_KEY));
         if (isStubServiceInvoke) {
+            // 从Channel中获取 端口 port
             port = channel.getRemoteAddress().getPort();
         }
-        //callback
+
+        // 如果是参数回调，获得真正的服务名 `path`
         isCallBackServiceInvoke = isClientSide(channel) && !isStubServiceInvoke;
         if (isCallBackServiceInvoke) {
             path = inv.getAttachments().get(Constants.PATH_KEY) + "." + inv.getAttachments().get(Constants.CALLBACK_SERVICE_KEY);
             inv.getAttachments().put(IS_CALLBACK_SERVICE_INVOKE, Boolean.TRUE.toString());
         }
+
+        // 获得服务键 【根据 RpcInvocation中的attachments中的path、group、version以及从channel中获取的port拼接一个serviceKey 】，格式： group/path:version:port
         String serviceKey = serviceKey(port, path, inv.getAttachments().get(Constants.VERSION_KEY), inv.getAttachments().get(Constants.GROUP_KEY));
 
+        // 从 exporterMap 查找与 serviceKey 相对应的 DubboExporter 对象 [服务导出过程中会将 <serviceKey, DubboExporter> 映射关系存储到 exporterMap 集合中]
         DubboExporter<?> exporter = (DubboExporter<?>) exporterMap.get(serviceKey);
 
         if (exporter == null) {
             throw new RemotingException(channel, "Not found exported service: " + serviceKey + " in " + exporterMap.keySet() + ", may be version or group mismatch " + ", channel: consumer: " + channel.getRemoteAddress() + " --> provider: " + channel.getLocalAddress() + ", message:" + inv);
         }
 
+        // 取出Exporter中的Invoker 对象
         return exporter.getInvoker();
     }
 
@@ -293,6 +385,7 @@ public class DubboProtocol extends AbstractProtocol {
 
         // 参数配置项 isserver,可以暴露一个仅当前JVM可调用的服务【todo 目前该配置项应不存在了】
         boolean isServer = url.getParameter(Constants.IS_SERVER_KEY, true);
+
         if (isServer) {
             // 从serverMap缓存中获取服务器地址:端口 对应的通信服务器
             ExchangeServer server = serverMap.get(key);
@@ -320,8 +413,10 @@ public class DubboProtocol extends AbstractProtocol {
 
         // 默认开启 心跳 【heartbeat参数会在HeaderExchangeServer启动心跳计时器使用】
         url = url.addParameterIfAbsent(Constants.HEARTBEAT_KEY, String.valueOf(Constants.DEFAULT_HEARTBEAT));
+
         // 校验Server 的 Dubbo SPI扩展是否存在，默认是Netty
         String str = url.getParameter(Constants.SERVER_KEY, Constants.DEFAULT_REMOTING_SERVER);
+
         // 通过SPI检测是否存在server参数如Netty所代表的Transporter 拓展，不存在则抛出异常
         if (str != null && str.length() > 0 && !ExtensionLoader.getExtensionLoader(Transporter.class).hasExtension(str)) {
             throw new RpcException("Unsupported server type: " + str + ", url: " + url);

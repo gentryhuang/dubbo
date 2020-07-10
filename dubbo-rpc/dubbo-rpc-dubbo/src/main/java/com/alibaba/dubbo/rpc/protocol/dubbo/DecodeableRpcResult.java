@@ -39,12 +39,14 @@ import java.util.Map;
 
 /**
  * 可解码的 RpcResult 实现类
+ * 说明：
+ * 当服务提供者者，返回服务消费者调用结果，前者编码的 RpcResult 对象，后者解码成 DecodeableRpcResult 对象
  */
 public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable {
 
     private static final Logger log = LoggerFactory.getLogger(DecodeableRpcResult.class);
     /**
-     * 通道
+     * Dubbo 通道
      */
     private Channel channel;
     /**
@@ -85,12 +87,23 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * 解码
+     *
+     * @param channel channel.
+     * @param input   input stream.
+     * @return
+     * @throws IOException
+     */
     @Override
     public Object decode(Channel channel, InputStream input) throws IOException {
-        ObjectInput in = CodecSupport.getSerialization(channel.getUrl(), serializationType)
-                .deserialize(channel.getUrl(), input);
 
+        // 通过序列化器获取 输入流
+        ObjectInput in = CodecSupport.getSerialization(channel.getUrl(), serializationType).deserialize(channel.getUrl(), input);
+
+        // 反序列化响应类型
         byte flag = in.readByte();
+
         switch (flag) {
             // 无返回值
             case DubboCodec.RESPONSE_NULL_VALUE:
@@ -99,13 +112,18 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
             case DubboCodec.RESPONSE_VALUE:
                 try {
                     Type[] returnType = RpcUtils.getReturnTypes(invocation);
-                    setValue(returnType == null || returnType.length == 0 ? in.readObject() :
-                            (returnType.length == 1 ? in.readObject((Class<?>) returnType[0])
-                                    : in.readObject((Class<?>) returnType[0], returnType[1])));
+
+                    // 设置结果
+                    setValue(returnType == null || returnType.length == 0 ?
+                            in.readObject() :
+                            // 返回结果:Type[]{method.getReturnType(), method.getGenericReturnType()}
+                            (returnType.length == 1 ? in.readObject((Class<?>) returnType[0]) : in.readObject((Class<?>) returnType[0], returnType[1])));
+
                 } catch (ClassNotFoundException e) {
                     throw new IOException(StringUtils.toString("Read response data failed.", e));
                 }
                 break;
+
             // 有异常
             case DubboCodec.RESPONSE_WITH_EXCEPTION:
                 try {
@@ -118,31 +136,51 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
                     throw new IOException(StringUtils.toString("Read response data failed.", e));
                 }
                 break;
+
+            // 返回值为空，且携带了 attachments 集合
             case DubboCodec.RESPONSE_NULL_VALUE_WITH_ATTACHMENTS:
                 try {
+
+                    // 反序列化 attachments 集合，并存储起来
                     setAttachments((Map<String, String>) in.readObject(Map.class));
                 } catch (ClassNotFoundException e) {
                     throw new IOException(StringUtils.toString("Read response data failed.", e));
                 }
                 break;
+
+            // 返回值不为空，且携带了 attachments 集合
             case DubboCodec.RESPONSE_VALUE_WITH_ATTACHMENTS:
                 try {
+
+                    // 获取返回值类型
                     Type[] returnType = RpcUtils.getReturnTypes(invocation);
-                    setValue(returnType == null || returnType.length == 0 ? in.readObject() :
-                            (returnType.length == 1 ? in.readObject((Class<?>) returnType[0])
-                                    : in.readObject((Class<?>) returnType[0], returnType[1])));
+
+                    // 反序列化调用结果，并保存起来
+                    setValue(returnType == null || returnType.length == 0 ? in.readObject() : (returnType.length == 1 ? in.readObject((Class<?>) returnType[0]) : in.readObject((Class<?>) returnType[0], returnType[1])));
+
+                    // 反序列化 attachments 集合，并存储起来
                     setAttachments((Map<String, String>) in.readObject(Map.class));
+
                 } catch (ClassNotFoundException e) {
                     throw new IOException(StringUtils.toString("Read response data failed.", e));
                 }
                 break;
+
+            // 异常对象不为空，且携带了 attachments 集合
             case DubboCodec.RESPONSE_WITH_EXCEPTION_WITH_ATTACHMENTS:
                 try {
+                    // 反序列化异常对象
                     Object obj = in.readObject();
-                    if (obj instanceof Throwable == false)
+                    if (obj instanceof Throwable == false) {
                         throw new IOException("Response data error, expect Throwable, but get " + obj);
+                    }
+
+                    // 设置异常对象
                     setException((Throwable) obj);
+
+                    // 反序列化 attachments 集合，并存储起来
                     setAttachments((Map<String, String>) in.readObject(Map.class));
+
                 } catch (ClassNotFoundException e) {
                     throw new IOException(StringUtils.toString("Read response data failed.", e));
                 }
@@ -156,16 +194,26 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
         return this;
     }
 
+    /**
+     * 解码
+     *
+     * @throws Exception
+     */
     @Override
     public void decode() throws Exception {
         if (!hasDecoded && channel != null && inputStream != null) {
             try {
+
+                // 执行反序列化操作
                 decode(channel, inputStream);
             } catch (Throwable e) {
                 if (log.isWarnEnabled()) {
                     log.warn("Decode rpc result failed: " + e.getMessage(), e);
                 }
+
+                // 反序列化失败，设置 CLIENT_ERROR 状态到 Response 对象中
                 response.setStatus(Response.CLIENT_ERROR);
+                // 设置异常信息
                 response.setErrorMessage(StringUtils.toString(e));
             } finally {
                 hasDecoded = true;

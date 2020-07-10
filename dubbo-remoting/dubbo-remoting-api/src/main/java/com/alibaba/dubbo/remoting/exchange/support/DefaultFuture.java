@@ -107,6 +107,13 @@ public class DefaultFuture implements ResponseFuture {
      */
     private volatile ResponseCallback callback;
 
+    /**
+     * 创建 DefaultFuture 时，会把创建的该实例放入 FUTURES 缓存中，注意key的值
+     *
+     * @param channel
+     * @param request
+     * @param timeout
+     */
     public DefaultFuture(Channel channel, Request request, int timeout) {
         this.channel = channel;
         this.request = request;
@@ -169,7 +176,7 @@ public class DefaultFuture implements ResponseFuture {
      */
     public static void received(Channel channel, Response response) {
         try {
-            // 移除请求对应的DefaultFuture
+            // 移除元素并返回key=response.getId()的DefaultFuture，即 请求 对应 响应 ，解决了Request和Response的对应
             DefaultFuture future = FUTURES.remove(response.getId());
 
             // 接收结果
@@ -200,8 +207,8 @@ public class DefaultFuture implements ResponseFuture {
         }
 
         /**
-         * 若未完成，就进入等待，基于 Lock + Condition 方式，实现等待。 等待的唤醒通过 ChannelHandler#received(channel, message) 方法，
-         * 接收到请求时执行 DefaultFuture#received(channel, response) 方法
+         * 若未完成即响应response没有回来，基于 Lock + Condition 方式，实现等待，阻塞当前线程，直到被唤醒或被中断或阻塞时间到时了。
+         * 等待唤醒则是通过 ChannelHandler#received(channel, message) 方法，当客户端收到服务端到响应时执行 DefaultFuture#received(channel, response) 方法，具体处理看方法内部处理
          */
         if (!isDone()) {
             long start = System.currentTimeMillis();
@@ -244,8 +251,15 @@ public class DefaultFuture implements ResponseFuture {
         return response != null;
     }
 
+    /**
+     * 设置回调用 {@link com.alibaba.dubbo.rpc.protocol.dubbo.filter.FutureFilter#asyncCallback(com.alibaba.dubbo.rpc.Invoker, com.alibaba.dubbo.rpc.Invocation)}
+     *
+     * @param callback
+     *
+     */
     @Override
     public void setCallback(ResponseCallback callback) {
+        // 如果有响应，即执行回调用
         if (isDone()) {
             invokeCallback(callback);
         } else {
@@ -365,7 +379,7 @@ public class DefaultFuture implements ResponseFuture {
     }
 
     /**
-     * 响应结果
+     * 响应结果 【客户端收到服务端的响应结果】
      *
      * @param res
      */
@@ -377,7 +391,9 @@ public class DefaultFuture implements ResponseFuture {
             // 设置结果
             response = res;
 
-            // 通知，唤醒等待
+            /**
+             *  通知，唤醒阻塞的线程。{@link #get()}方法就会释放锁，然后执行 returnFromResponse 方法，返回结果
+             */
             if (done != null) {
                 done.signal();
             }
@@ -386,7 +402,7 @@ public class DefaultFuture implements ResponseFuture {
             lock.unlock();
         }
 
-        // 回掉有设置，就调用回调
+        // 回调有设置，就调用回调
         if (callback != null) {
             invokeCallback(callback);
         }

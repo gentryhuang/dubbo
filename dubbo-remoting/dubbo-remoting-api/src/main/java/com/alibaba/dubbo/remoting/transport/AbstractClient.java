@@ -98,8 +98,10 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
 
     public AbstractClient(URL url, ChannelHandler handler) throws RemotingException {
         super(url, handler);
+
         // 从URL中，获得重连相关配置，即 send.reconnect 配置属性
         send_reconnect = url.getParameter(Constants.SEND_RECONNECT_KEY, false);
+
         // 从URL中获得关闭超时时间 即 shutdown.timeout 配置属性
         shutdown_timeout = url.getParameter(Constants.SHUTDOWN_TIMEOUT_KEY, Constants.DEFAULT_SHUTDOWN_TIMEOUT);
 
@@ -126,6 +128,7 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
         } catch (RemotingException t) {
             // 如果连接失败，并且配置了启动检查，则进行对应的逻辑
             if (url.getParameter(Constants.CHECK_KEY, true)) {
+                // 关闭连接
                 close();
                 throw t;
             } else {
@@ -189,7 +192,7 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
     private synchronized void initConnectStatusCheckCommand() {
         // 获得重连频率  【注意：默认是开启的，2000毫秒】
         int reconnect = getReconnectParam(getUrl());
-        // 若开启重连功能，创建重连线程
+        // 若开启重连功能，创建重连线程   todo  reconnectExecutorFuture.isCancelled() 这个条件貌似可能引起死循环
         if (reconnect > 0 && (reconnectExecutorFuture == null || reconnectExecutorFuture.isCancelled())) {
             // 创建重连任务体
             Runnable connectStatusCheckCommand = new Runnable() {
@@ -224,11 +227,14 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
                     }
                 }
             };
-            // 发起重连定时任务，定时检查是否需要重连
+            // 发起重连定时任务，定时检查是否需要重连 [默认两秒检查一次]
             reconnectExecutorFuture = reconnectExecutorService.scheduleWithFixedDelay(connectStatusCheckCommand, reconnect, reconnect, TimeUnit.MILLISECONDS);
         }
     }
 
+    /**
+     * 关闭重试
+     */
     private synchronized void destroyConnectStatusCheckCommand() {
         try {
             if (reconnectExecutorFuture != null && !reconnectExecutorFuture.isDone()) {
@@ -323,7 +329,7 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
         if (send_reconnect && !isConnected()) {
             connect();
         }
-        // 获取通道
+        // 获取通道，NettyChannel 实例，其内部channel实例 就是 NioClientSocketChannel 实例
         Channel channel = getChannel();
         //TODO Can the value returned by getChannel() be null? need improvement.
         if (channel == null || !channel.isConnected()) {
@@ -342,11 +348,11 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
         // 获得锁 【在连接和断开连接时，通过同一个锁避免并发冲突】
         connectLock.lock();
         try {
-            // 判断连接状态，若已经连接就不重复连接
+            // 判断连接状态，若已经连接就不重复连接。todo 待验证 长连接问题，复用！！！
             if (isConnected()) {
                 return;
             }
-            // 初始化重连线程
+            // 初始化重连线程 【断线重连机制】
             initConnectStatusCheckCommand();
             // 执行连接
             doConnect();
@@ -408,15 +414,23 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
     }
 
     /**
-     * 重连
+     * 重连 - （哪里会调用，其中心跳检测的时候会调用）
+     *
      * @throws RemotingException
      */
     @Override
     public void reconnect() throws RemotingException {
+        // 先断开连接
         disconnect();
+        // 连接
         connect();
     }
 
+    /**
+     * 关闭连接，连接重试也会关闭
+     * 1 在客户端连接服务端连接失败的时候，如果并且配置了启动检查，则执行该方法
+     * 1 todo 注意调用时机 【是不是基于注册中心通知】？ 待调试验证
+     */
     @Override
     public void close() {
         try {

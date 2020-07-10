@@ -16,8 +16,9 @@ import java.io.IOException;
  */
 public class ConsumerLocal {
 
-    // 如果使用Multicast Registry 作为注册中心，需要debug模式运行，否则应用启动不起来
-
+    /**
+     * 调试本地服务引用，要使服务提供者和消费者在同一个JVM进程中，即两者配置一起加载到JVM中
+     */
     public static String[] consumerPath = {"xml/consumer-injvm.xml"};
 
     public static void main(String[] args) throws IOException{

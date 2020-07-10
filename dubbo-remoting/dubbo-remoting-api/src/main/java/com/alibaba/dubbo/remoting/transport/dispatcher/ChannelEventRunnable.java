@@ -53,48 +53,57 @@ public class ChannelEventRunnable implements Runnable {
         this.exception = exception;
     }
 
+    /**
+     * 任务体 - 请求和响应消息出现频率明显比其他类型消息高，所以这里对该类型的消息进行了针对性判断。ChannelEventRunnable 仅是一个中转站，它的 run 方法中并不包含具体的调用逻辑，仅用于将参数传给其他 ChannelHandler 对象进行处理
+     */
     @Override
     public void run() {
+
+        // 检测通道状态，对于请求或响应消息，此时 state = RECEIVED
         if (state == ChannelState.RECEIVED) {
             try {
+
+                // 将 channel 和 message 传递给 ChannelHandler 对象，用于后续的调用
                 handler.received(channel, message);
             } catch (Exception e) {
                 logger.warn("ChannelEventRunnable handle " + state + " operation error, channel is " + channel
                         + ", message is " + message, e);
             }
+
+            // 其他的消息处理
         } else {
             switch (state) {
-            case CONNECTED:
-                try {
-                    handler.connected(channel);
-                } catch (Exception e) {
-                    logger.warn("ChannelEventRunnable handle " + state + " operation error, channel is " + channel, e);
-                }
-                break;
-            case DISCONNECTED:
-                try {
-                    handler.disconnected(channel);
-                } catch (Exception e) {
-                    logger.warn("ChannelEventRunnable handle " + state + " operation error, channel is " + channel, e);
-                }
-                break;
-            case SENT:
-                try {
-                    handler.sent(channel, message);
-                } catch (Exception e) {
-                    logger.warn("ChannelEventRunnable handle " + state + " operation error, channel is " + channel
-                            + ", message is " + message, e);
-                }
-            case CAUGHT:
-                try {
-                    handler.caught(channel, exception);
-                } catch (Exception e) {
-                    logger.warn("ChannelEventRunnable handle " + state + " operation error, channel is " + channel
-                            + ", message is: " + message + ", exception is " + exception, e);
-                }
-                break;
-            default:
-                logger.warn("unknown state: " + state + ", message is " + message);
+                case CONNECTED:
+                    try {
+                        handler.connected(channel);
+                    } catch (Exception e) {
+                        logger.warn("ChannelEventRunnable handle " + state + " operation error, channel is " + channel, e);
+                    }
+                    break;
+                case DISCONNECTED:
+                    try {
+                        handler.disconnected(channel);
+                    } catch (Exception e) {
+                        logger.warn("ChannelEventRunnable handle " + state + " operation error, channel is " + channel, e);
+                    }
+                    break;
+                case SENT:
+                    try {
+                        handler.sent(channel, message);
+                    } catch (Exception e) {
+                        logger.warn("ChannelEventRunnable handle " + state + " operation error, channel is " + channel
+                                + ", message is " + message, e);
+                    }
+                case CAUGHT:
+                    try {
+                        handler.caught(channel, exception);
+                    } catch (Exception e) {
+                        logger.warn("ChannelEventRunnable handle " + state + " operation error, channel is " + channel
+                                + ", message is: " + message + ", exception is " + exception, e);
+                    }
+                    break;
+                default:
+                    logger.warn("unknown state: " + state + ", message is " + message);
             }
         }
 
@@ -102,18 +111,16 @@ public class ChannelEventRunnable implements Runnable {
 
     /**
      * ChannelState
-     *
-     *
      */
     public enum ChannelState {
 
         /**
-         * CONNECTED
+         * CONNECTED  - 连接
          */
         CONNECTED,
 
         /**
-         * DISCONNECTED
+         * DISCONNECTED - 断开连接
          */
         DISCONNECTED,
 
@@ -123,12 +130,12 @@ public class ChannelEventRunnable implements Runnable {
         SENT,
 
         /**
-         * RECEIVED
+         * RECEIVED - 接收请求/响应消息
          */
         RECEIVED,
 
         /**
-         * CAUGHT
+         * CAUGHT - 异常
          */
         CAUGHT
     }

@@ -39,6 +39,7 @@ public class ChannelHandlers {
 
     /**
      * 无论是Client还是Server，都是类似的，将传入的ChannelHandler使用ChannelHandlers进行一次包装
+     *
      * @param handler
      * @param url
      * @return
@@ -56,9 +57,11 @@ public class ChannelHandlers {
     }
 
     /**
-     *1  对DecodeHandler对象进行层层包装，最终得到MultiMessageHandler：
-     *  MultiMessageHandler->HeartbeatHandler->AllChangeHandler[url:providerUrl,executor:FixedExecutor,handler:DecodeHandler]
-     *2 MultiMessageHandler 创建后，NettyServer就开始调用各个父类进行属性初始化
+     * 说明：无论是请求还是响应都会按照这个顺序处理一遍
+     * <p>
+     * 1  对DecodeHandler对象进行层层包装，最终得到MultiMessageHandler：
+     * MultiMessageHandler->HeartbeatHandler->AllChangeHandler[url:providerUrl,executor:FixedExecutor,handler:DecodeHandler] -> DecodeHandler -> HeaderExchangeHandler->ExchangeHandlerAdapter
+     * 2 MultiMessageHandler 创建后，NettyServer就开始调用各个父类进行属性初始化
      *
      * @param handler
      * @param url

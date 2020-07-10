@@ -31,11 +31,13 @@ import java.io.IOException;
 
 /**
  * 实现Codec2接口，支持多消息的编解码器
+ * 注意：
+ * 在DubboProtocol中 Client和Server 创建的过程，设置了编码器，默认拓展名为 'dubbo'，通过Dubbo SPI机制加载到的就是 DubboCountCodec
  */
 public final class DubboCountCodec implements Codec2 {
 
     /**
-     * 编解码器
+     * Dubbo的编解码器
      */
     private DubboCodec codec = new DubboCodec();
 
@@ -64,7 +66,7 @@ public final class DubboCountCodec implements Codec2 {
     public Object decode(Channel channel, ChannelBuffer buffer) throws IOException {
         // 记录当前读位置，用于下面计算每条消息的长度
         int save = buffer.readerIndex();
-        // 创建MultiMessage 对象。MultiMessageHandler支持对它的处理分发
+        // 创建MultiMessage 对象【多消息的封装】。MultiMessageHandler支持对它的处理分发
         MultiMessage result = MultiMessage.create();
 
         // 循环解码消息
@@ -81,7 +83,7 @@ public final class DubboCountCodec implements Codec2 {
                 result.addMessage(obj);
                 // 记录消息长度到隐式参数集合，用于 MonitorFilter 监控
                 logMessageLength(obj, buffer.readerIndex() - save);
-                // 记录当前读位置
+                // 记录当前读位置，用于计算下一条消息的长度
                 save = buffer.readerIndex();
             }
         } while (true);

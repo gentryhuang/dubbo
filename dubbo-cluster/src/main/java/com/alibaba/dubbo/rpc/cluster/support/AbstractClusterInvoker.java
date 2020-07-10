@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * AbstractClusterInvoker
- *
  */
 public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
 
@@ -48,7 +47,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             .getLogger(AbstractClusterInvoker.class);
 
     /**
-     * 重要-
+     * 重要- RegistryDirectory
      */
     protected final Directory<T> directory;
 
@@ -100,22 +99,23 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
 
     /**
      * Select a invoker using loadbalance policy.</br>
-     * a)Firstly, select an invoker using loadbalance. If this invoker is in previously selected list, or, 
+     * a)Firstly, select an invoker using loadbalance. If this invoker is in previously selected list, or,
      * if this invoker is unavailable, then continue step b (reselect), otherwise return the first selected invoker</br>
      * b)Reslection, the validation rule for reselection: selected > available. This rule guarantees that
-     * the selected invoker has the minimum chance to be one in the previously selected list, and also 
+     * the selected invoker has the minimum chance to be one in the previously selected list, and also
      * guarantees this invoker is available.
      *
      * @param loadbalance load balance policy
      * @param invocation
-     * @param invokers invoker candidates
-     * @param selected  exclude selected invokers or not
+     * @param invokers    invoker candidates
+     * @param selected    exclude selected invokers or not
      * @return
      * @throws RpcException
      */
     protected Invoker<T> select(LoadBalance loadbalance, Invocation invocation, List<Invoker<T>> invokers, List<Invoker<T>> selected) throws RpcException {
-        if (invokers == null || invokers.isEmpty())
+        if (invokers == null || invokers.isEmpty()) {
             return null;
+        }
         String methodName = invocation == null ? "" : invocation.getMethodName();
 
         boolean sticky = invokers.get(0).getUrl().getMethodParameter(methodName, Constants.CLUSTER_STICKY_KEY, Constants.DEFAULT_CLUSTER_STICKY);
@@ -131,6 +131,8 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
                 }
             }
         }
+
+
         Invoker<T> invoker = doSelect(loadbalance, invocation, invokers, selected);
 
         if (sticky) {
@@ -140,18 +142,19 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
     }
 
     private Invoker<T> doSelect(LoadBalance loadbalance, Invocation invocation, List<Invoker<T>> invokers, List<Invoker<T>> selected) throws RpcException {
-        if (invokers == null || invokers.isEmpty())
+        if (invokers == null || invokers.isEmpty()) {
             return null;
-        if (invokers.size() == 1)
+        }
+        if (invokers.size() == 1) {
             return invokers.get(0);
+        }
         if (loadbalance == null) {
             loadbalance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(Constants.DEFAULT_LOADBALANCE);
         }
         Invoker<T> invoker = loadbalance.select(invokers, getUrl(), invocation);
 
         //If the `invoker` is in the  `selected` or invoker is unavailable && availablecheck is true, reselect.
-        if ((selected != null && selected.contains(invoker))
-                || (!invoker.isAvailable() && getUrl() != null && availablecheck)) {
+        if ((selected != null && selected.contains(invoker)) || (!invoker.isAvailable() && getUrl() != null && availablecheck)) {
             try {
                 Invoker<T> rinvoker = reselect(loadbalance, invocation, invokers, selected, availablecheck);
                 if (rinvoker != null) {
@@ -229,6 +232,13 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         return null;
     }
 
+    /**
+     * ClusterInvoker 将多个Invoker 封装成一个集群版的Invoker
+     *
+     * @param invocation
+     * @return
+     * @throws RpcException
+     */
     @Override
     public Result invoke(final Invocation invocation) throws RpcException {
         checkWhetherDestroyed();
@@ -240,11 +250,14 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             ((RpcInvocation) invocation).addAttachments(contextAttachments);
         }
 
+        // 获取 Invokers 【要经过Router进行过滤流程】
         List<Invoker<T>> invokers = list(invocation);
+
         if (invokers != null && !invokers.isEmpty()) {
-            loadbalance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(invokers.get(0).getUrl()
-                    .getMethodParameter(RpcUtils.getMethodName(invocation), Constants.LOADBALANCE_KEY, Constants.DEFAULT_LOADBALANCE));
+            // 获取负载均衡器 ，默认是random
+            loadbalance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(invokers.get(0).getUrl().getMethodParameter(RpcUtils.getMethodName(invocation), Constants.LOADBALANCE_KEY, Constants.DEFAULT_LOADBALANCE));
         }
+        // 异步操作添加 InvocationId
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
         return doInvoke(invocation, invokers, loadbalance);
     }
@@ -275,9 +288,15 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         }
     }
 
-    protected abstract Result doInvoke(Invocation invocation, List<Invoker<T>> invokers,
-                                       LoadBalance loadbalance) throws RpcException;
+    protected abstract Result doInvoke(Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException;
 
+    /**
+     * 通过 RegistryDirectory 获取Invokers
+     *
+     * @param invocation 调用信息
+     * @return
+     * @throws RpcException
+     */
     protected List<Invoker<T>> list(Invocation invocation) throws RpcException {
         List<Invoker<T>> invokers = directory.list(invocation);
         return invokers;

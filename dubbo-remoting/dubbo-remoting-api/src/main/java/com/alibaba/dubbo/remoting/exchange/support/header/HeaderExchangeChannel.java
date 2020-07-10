@@ -45,7 +45,7 @@ final class HeaderExchangeChannel implements ExchangeChannel {
      */
     private static final String CHANNEL_KEY = HeaderExchangeChannel.class.getName() + ".CHANNEL";
     /**
-     * 通道
+     * 通道 [NettyClient]
      */
     private final Channel channel;
     /**
@@ -103,6 +103,13 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         send(message, getUrl().getParameter(Constants.SENT_KEY, false));
     }
 
+    /**
+     * 该方法内部调用的是其父类AbstractPeer，AbstractPeer最终调用AbstractClient#send方法
+     *
+     * @param message
+     * @param sent    true: 会等待消息发出，消息发送失败会抛出异常；  false: 不等待消息发出，将消息放入IO队列，即可返回
+     * @throws RemotingException
+     */
     @Override
     public void send(Object message, boolean sent) throws RemotingException {
         if (closed) {
@@ -140,17 +147,23 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         if (closed) {
             throw new RemotingException(this.getLocalAddress(), null, "Failed to send request " + request + ", cause: The channel " + this + " is closed!");
         }
-        // 创建请求
+        // 创建请求 【创建的时候会生成 请求编号】
         Request req = new Request();
         req.setVersion(Version.getProtocolVersion());
         // 需要响应
         req.setTwoWay(true);
-        // 具体数据
+        // 具体数据 todo 待验证是否为 RpcInvocation
         req.setData(request);
-        // 创建DefaultFuture 对象
+        /**
+         *  创建DefaultFuture 对象,该对象在接受到服务端响应的时候会用到。
+         *  1 netty从宏观上看是一个异步非阻塞的框架，所以当执行channel.send(req)的时候，其内部执行到netty发送消息时，不会等待结果，直接返回。为了实现“异步转为同步”，使用了DefaultFuture这个辅助类
+         *  2 在创建 DefaultFuture对象时，会把该对象放到缓存Map {@link DefaultFuture#FUTURES }
+         *  3 在HeaderExchangeChannel.request(Object request, int timeout)，在还没有等到客户端的响应回来的时候，就直接将future返回了
+         *  4 netty是异步非阻塞的，那么假设现在我发了1w个Request，后来返回来1w个Response，那么怎么对应Request和Response呢？如果对应不上，最起码的唤醒就会有问题。为了解决这个问题提，Request和Response中都有一个属性id，Response中的属性mId就是Request中的mId
+         */
         DefaultFuture future = new DefaultFuture(channel, req, timeout);
         try {
-            // 发送请求
+            //  发送请求。需要注意的是，NettyClient中并未实现send 方法，该方法继承自父类AbstractPeer
             channel.send(req);
         } catch (RemotingException e) {
             // 发送请求失败就取消 DefaultFuture

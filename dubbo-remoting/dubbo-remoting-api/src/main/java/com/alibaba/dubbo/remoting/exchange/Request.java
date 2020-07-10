@@ -38,7 +38,7 @@ public class Request {
      */
     private static final AtomicLong INVOKE_ID = new AtomicLong(0);
     /**
-     * 请求编号
+     * 请求编号 ，注意这个编号用来和该请求对应的响应Response关联，Response中的mId就是该请求的mId
      */
     private final long mId;
     /**
@@ -62,6 +62,9 @@ public class Request {
      */
     private Object mData;
 
+    /**
+     *
+     */
     public Request() {
         mId = newId();
     }

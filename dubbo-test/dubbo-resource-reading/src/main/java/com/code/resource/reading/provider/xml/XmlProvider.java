@@ -22,7 +22,7 @@ public class XmlProvider {
     public static void main(String[] args) throws IOException {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext(providerPath);
         context.start();
-       // System.in.read();
+        System.in.read();
     }
 
 }

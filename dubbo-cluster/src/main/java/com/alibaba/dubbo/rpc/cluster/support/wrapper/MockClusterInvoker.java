@@ -36,8 +36,13 @@ public class MockClusterInvoker<T> implements Invoker<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(MockClusterInvoker.class);
 
+    /**
+     * RegistryDirectory
+     */
     private final Directory<T> directory;
-
+    /**
+     * FailoverClusterInvoker
+     */
     private final Invoker<T> invoker;
 
     public MockClusterInvoker(Directory<T> directory, Invoker<T> invoker) {
@@ -65,23 +70,39 @@ public class MockClusterInvoker<T> implements Invoker<T> {
         return directory.getInterface();
     }
 
+    /**
+     * 这里实际上会根据配置的 mock 参数来做 服务降级：
+     * <p>
+     * 1 如果没有配置 mock 参数或者 mock=false，则进行远程调用
+     * 2 如果配置了mock=force:return null,则直接返回null，不进行远程调用
+     * 3 如果配置了mock=fail:return null，先进行远程调用，失败了再进行mock 调用
+     *
+     * @param invocation
+     * @return
+     * @throws RpcException
+     */
     @Override
     public Result invoke(Invocation invocation) throws RpcException {
         Result result = null;
-
+        // 获取mock 配置值
         String value = directory.getUrl().getMethodParameter(invocation.getMethodName(), Constants.MOCK_KEY, Boolean.FALSE.toString()).trim();
         if (value.length() == 0 || value.equalsIgnoreCase("false")) {
-            //no mock
+            //没有mock 逻辑，直接调用其他 Invoker 对象的 invoke 方法
             result = this.invoker.invoke(invocation);
+
+            // force:xxx 直接执行 mock 逻辑，不发起远程调用
         } else if (value.startsWith("force")) {
             if (logger.isWarnEnabled()) {
                 logger.info("force-mock: " + invocation.getMethodName() + " force-mock enabled , url : " + directory.getUrl());
             }
             //force:direct mock
             result = doMockInvoke(invocation, null);
+
+            // fail:xxx 表示消费方对调用服务失败后，再执行 mock 逻辑，不抛出异常
         } else {
-            //fail-mock
+
             try {
+                // 调用其他 Invoker 对象的 invoke 方法
                 result = this.invoker.invoke(invocation);
             } catch (RpcException e) {
                 if (e.isBiz()) {
@@ -90,6 +111,7 @@ public class MockClusterInvoker<T> implements Invoker<T> {
                     if (logger.isWarnEnabled()) {
                         logger.warn("fail-mock: " + invocation.getMethodName() + " fail-mock enabled , url : " + directory.getUrl(), e);
                     }
+                    // 调用失败，执行 mock 逻辑
                     result = doMockInvoke(invocation, e);
                 }
             }

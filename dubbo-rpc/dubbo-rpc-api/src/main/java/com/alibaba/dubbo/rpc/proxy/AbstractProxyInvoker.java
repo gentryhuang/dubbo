@@ -89,7 +89,7 @@ public abstract class AbstractProxyInvoker<T> implements Invoker<T> {
     @Override
     public Result invoke(Invocation invocation) throws RpcException {
         try {
-            // 创建RpcResult对象，将结果包装返回
+            // 调用 doInvoke 执行后续的调用，并将调用结果封装到 RpcResult 中
             return new RpcResult(doInvoke(proxy, invocation.getMethodName(), invocation.getParameterTypes(), invocation.getArguments()));
         } catch (InvocationTargetException e) {
             // 发生InvocationTargetException 异常，创建RpcResult对象包装

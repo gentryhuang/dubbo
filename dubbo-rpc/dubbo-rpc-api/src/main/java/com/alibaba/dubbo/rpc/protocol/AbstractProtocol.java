@@ -60,6 +60,15 @@ public abstract class AbstractProtocol implements Protocol {
                 url.getParameter(Constants.GROUP_KEY));
     }
 
+    /**
+     * 获取服务键
+     *
+     * @param port
+     * @param serviceName
+     * @param serviceVersion
+     * @param serviceGroup
+     * @return
+     */
     protected static String serviceKey(int port, String serviceName, String serviceVersion, String serviceGroup) {
         return ProtocolUtils.serviceKey(port, serviceName, serviceVersion, serviceGroup);
     }

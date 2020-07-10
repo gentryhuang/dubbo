@@ -598,6 +598,12 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
         }
     }
 
+    /**
+     * 从 Map<String, List<Invoker<T>>> methodInvokerMap 中获取key 为 Invocation中的方法对应的 List<Invoker<T>>
+     *
+     * @param invocation
+     * @return
+     */
     @Override
     public List<Invoker<T>> doList(Invocation invocation) {
         if (forbidden) {
@@ -607,12 +613,13 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                             + " use dubbo version " + Version.getVersion() + ", please check status of providers(disabled, not registered or in blacklist).");
         }
         List<Invoker<T>> invokers = null;
-        Map<String, List<Invoker<T>>> localMethodInvokerMap = this.methodInvokerMap; // local reference
+        // 服务引用的过程 methodInvokerMap 中的值已经有了，并且该值会随着订阅的服务而变化
+        Map<String, List<Invoker<T>>> localMethodInvokerMap = this.methodInvokerMap;
         if (localMethodInvokerMap != null && localMethodInvokerMap.size() > 0) {
             String methodName = RpcUtils.getMethodName(invocation);
             Object[] args = RpcUtils.getArguments(invocation);
-            if (args != null && args.length > 0 && args[0] != null
-                    && (args[0] instanceof String || args[0].getClass().isEnum())) {
+            if (args != null && args.length > 0 && args[0] != null && (args[0] instanceof String || args[0].getClass().isEnum())) {
+                // 可根据第一个参数枚举路由
                 invokers = localMethodInvokerMap.get(methodName + "." + args[0]); // The routing can be enumerated according to the first parameter
             }
             if (invokers == null) {

@@ -44,7 +44,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class DubboInvoker<T> extends AbstractInvoker<T> {
 
     /**
-     * 远程通信客户端数组
+     * 远程通信客户端数组 - 会在服务引用的时候初始化 【类型是：ReferenceCountExchangeClient】
      */
     private final ExchangeClient[] clients;
     /**
@@ -78,35 +78,78 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
         this.invokers = invokers;
     }
 
+    /**
+     * 消费者调用服务，即DubboInvoker 会调用 Client ，向服务提供者发起请求
+     *
+     * @param invocation
+     * @return
+     * @throws Throwable
+     */
     @Override
     protected Result doInvoke(final Invocation invocation) throws Throwable {
         RpcInvocation inv = (RpcInvocation) invocation;
+        // 获得方法名
         final String methodName = RpcUtils.getMethodName(invocation);
+        // 设置 path（服务名），version 到 attachment 中
         inv.setAttachment(Constants.PATH_KEY, getUrl().getPath());
         inv.setAttachment(Constants.VERSION_KEY, version);
-        // 远程通信客户端
+
+        // 获得 远程通信客户端
         ExchangeClient currentClient;
+
+        // 默认是单一长连接
         if (clients.length == 1) {
             currentClient = clients[0];
         } else {
             currentClient = clients[index.getAndIncrement() % clients.length];
         }
+
+        // 远程调用
         try {
+            // 获得是否异步调用
             boolean isAsync = RpcUtils.isAsync(getUrl(), invocation);
+            // 获得是否单向调用
             boolean isOneway = RpcUtils.isOneway(getUrl(), invocation);
+            // 获得调用超时时间 （毫秒）
             int timeout = getUrl().getMethodParameter(methodName, Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
+
+            // 单向调用 【可以理解为异步无返回值】
             if (isOneway) {
                 boolean isSent = getUrl().getMethodParameter(methodName, Constants.SENT_KEY, false);
+                // 注意，调用的是 ExchangeClient#send(invocation, sent) 方法，发送消息，而不是请求
                 currentClient.send(inv, isSent);
+                // 设置 RpcContext.future = null ，无需 FutureFilter ，异步回调
                 RpcContext.getContext().setFuture(null);
+                // 返回 空结果
                 return new RpcResult();
+
+
+                // 异步调用【有返回值】
             } else if (isAsync) {
+
+                /**
+                 *  调用 ExchangeClient#request(invocation, timeout) 方法，发送请求
+                 *
+                 *  DefaultFuture是ResponseFuture的实现类，实际上这里返回的就是DefaultFuture实例，而该实例就是HeaderExchangeChannel.request(Object request, int timeout)返回的future实例
+                 */
                 ResponseFuture future = currentClient.request(inv, timeout);
+                /**
+                 * 1 调用 RpcContext#setFuture(future) 方法，在 FutureFitler 中，异步回调。
+                 * 2 将DefaultFuture 对象封装到 FutureAdapter实例中，并将 FutureAdapter实例设置到RpcContext 中，我们可以在需要的地方取出使用 【在合适的地方调用 get方法】
+                 * 3 FutureAdapter 是一个适配器，用于将 Dubbo 中的 ResponseFuture 与 JDK 中的 Future 进行适配，这样当用户线程调用 Future 的 get 方法时，经过 FutureAdapter 适配，最终会调用 ResponseFuture 实现类对象的 get 方法，也就是 DefaultFuture 的 get 方法
+                 */
                 RpcContext.getContext().setFuture(new FutureAdapter<Object>(future));
+                // 返回 空结果
                 return new RpcResult();
+
+                // 同步调用
             } else {
+                // 设置 RpcContext.future = null，无需FutureFilter ，异步回调
                 RpcContext.getContext().setFuture(null);
-                // 使用客户端处理请求
+                /**
+                 * 1 调用 ExchangeClient#request(invocation, timeout) 方法，发送请求
+                 * 2 用 ResponseFuture#get() 方法，阻塞等待返回结果
+                 */
                 return (Result) currentClient.request(inv, timeout).get();
             }
         } catch (TimeoutException e) {

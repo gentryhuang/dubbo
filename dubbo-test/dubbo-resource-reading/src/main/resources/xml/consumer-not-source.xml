@@ -19,7 +19,7 @@
 
     <!-- 引入服务-->
     <!-- 引入远程服务 -->
-    <dubbo:reference interface="com.code.reading.service.IDemoService" id="proxyDemoService" check="false"/>
+    <dubbo:reference interface="com.code.reading.service.IDemoService" id="notSourceDemoService" check="false"/>
 
 
 </beans>

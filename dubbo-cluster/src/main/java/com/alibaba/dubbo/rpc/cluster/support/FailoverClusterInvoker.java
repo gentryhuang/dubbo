@@ -39,7 +39,6 @@ import java.util.Set;
  * Note that retry causes latency.
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Failover">Failover</a>
- *
  */
 public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
@@ -54,6 +53,7 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
     public Result doInvoke(Invocation invocation, final List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         List<Invoker<T>> copyinvokers = invokers;
         checkInvokers(copyinvokers, invocation);
+        // 默认是 2+1 次
         int len = getUrl().getMethodParameter(invocation.getMethodName(), Constants.RETRIES_KEY, Constants.DEFAULT_RETRIES) + 1;
         if (len <= 0) {
             len = 1;
@@ -62,18 +62,23 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
         RpcException le = null; // last exception.
         List<Invoker<T>> invoked = new ArrayList<Invoker<T>>(copyinvokers.size()); // invoked invokers.
         Set<String> providers = new HashSet<String>(len);
+
         for (int i = 0; i < len; i++) {
-            //Reselect before retry to avoid a change of candidate `invokers`.
-            //NOTE: if `invokers` changed, then `invoked` also lose accuracy.
+            /**
+             * 重试时进行重新选择 Invoker列表，避免重试时 Invoker列表已发生改变。需要注意的是：如果列表发生了改变，那么invoked 判断会失效
+             */
             if (i > 0) {
                 checkWhetherDestroyed();
                 copyinvokers = list(invocation);
                 // check again
                 checkInvokers(copyinvokers, invocation);
             }
+
+            // 使用负载均衡器选择出来一个Invoker
             Invoker<T> invoker = select(loadbalance, invocation, copyinvokers, invoked);
             invoked.add(invoker);
             RpcContext.getContext().setInvokers((List) invoked);
+
             try {
                 Result result = invoker.invoke(invocation);
                 if (le != null && logger.isWarnEnabled()) {

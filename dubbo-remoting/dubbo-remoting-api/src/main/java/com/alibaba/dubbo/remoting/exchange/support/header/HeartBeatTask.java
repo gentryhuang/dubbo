@@ -61,25 +61,28 @@ final class HeartBeatTask implements Runnable {
     public void run() {
         try {
             long now = System.currentTimeMillis();
+            // 获取到需要心跳检测的channel，对每个channel进行判断
             for (Channel channel : channelProvider.getChannels()) {
                 if (channel.isClosed()) {
                     continue;
                 }
                 try {
 
-                    // 最后读时间
+                    // 最后一次读操作的时间
                     Long lastRead = (Long) channel.getAttribute(HeaderExchangeHandler.KEY_READ_TIMESTAMP);
-                    // 最后写时间
+                    // 最后一次写操作时间
                     Long lastWrite = (Long) channel.getAttribute(HeaderExchangeHandler.KEY_WRITE_TIMESTAMP);
 
-                    // 最后读写的时间，任一超过心跳间隔 heartbeat，就发送心跳
+                    // 如果在heartbeat内没有进行读操作或者写操作，则发送心跳请求
                     if ((lastRead != null && now - lastRead > heartbeat) || (lastWrite != null && now - lastWrite > heartbeat)) {
+
                         Request req = new Request();
                         req.setVersion(Version.getProtocolVersion());
                         // 需要响应
                         req.setTwoWay(true);
                         // 设置心跳事件
                         req.setEvent(Request.HEARTBEAT_EVENT);
+                        // 发送心跳请求
                         channel.send(req);
                         if (logger.isDebugEnabled()) {
                             logger.debug("Send heartbeat to remote channel " + channel.getRemoteAddress()
@@ -87,7 +90,7 @@ final class HeartBeatTask implements Runnable {
                         }
                     }
 
-                    // 最后读时间超过心跳超时时间 heartbeatTimeout
+                    // 正常消息和心跳在heartbeatTimeout都没接收到，即在3次heartbeat中没有收到消息
                     if (lastRead != null && now - lastRead > heartbeatTimeout) {
                         logger.warn("Close channel " + channel
                                 + ", because heartbeat read idle time out: " + heartbeatTimeout + "ms");

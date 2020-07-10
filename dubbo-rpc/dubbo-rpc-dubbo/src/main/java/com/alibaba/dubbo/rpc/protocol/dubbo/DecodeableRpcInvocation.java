@@ -48,7 +48,7 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
     private static final Logger log = LoggerFactory.getLogger(DecodeableRpcInvocation.class);
 
     /**
-     * 通道
+     * Dubbo 的通道
      */
     private Channel channel;
     /**
@@ -106,32 +106,50 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * 过反序列化将诸如 path、version、调用方法名、参数列表等信息依次解析出来，并设置到相应的字段中，最终得到一个具有完整调用信息的 DecodeableRpcInvocation 对象。
+     *
+     * @param channel channel.
+     * @param input   input stream.
+     * @return
+     * @throws IOException
+     */
     @Override
     public Object decode(Channel channel, InputStream input) throws IOException {
-        ObjectInput in = CodecSupport.getSerialization(channel.getUrl(), serializationType)
-                .deserialize(channel.getUrl(), input);
 
+        // 获取序列化方式
+        ObjectInput in = CodecSupport.getSerialization(channel.getUrl(), serializationType).deserialize(channel.getUrl(), input);
+
+        /** 和编码设置的参数对应，写什么读什么 */
+
+        // 通过反序列化得到 dubbo version
         String dubboVersion = in.readUTF();
         request.setVersion(dubboVersion);
-        // 解码 `dubbo` `path` `version`
+
+        // 通过反序列化的到 `dubbo` `path` `version`，并保存到 attachments 变量中
         setAttachment(Constants.DUBBO_VERSION_KEY, dubboVersion);
         setAttachment(Constants.PATH_KEY, in.readUTF());
         setAttachment(Constants.VERSION_KEY, in.readUTF());
 
-        // 解码方法、方法签名、方法参数集合
+        // 通过反序列化得到调用方法名
         setMethodName(in.readUTF());
+
         try {
             Object[] args;
             Class<?>[] pts;
+
+            // 通过反序列化得到参数类型字符串，如： Ljava/lang/String
             String desc = in.readUTF();
             if (desc.length() == 0) {
                 pts = DubboCodec.EMPTY_CLASS_ARRAY;
                 args = DubboCodec.EMPTY_OBJECT_ARRAY;
             } else {
+                // 将 desc 解析为参数类型数组
                 pts = ReflectUtils.desc2classArray(desc);
                 args = new Object[pts.length];
                 for (int i = 0; i < args.length; i++) {
                     try {
+                        // 解析运行时参数
                         args[i] = in.readObject(pts[i]);
                     } catch (Exception e) {
                         if (log.isWarnEnabled()) {
@@ -140,25 +158,29 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
                     }
                 }
             }
+
+            // 设置参数类型数组
             setParameterTypes(pts);
 
-            // 解码隐式传参集合
+            // 通过反序列化得到原 attachments 的内容
             Map<String, String> map = (Map<String, String>) in.readObject(Map.class);
             if (map != null && map.size() > 0) {
                 Map<String, String> attachment = getAttachments();
                 if (attachment == null) {
                     attachment = new HashMap<String, String>();
                 }
+
+                // 将 原 attachments 的内容融合到 当前对象的 attachment 中
                 attachment.putAll(map);
                 setAttachments(attachment);
             }
 
             // 进一步解码方法参数，主要为了参数返回
-            //decode argument ,may be callback
             for (int i = 0; i < args.length; i++) {
                 args[i] = decodeInvocationArgument(channel, this, pts, i, args[i]);
             }
 
+            // 设置参数列表
             setArguments(args);
 
         } catch (ClassNotFoundException e) {

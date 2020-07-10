@@ -53,7 +53,14 @@ public class MonitorFilter implements Filter {
         this.monitorFactory = monitorFactory;
     }
 
-    // intercepting invocation
+    /**
+     * 收集调用数据
+     *
+     * @param invoker    service
+     * @param invocation invocation.
+     * @return
+     * @throws RpcException
+     */
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
         if (invoker.getUrl().hasParameter(Constants.MONITOR_KEY)) {

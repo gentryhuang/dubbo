@@ -59,8 +59,8 @@ public class JavassistProxyFactory extends AbstractProxyFactory {
          */
         final Wrapper wrapper = Wrapper.getWrapper(proxy.getClass().getName().indexOf('$') < 0 ? proxy.getClass() : type);
         /**
-         * 创建 继承自AbstractProxyInvoker类的匿名对象，并实现 doInvoke方法：将调用请求转发给了 Wrapper 类的 invokeMethod 方法，从而调用Service的方法
          *
+         * 创建 继承自AbstractProxyInvoker类的匿名对象，并实现 doInvoke方法：将调用请求转发给了 Wrapper 类的 invokeMethod 方法，从而调用Service的方法
          */
         return new AbstractProxyInvoker<T>(proxy, type, url) {
             @Override

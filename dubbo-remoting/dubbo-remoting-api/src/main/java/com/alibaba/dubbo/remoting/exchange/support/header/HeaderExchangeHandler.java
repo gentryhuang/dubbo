@@ -31,6 +31,7 @@ import com.alibaba.dubbo.remoting.exchange.ExchangeHandler;
 import com.alibaba.dubbo.remoting.exchange.Request;
 import com.alibaba.dubbo.remoting.exchange.Response;
 import com.alibaba.dubbo.remoting.exchange.support.DefaultFuture;
+import com.alibaba.dubbo.remoting.exchange.support.ExchangeHandlerAdapter;
 import com.alibaba.dubbo.remoting.transport.ChannelHandlerDelegate;
 
 import java.net.InetSocketAddress;
@@ -56,7 +57,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
     }
 
     /**
-     * 处理响应
+     * 处理响应 - 客户端收到服务端的响应
      *
      * @param channel
      * @param response
@@ -116,6 +117,8 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
                 msg = data.toString();
             }
             res.setErrorMessage("Fail to decode request due to: " + msg);
+
+            // 设置 BAD_REQUEST 状态
             res.setStatus(Response.BAD_REQUEST);
 
             return res;
@@ -123,19 +126,37 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
 
         // 使用 ExchangeHandler 处理，并返回响应
 
+        // 获取 data 字段值，也就是 RpcInvocation 对象
         Object msg = req.getData();
         try {
-            // handle data.
+            /** 处理请求
+             * @see ExchangeHandlerAdapter#reply(com.alibaba.dubbo.remoting.exchange.ExchangeChannel, java.lang.Object)
+             * 在DubboProtocol中基于 ExchangeHandlerAdapter实现自己的处理器，处理请求，返回结果，{@link com.alibaba.dubbo.rpc.protocol.dubbo.DubboProtocol#requestHandler}
+             */
             Object result = handler.reply(channel, msg);
+
+            // 封装请求状态和结果
             res.setStatus(Response.OK);
             res.setResult(result);
         } catch (Throwable e) {
+
+            // 若调用过程出现异常，则设置 SERVICE_ERROR，表示服务端异常
             res.setStatus(Response.SERVICE_ERROR);
             res.setErrorMessage(StringUtils.toString(e));
         }
+        // 返回响应
         return res;
     }
 
+    /**    todo  从handler {@link com.alibaba.dubbo.remoting.transport.dispatcher.ChannelHandlers#wrapInternal(ChannelHandler, URL)}链来看，无论是请求还是响应都会按照handler链来处理一遍。那么在HeartbeatHandler中已经进行了lastWrite和lastRead的设置，为什么还要在HeaderExchangeHandler中再处理一遍  --------*/
+
+
+    /**
+     * 连接完成时：设置lastRead和lastWrite
+     *
+     * @param channel channel.
+     * @throws RemotingException
+     */
     @Override
     public void connected(Channel channel) throws RemotingException {
         channel.setAttribute(KEY_READ_TIMESTAMP, System.currentTimeMillis());
@@ -148,6 +169,12 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         }
     }
 
+    /**
+     * 连接断开时：也设置lastRead和lastWrite todo HeartbeatHandler 中是清空，这里为什么还要设置
+     *
+     * @param channel channel.
+     * @throws RemotingException
+     */
     @Override
     public void disconnected(Channel channel) throws RemotingException {
         channel.setAttribute(KEY_READ_TIMESTAMP, System.currentTimeMillis());
@@ -161,6 +188,13 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         }
     }
 
+    /**
+     * 发送消息时：设置lastWrite
+     *
+     * @param channel channel.
+     * @param message message.
+     * @throws RemotingException
+     */
     @Override
     public void sent(Channel channel, Object message) throws RemotingException {
         Throwable exception = null;
@@ -193,6 +227,8 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
 
     /**
      * 接收消息
+     * <p>
+     * 设置lastRead
      *
      * @param channel channel 通道
      * @param message message 消息
@@ -206,7 +242,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         ExchangeChannel exchangeChannel = HeaderExchangeChannel.getOrAddChannel(channel);
         try {
 
-            // 如果是请求，就处理请求
+            // 如果是请求 【服务端收到客户端的请求】
             if (message instanceof Request) {
                 // handle request.
                 Request request = (Request) message;
@@ -219,19 +255,22 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
                     // 需要响应，要将响应写回请求方
                     if (request.isTwoWay()) {
                         Response response = handleRequest(exchangeChannel, request);
+
+                        // 将调用结果返回给服务消费端  todo 问题： 1 channel 类型 ？
                         channel.send(response);
 
-                        // 不需要响应， 提交给 handler 处理
+                        // 不需要返回调用结果， 提交给 handler 处理
                     } else {
                         handler.received(exchangeChannel, request.getData());
                     }
                 }
 
-                // 处理响应
+                // 处理响应 【客户端收到服务端的响应】
             } else if (message instanceof Response) {
                 handleResponse(channel, (Response) message);
                 // 处理String
             } else if (message instanceof String) {
+
                 // 客户端侧 不支持String
                 if (isClientSide(channel)) {
                     Exception e = new Exception("Dubbo client can not supported string message: " + message + " in channel: " + channel + ", url: " + channel.getUrl());

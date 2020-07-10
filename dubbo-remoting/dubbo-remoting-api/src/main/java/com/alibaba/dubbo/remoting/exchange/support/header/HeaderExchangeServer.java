@@ -77,14 +77,20 @@ public class HeaderExchangeServer implements ExchangeServer {
             throw new IllegalArgumentException("server == null");
         }
         this.server = server;
-        // 读取心跳相关配置
+
+        // 读取心跳相关配置 ,注意在这之前 Constants.HEARTBEAT_KEY 对应的已经有值了： 如果配置了就是配置的，如果没有配置就是默认的60。
         this.heartbeat = server.getUrl().getParameter(Constants.HEARTBEAT_KEY, 0);
+
+        // 注意 heartbeatTimeout：默认是heartbeat*3。（原因：假设一端发出一次heartbeatRequest，另一端在heartbeat内没有返回任何响应-包括正常请求响应和心跳响应，此时不能认为是连接断了，因为有可能还是网络抖动什么的导致了tcp包的重传超时等）
         this.heartbeatTimeout = server.getUrl().getParameter(Constants.HEARTBEAT_TIMEOUT_KEY, heartbeat * 3);
+
         if (heartbeatTimeout < heartbeat * 2) {
             throw new IllegalStateException("heartbeatTimeout < heartbeatInterval * 2");
         }
 
-        // 发起心跳定时器
+        /**
+         * dubbo的心跳默认是在heartbeat（默认是60s）内如果没有接收到消息，就会发送心跳消息，如果连着3次（默认180s）没有收到心跳响应，provider会关闭channel。
+         */
         startHeartbeatTimer();
     }
 
@@ -201,6 +207,11 @@ public class HeaderExchangeServer implements ExchangeServer {
         }
     }
 
+    /**
+     * 获取NettyServer中的全部channel连接
+     *
+     * @return
+     */
     @Override
     public Collection<ExchangeChannel> getExchangeChannels() {
         Collection<ExchangeChannel> exchangeChannels = new ArrayList<ExchangeChannel>();
@@ -311,11 +322,23 @@ public class HeaderExchangeServer implements ExchangeServer {
 
         // 发起新的定时任务
         if (heartbeat > 0) {
+            /**
+             * 启动scheduled中的定时线程，从启动该线程开始，每隔heartbeat执行一次HeartBeatTask任务（第一次执行是在启动线程后heartbeat时）
+             */
             heartbeatTimer = scheduled.scheduleWithFixedDelay(
+                    /**
+                     * 创建心跳任务，channelProvider实例是HeaderExchangeServer中在启动线程定时执行器的时候创建的内部类
+                     */
                     new HeartBeatTask(new HeartBeatTask.ChannelProvider() {
+                        /**
+                         * 获取需要心跳的通道
+                         * @return
+                         */
                         @Override
                         public Collection<Channel> getChannels() {
-                            // Server 持有多条Client 连接的Channel
+                            /**
+                             * 获取NettyServer中的全部channel连接【Server 持有多条Client 连接的Channel】
+                             */
                             return Collections.unmodifiableCollection(HeaderExchangeServer.this.getChannels());
                         }
                     }, heartbeat, heartbeatTimeout),

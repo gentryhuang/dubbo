@@ -58,7 +58,7 @@ public class NettyClient extends AbstractClient {
     private ClientBootstrap bootstrap;
 
     /**
-     * Netty 通道
+     * Netty 通道 - 连接到Netty的服务端后，该属性会被赋值为该链接，即Netty的通道
      */
     private volatile Channel channel;
 
@@ -197,6 +197,11 @@ public class NettyClient extends AbstractClient {
         }*/
     }
 
+    /**
+     * 获取一个封装了Netty的Dubbo Channel
+     *
+     * @return
+     */
     @Override
     protected com.alibaba.dubbo.remoting.Channel getChannel() {
         Channel c = channel;
