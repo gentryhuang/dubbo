@@ -30,6 +30,9 @@ import java.lang.reflect.Type;
 
 public class FastJsonObjectInput implements ObjectInput {
 
+    /**
+     * java.io 的 输入流 BufferedReader
+     */
     private final BufferedReader reader;
 
     public FastJsonObjectInput(InputStream in) {

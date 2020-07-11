@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 
 /**
- * Object input.
+ * 对象输入接口。继承 DataInput 接口，在DataInput 的基础上增加读取对象的数据
  */
 public interface ObjectInput extends DataInput {
 

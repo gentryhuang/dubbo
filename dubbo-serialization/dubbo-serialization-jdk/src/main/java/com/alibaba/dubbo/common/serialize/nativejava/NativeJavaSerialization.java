@@ -26,6 +26,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+/**
+ * 1 基于Java 原生（自带）的Java序列化实现，即使用 java.io.ObjectInputStream 进行反序列化，使用 java.io.ObjectOutputSteam 进行序列化
+ */
 public class NativeJavaSerialization implements Serialization {
 
     public static final String NAME = "nativejava";

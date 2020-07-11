@@ -28,15 +28,26 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 
+/**
+ * 实现 ObjectInput、Cleanable接口，Kryo对象输入实现类
+ */
 public class KryoObjectInput implements ObjectInput, Cleanable {
 
+    /**
+     * Kryo 对象
+     */
     private Kryo kryo;
+    /**
+     * Kryo 输入 【继承java.io.InputStream】
+     */
     private Input input;
 
     public KryoObjectInput(InputStream inputStream) {
         input = new Input(inputStream);
         this.kryo = KryoUtils.get();
     }
+
+    //------ 以下的方法是来自 DataInput或者ObjectInput 的方法，然后使用 input和kryo分别处理不同类型的数据 ，前者处理基本类型的数据，后者处理对象数据----------------------/
 
     @Override
     public boolean readBool() throws IOException {
@@ -151,9 +162,14 @@ public class KryoObjectInput implements ObjectInput, Cleanable {
         return readObject(clazz);
     }
 
+    /**
+     * 执行清理逻辑
+     */
     @Override
     public void cleanup() {
+        // 释放 Kryo 对象
         KryoUtils.release(kryo);
+        // 清空
         kryo = null;
     }
 }

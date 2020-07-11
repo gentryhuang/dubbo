@@ -24,22 +24,30 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.serializers.JavaSerializer;
 
+/**
+ * 继承 Kryo 类，兼容无参构造方法的Kryo的子类
+ */
 public class CompatibleKryo extends Kryo {
 
     private static final Logger logger = LoggerFactory.getLogger(CompatibleKryo.class);
 
     @Override
     public Serializer getDefaultSerializer(Class type) {
+
         if (type == null) {
             throw new IllegalArgumentException("type cannot be null.");
         }
 
+        /**
+         * 空构造方法时，使用JavaSerializer，Java 原生序列化实现 【Kryo 不支持不包含无参构造方法的类的序列化】
+         */
         if (!type.isArray() && !type.isEnum() && !ReflectionUtils.checkZeroArgConstructor(type)) {
             if (logger.isWarnEnabled()) {
                 logger.warn(type + " has no zero-arg constructor and this will affect the serialization performance");
             }
             return new JavaSerializer();
         }
+        // 使用 Kryo 默认序列化实现
         return super.getDefaultSerializer(type);
     }
 }

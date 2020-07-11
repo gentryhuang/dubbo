@@ -86,7 +86,11 @@ public class DubboProtocol extends AbstractProtocol {
      */
     private final ConcurrentMap<String, Object> locks = new ConcurrentHashMap<String, Object>();
 
+    /**
+     * 已初始化的 SerializationOptimizer 实现类名的集合
+     */
     private final Set<String> optimizers = new ConcurrentHashSet<String>();
+
     //consumer side export a stub service for dispatching event
     //servicekey-stubmethods
     private final ConcurrentMap<String, String> stubServiceMethodsMap = new ConcurrentHashMap<String, String>();
@@ -369,6 +373,7 @@ public class DubboProtocol extends AbstractProtocol {
 
         // 启动服务器
         openServer(url);
+
         // 优化序列化
         optimizeSerialization(url);
         return exporter;
@@ -448,7 +453,10 @@ public class DubboProtocol extends AbstractProtocol {
     }
 
     private void optimizeSerialization(URL url) throws RpcException {
+        // 获得 optimizer 序列化优化器 配置项
         String className = url.getParameter(Constants.OPTIMIZER_KEY, "");
+
+        // 如果系统中没有序列化优化器就直接返回
         if (StringUtils.isEmpty(className) || optimizers.contains(className)) {
             return;
         }
@@ -456,21 +464,28 @@ public class DubboProtocol extends AbstractProtocol {
         logger.info("Optimizing the serialization process for Kryo, FST, etc...");
 
         try {
+            // 根据 序列化优化器名 加载 SerializationOptimizer 实现类
             Class clazz = Thread.currentThread().getContextClassLoader().loadClass(className);
+
+            // 是否是 SerializationOptimizer.class，或者 是SerializationOptimizer的子
             if (!SerializationOptimizer.class.isAssignableFrom(clazz)) {
                 throw new RpcException("The serialization optimizer " + className + " isn't an instance of " + SerializationOptimizer.class.getName());
             }
 
+            // 创建 SerializationOptimizer 对象
             SerializationOptimizer optimizer = (SerializationOptimizer) clazz.newInstance();
 
+            // 没有要优化的类直接返回
             if (optimizer.getSerializableClasses() == null) {
                 return;
             }
 
+            // 将要优化的类注册到 SerializableClassRegistry 中
             for (Class c : optimizer.getSerializableClasses()) {
                 SerializableClassRegistry.registerClass(c);
             }
 
+            // 将 序列化优化器实现类名 加入到缓存中
             optimizers.add(className);
         } catch (ClassNotFoundException e) {
             throw new RpcException("Cannot find the serialization optimizer class: " + className, e);

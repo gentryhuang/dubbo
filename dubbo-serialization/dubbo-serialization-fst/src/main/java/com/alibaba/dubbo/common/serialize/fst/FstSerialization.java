@@ -25,6 +25,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+/**
+ * 实现 Serialization 接口，FST 序列化实现类。 使用FST相关的流处理
+ */
 public class FstSerialization implements Serialization {
 
     @Override
@@ -32,6 +35,10 @@ public class FstSerialization implements Serialization {
         return 9;
     }
 
+    /**
+     * 内容类型
+     * @return
+     */
     @Override
     public String getContentType() {
         return "x-application/fst";

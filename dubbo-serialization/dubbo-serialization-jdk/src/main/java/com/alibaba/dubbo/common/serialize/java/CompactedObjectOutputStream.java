@@ -23,8 +23,11 @@ import java.io.OutputStream;
 
 /**
  * Compacted java object output stream.
+ * <p>
+ * 在 JavaSerialization 基础上，实现了对ClassDescriptor的处理
  */
 public class CompactedObjectOutputStream extends ObjectOutputStream {
+
     public CompactedObjectOutputStream(OutputStream out) throws IOException {
         super(out);
     }

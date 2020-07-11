@@ -27,7 +27,9 @@ import java.io.OutputStream;
 
 /**
  * TODO for now kryo serialization doesn't deny classes that don't implement the serializable interface
- *
+ * <p>
+ * Java对象序列化框架Kryo
+ * Kryo是一个快速高效的Java对象序列化框架，主要特点是性能、高效和易用。该项目用来序列化对象到文件、数据库或者网络
  */
 public class KryoSerialization implements Serialization {
 

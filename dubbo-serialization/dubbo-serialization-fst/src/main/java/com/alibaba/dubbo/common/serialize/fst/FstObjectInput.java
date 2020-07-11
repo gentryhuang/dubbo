@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 
-
+/**
+ * 实现 ObjectInput 接口，FST 对象输入实现类
+ */
 public class FstObjectInput implements ObjectInput {
 
     private FSTObjectInput input;
@@ -32,6 +34,8 @@ public class FstObjectInput implements ObjectInput {
     public FstObjectInput(InputStream inputStream) {
         input = FstFactory.getDefaultFactory().getObjectInput(inputStream);
     }
+
+    // -----------  几乎所有的实现方法，直接调用 FSTObjectInput 对应的方法 ---------------/
 
     @Override
     public boolean readBool() throws IOException {
@@ -69,20 +73,6 @@ public class FstObjectInput implements ObjectInput {
     }
 
     @Override
-    public byte[] readBytes() throws IOException {
-        int len = input.readInt();
-        if (len < 0) {
-            return null;
-        } else if (len == 0) {
-            return new byte[]{};
-        } else {
-            byte[] b = new byte[len];
-            input.readFully(b);
-            return b;
-        }
-    }
-
-    @Override
     public String readUTF() throws IOException {
         return input.readUTF();
     }
@@ -110,6 +100,21 @@ public class FstObjectInput implements ObjectInput {
             return (T) input.readObject(clazz);
         } catch (Exception e) {
             throw new IOException(e);
+        }
+    }
+
+
+    @Override
+    public byte[] readBytes() throws IOException {
+        int len = input.readInt();
+        if (len < 0) {
+            return null;
+        } else if (len == 0) {
+            return new byte[]{};
+        } else {
+            byte[] b = new byte[len];
+            input.readFully(b);
+            return b;
         }
     }
 }

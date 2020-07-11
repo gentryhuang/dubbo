@@ -29,6 +29,9 @@ import java.io.Writer;
 
 public class FastJsonObjectOutput implements ObjectOutput {
 
+    /**
+     * java.io的 输出流 PrintWriter
+     */
     private final PrintWriter writer;
 
     public FastJsonObjectOutput(OutputStream out) {
@@ -92,9 +95,13 @@ public class FastJsonObjectOutput implements ObjectOutput {
     @Override
     public void writeObject(Object obj) throws IOException {
         SerializeWriter out = new SerializeWriter();
+        // 序列化，写入对象
         JSONSerializer serializer = new JSONSerializer(out);
+        // 支持 枚举转字符串
         serializer.config(SerializerFeature.WriteEnumUsingToString, true);
         serializer.write(obj);
+
+        // 写到，输出流
         out.writeTo(writer);
         out.close(); // for reuse SerializeWriter buf
         writer.println();

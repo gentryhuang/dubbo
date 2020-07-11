@@ -26,15 +26,27 @@ import com.esotericsoftware.kryo.io.Output;
 import java.io.IOException;
 import java.io.OutputStream;
 
+/**
+ * 实现ObjectOutput、Cleanable 接口，Kryo对象输出实现类
+ */
 public class KryoObjectOutput implements ObjectOutput, Cleanable {
 
+    /**
+     * Kryo 输出
+     */
     private Output output;
+    /**
+     * Kryo 对象
+     */
     private Kryo kryo;
 
     public KryoObjectOutput(OutputStream outputStream) {
         output = new Output(outputStream);
         this.kryo = KryoUtils.get();
     }
+
+    //------ 以下的方法是来自 DataOutput或者ObjectOutput 的方法，然后使用 output和kryo分别处理不同类型的数据 ，前者处理基本类型的数据，后者处理对象数据----------------------/
+
 
     @Override
     public void writeBool(boolean v) throws IOException {
@@ -106,10 +118,14 @@ public class KryoObjectOutput implements ObjectOutput, Cleanable {
     public void flushBuffer() throws IOException {
         output.flush();
     }
-
+    /**
+     * 执行清理逻辑
+     */
     @Override
     public void cleanup() {
+        // 释放 Kryo 对象
         KryoUtils.release(kryo);
+        // 清空
         kryo = null;
     }
 }

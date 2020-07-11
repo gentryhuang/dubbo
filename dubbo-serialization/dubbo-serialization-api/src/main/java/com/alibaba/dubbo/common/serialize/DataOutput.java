@@ -19,7 +19,7 @@ package com.alibaba.dubbo.common.serialize;
 import java.io.IOException;
 
 /**
- * Data output.
+ * 数据输出接口，向OutputStream 中写入基本数据类型的数据
  */
 public interface DataOutput {
 

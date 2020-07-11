@@ -25,6 +25,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+/**
+ * Hessian2 序列化方式
+ */
 public class Hessian2Serialization implements Serialization {
 
     public static final byte ID = 2;

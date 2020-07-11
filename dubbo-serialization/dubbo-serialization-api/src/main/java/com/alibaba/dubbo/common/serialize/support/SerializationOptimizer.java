@@ -20,9 +20,17 @@ import java.util.Collection;
 
 /**
  * This class can be replaced with the contents in config file, but for now I think the class is easier to write
- *
+ * 序列化优化器接口
+ * 说明：
+ *  在Kryo、FST中，支持配置需要优化的类。业务系统中，可以实现自定义的SerializationOptimizer子类，进行配置。当然使用文件也是一个选择，即这个类可以替换为配置文件中的内容，
+ *  但是类的方式更容易编写
  */
 public interface SerializationOptimizer {
 
+    /**
+     * 返回需要使用优化的类的集合
+     *
+     * @return
+     */
     Collection<Class> getSerializableClasses();
 }

@@ -24,12 +24,25 @@ import com.esotericsoftware.kryo.Kryo;
  * @since 2.6.0
  */
 public class KryoUtils {
+    /**
+     * 创建 基于ThreadLocal 的 Kryo 工厂实现类
+     */
     private static AbstractKryoFactory kryoFactory = new ThreadLocalKryoFactory();
 
+    /**
+     * 获取 Kryo
+     *
+     * @return
+     */
     public static Kryo get() {
         return kryoFactory.getKryo();
     }
 
+    /**
+     * 释放 Kryo
+     *
+     * @param kryo
+     */
     public static void release(Kryo kryo) {
         kryoFactory.returnKryo(kryo);
     }

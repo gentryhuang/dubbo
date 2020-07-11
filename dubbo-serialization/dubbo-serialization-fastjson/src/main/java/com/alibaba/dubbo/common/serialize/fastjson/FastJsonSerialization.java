@@ -25,6 +25,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+/**
+ * FastJson 实现序列化，主要是 在序列化和反序列的时候借助FastJson 实现相关细节
+ */
 public class FastJsonSerialization implements Serialization {
 
     @Override

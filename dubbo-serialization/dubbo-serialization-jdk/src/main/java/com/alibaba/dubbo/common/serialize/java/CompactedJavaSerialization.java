@@ -25,6 +25,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+/**
+ * 在Java序列化基础上，实现了对 ClassDescriptor 的处理
+ */
 public class CompactedJavaSerialization implements Serialization {
 
     @Override
@@ -37,6 +40,14 @@ public class CompactedJavaSerialization implements Serialization {
         return "x-application/compactedjava";
     }
 
+    /**
+     * 在创建 JavaObjectOutput 时，根据 compact = true 时，使用 CompactedObjectOutputStream 输出流
+     *
+     * @param url URL
+     * @param out
+     * @return
+     * @throws IOException
+     */
     @Override
     public ObjectOutput serialize(URL url, OutputStream out) throws IOException {
         return new JavaObjectOutput(out, true);

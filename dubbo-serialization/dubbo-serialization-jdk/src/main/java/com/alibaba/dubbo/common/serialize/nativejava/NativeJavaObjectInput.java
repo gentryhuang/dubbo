@@ -27,6 +27,9 @@ import java.lang.reflect.Type;
 
 public class NativeJavaObjectInput implements ObjectInput {
 
+    /**
+     * Java原生的 ObjectInputStream 输入流
+     */
     private final ObjectInputStream inputStream;
 
     public NativeJavaObjectInput(InputStream is) throws IOException {

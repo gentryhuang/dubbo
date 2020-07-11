@@ -19,7 +19,7 @@ package com.alibaba.dubbo.common.serialize;
 import java.io.IOException;
 
 /**
- * Object output.
+ * 继承 DataOutput 接口，对象输出接口，在DataOutput 的基础上，增加写入对象的数据
  */
 public interface ObjectOutput extends DataOutput {
 
