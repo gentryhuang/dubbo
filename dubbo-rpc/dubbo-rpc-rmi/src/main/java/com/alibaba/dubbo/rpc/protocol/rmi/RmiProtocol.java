@@ -34,10 +34,15 @@ import java.net.SocketTimeoutException;
 import java.rmi.RemoteException;
 
 /**
- * RmiProtocol.
+ * RmiProtocol ，实现AbstractProxyProtocol 抽象类，rmi:// 协议实现类
+ * 说明：
+ * 整体实现和dubbo-rpc-http差不多
  */
 public class RmiProtocol extends AbstractProxyProtocol {
 
+    /**
+     * 默认端口
+     */
     public static final int DEFAULT_PORT = 1099;
 
     public RmiProtocol() {
@@ -51,6 +56,7 @@ public class RmiProtocol extends AbstractProxyProtocol {
 
     @Override
     protected <T> Runnable doExport(final T impl, Class<T> type, URL url) throws RpcException {
+        // 创建 RmiServiceExporter 对象
         final RmiServiceExporter rmiServiceExporter = new RmiServiceExporter();
         rmiServiceExporter.setRegistryPort(url.getPort());
         rmiServiceExporter.setServiceName(url.getPath());
@@ -61,6 +67,8 @@ public class RmiProtocol extends AbstractProxyProtocol {
         } catch (RemoteException e) {
             throw new RpcException(e.getMessage(), e);
         }
+
+        // 返回取消暴露的回调的 Runnable
         return new Runnable() {
             @Override
             public void run() {
@@ -76,8 +84,11 @@ public class RmiProtocol extends AbstractProxyProtocol {
     @Override
     @SuppressWarnings("unchecked")
     protected <T> T doRefer(final Class<T> serviceType, final URL url) throws RpcException {
+        // 创建 RmiProxyFactoryBean 对象
         final RmiProxyFactoryBean rmiProxyFactoryBean = new RmiProxyFactoryBean();
         // RMI needs extra parameter since it uses customized remote invocation object
+
+        // 如果远程服务是Dubbo RMI 时，RMI 传输时使用 自定义的远程执行对象，从而传递额外的参数
         if (url.getParameter(Constants.DUBBO_VERSION_KEY, Version.getProtocolVersion()).equals(Version.getProtocolVersion())) {
             // Check dubbo version on provider, this feature only support
             rmiProxyFactoryBean.setRemoteInvocationFactory(new RemoteInvocationFactory() {
@@ -87,12 +98,16 @@ public class RmiProtocol extends AbstractProxyProtocol {
                 }
             });
         }
+
+        // 设置相关参数 【注意，Dubbo 配置中的超时时间对RMI无效，需要使用java 启动参数设置 -Dxxx=yyy】
         rmiProxyFactoryBean.setServiceUrl(url.toIdentityString());
         rmiProxyFactoryBean.setServiceInterface(serviceType);
         rmiProxyFactoryBean.setCacheStub(true);
         rmiProxyFactoryBean.setLookupStubOnStartup(true);
         rmiProxyFactoryBean.setRefreshStubOnConnectFailure(true);
         rmiProxyFactoryBean.afterPropertiesSet();
+
+        // 创建 Service Proxy 对象
         return (T) rmiProxyFactoryBean.getObject();
     }
 
