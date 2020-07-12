@@ -385,6 +385,7 @@ public class DubboProtocol extends AbstractProtocol {
      * @param url
      */
     private void openServer(URL url) {
+
         // 获得服务地址【主机、端口:ip:port】，并将其作为服务器实例的key，用于标识当前的服务起实例
         String key = url.getAddress();
 
