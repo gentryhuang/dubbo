@@ -29,10 +29,13 @@ import java.io.IOException;
 import java.net.URL;
 
 /**
- * HttpClientConnectionFactory
+ * HttpClientConnectionFactory,实现HessianConnectionFactory 接口，是一个HttpClientConnection 连接工厂
  */
 public class HttpClientConnectionFactory implements HessianConnectionFactory {
 
+    /**
+     * Apache HttpClient
+     */
     private final HttpClient httpClient = new DefaultHttpClient();
 
     @Override

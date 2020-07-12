@@ -30,16 +30,23 @@ import java.io.OutputStream;
 import java.net.URL;
 
 /**
- * HttpClientConnection
+ * HttpClientConnection,实现HessianConnection 接口，HttpClient 连接器实现类。基于Apache HttpClient 封装的
  */
 public class HttpClientConnection implements HessianConnection {
 
+    /**
+     * Apache HttpClient
+     */
     private final HttpClient httpClient;
 
     private final ByteArrayOutputStream output;
-
+    /**
+     * Apache HttpPost
+     */
     private final HttpPost request;
-
+    /**
+     * Apache HttpResponse
+     */
     private volatile HttpResponse response;
 
     public HttpClientConnection(HttpClient httpClient, URL url) {
