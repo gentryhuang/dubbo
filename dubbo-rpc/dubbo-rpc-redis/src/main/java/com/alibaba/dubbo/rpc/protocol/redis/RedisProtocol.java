@@ -47,10 +47,13 @@ import java.util.concurrent.TimeoutException;
 
 
 /**
- * RedisProtocol
+ * RedisProtocol,实现AbstractProtocol 抽象类，redis:// 协议实现类
  */
 public class RedisProtocol extends AbstractProtocol {
 
+    /**
+     * 默认端口
+     */
     public static final int DEFAULT_PORT = 6379;
 
     @Override
@@ -58,82 +61,141 @@ public class RedisProtocol extends AbstractProtocol {
         return DEFAULT_PORT;
     }
 
+    /**
+     * 实际访问的是Redis Server 实例，因此无需进行Dubbo 服务暴露
+     *
+     * @param invoker Service invoker
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Exporter<T> export(final Invoker<T> invoker) throws RpcException {
         throw new UnsupportedOperationException("Unsupported export redis service. url: " + invoker.getUrl());
     }
 
+    /**
+     * 获取序列化
+     *
+     * @param url
+     * @return
+     */
     private Serialization getSerialization(URL url) {
         return ExtensionLoader.getExtensionLoader(Serialization.class).getExtension(url.getParameter(Constants.SERIALIZATION_KEY, "java"));
     }
 
+    /**
+     * 使用 Jedis 访问 Redis Server
+     * @param type Service class
+     * @param url  URL address for the remote service
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Invoker<T> refer(final Class<T> type, final URL url) throws RpcException {
         try {
+
+            // 创建 GenericObjectPoolConfig 对象，设置配置
             GenericObjectPoolConfig config = new GenericObjectPoolConfig();
             config.setTestOnBorrow(url.getParameter("test.on.borrow", true));
             config.setTestOnReturn(url.getParameter("test.on.return", false));
             config.setTestWhileIdle(url.getParameter("test.while.idle", false));
-            if (url.getParameter("max.idle", 0) > 0)
+            if (url.getParameter("max.idle", 0) > 0) {
                 config.setMaxIdle(url.getParameter("max.idle", 0));
-            if (url.getParameter("min.idle", 0) > 0)
+            }
+            if (url.getParameter("min.idle", 0) > 0) {
                 config.setMinIdle(url.getParameter("min.idle", 0));
-            if (url.getParameter("max.active", 0) > 0)
+            }
+            if (url.getParameter("max.active", 0) > 0) {
                 config.setMaxTotal(url.getParameter("max.active", 0));
-            if (url.getParameter("max.total", 0) > 0)
+            }
+            if (url.getParameter("max.total", 0) > 0) {
                 config.setMaxTotal(url.getParameter("max.total", 0));
-            if (url.getParameter("max.wait", 0) > 0)
+            }
+            if (url.getParameter("max.wait", 0) > 0) {
                 config.setMaxWaitMillis(url.getParameter("max.wait", 0));
-            if (url.getParameter("num.tests.per.eviction.run", 0) > 0)
+            }
+            if (url.getParameter("num.tests.per.eviction.run", 0) > 0) {
                 config.setNumTestsPerEvictionRun(url.getParameter("num.tests.per.eviction.run", 0));
-            if (url.getParameter("time.between.eviction.runs.millis", 0) > 0)
+            }
+            if (url.getParameter("time.between.eviction.runs.millis", 0) > 0) {
                 config.setTimeBetweenEvictionRunsMillis(url.getParameter("time.between.eviction.runs.millis", 0));
-            if (url.getParameter("min.evictable.idle.time.millis", 0) > 0)
+            }
+            if (url.getParameter("min.evictable.idle.time.millis", 0) > 0) {
                 config.setMinEvictableIdleTimeMillis(url.getParameter("min.evictable.idle.time.millis", 0));
+            }
+
+            // 创建 JedisPool 对象
             final JedisPool jedisPool = new JedisPool(config, url.getHost(), url.getPort(DEFAULT_PORT),
                     url.getParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT),
                     StringUtils.isBlank(url.getPassword()) ? null : url.getPassword(),
                     url.getParameter("db.index", 0));
+
+            // 处理方法名的映射 【如果方法名和redis的标准方法名不同，则需要配置映射关系】
             final int expiry = url.getParameter("expiry", 0);
             final String get = url.getParameter("get", "get");
             final String set = url.getParameter("set", Map.class.equals(type) ? "put" : "set");
             final String delete = url.getParameter("delete", Map.class.equals(type) ? "remove" : "delete");
+
+            // 创建Invoker 对象
             return new AbstractInvoker<T>(type, url) {
                 @Override
                 protected Result doInvoke(Invocation invocation) throws Throwable {
                     Jedis resource = null;
                     try {
+                        // 获取Redis Resource
                         resource = jedisPool.getResource();
 
+                        // Redis get 指令
                         if (get.equals(invocation.getMethodName())) {
                             if (invocation.getArguments().length != 1) {
                                 throw new IllegalArgumentException("The redis get method arguments mismatch, must only one arguments. interface: " + type.getName() + ", method: " + invocation.getMethodName() + ", url: " + url);
                             }
+
+                            // 获得值
                             byte[] value = resource.get(String.valueOf(invocation.getArguments()[0]).getBytes());
                             if (value == null) {
                                 return new RpcResult();
                             }
+
+                            // 反序列化
                             ObjectInput oin = getSerialization(url).deserialize(url, new ByteArrayInputStream(value));
+
+                            // 返回结果
                             return new RpcResult(oin.readObject());
+
+                            // Redis set 指令
                         } else if (set.equals(invocation.getMethodName())) {
                             if (invocation.getArguments().length != 2) {
                                 throw new IllegalArgumentException("The redis set method arguments mismatch, must be two arguments. interface: " + type.getName() + ", method: " + invocation.getMethodName() + ", url: " + url);
                             }
+
+                            // 序列化
                             byte[] key = String.valueOf(invocation.getArguments()[0]).getBytes();
                             ByteArrayOutputStream output = new ByteArrayOutputStream();
                             ObjectOutput value = getSerialization(url).serialize(url, output);
                             value.writeObject(invocation.getArguments()[1]);
+
+                            // 设置值
                             resource.set(key, output.toByteArray());
                             if (expiry > 1000) {
                                 resource.expire(key, expiry / 1000);
                             }
+
+                            // 返回结果
                             return new RpcResult();
+                            // Redis delete 指令
                         } else if (delete.equals(invocation.getMethodName())) {
                             if (invocation.getArguments().length != 1) {
                                 throw new IllegalArgumentException("The redis delete method arguments mismatch, must only one arguments. interface: " + type.getName() + ", method: " + invocation.getMethodName() + ", url: " + url);
                             }
+                            // 删除值
                             resource.del(String.valueOf(invocation.getArguments()[0]).getBytes());
+                            // 返回结果
                             return new RpcResult();
+
+                            // 其他命令暂时不支持
                         } else {
                             throw new UnsupportedOperationException("Unsupported method " + invocation.getMethodName() + " in redis service.");
                         }
@@ -148,6 +210,8 @@ public class RedisProtocol extends AbstractProtocol {
                         }
                         throw re;
                     } finally {
+
+                        // 归还 Redis Resource
                         if (resource != null) {
                             try {
                                 jedisPool.returnResource(resource);
@@ -158,9 +222,13 @@ public class RedisProtocol extends AbstractProtocol {
                     }
                 }
 
+
                 @Override
                 public void destroy() {
+                    // 标记销毁
                     super.destroy();
+
+                    // 销毁 Redis Pool
                     try {
                         jedisPool.destroy();
                     } catch (Throwable e) {
