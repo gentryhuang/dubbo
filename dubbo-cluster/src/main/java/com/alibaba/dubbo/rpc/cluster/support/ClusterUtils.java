@@ -103,6 +103,7 @@ public class ClusterUtils {
             }
         }
 
+        // 进行合并
         return remoteUrl.clearParameters().addParameters(map);
     }
 

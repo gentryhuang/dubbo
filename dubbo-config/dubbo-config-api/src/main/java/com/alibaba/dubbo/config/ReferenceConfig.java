@@ -218,11 +218,12 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         checkDefault();
         // 拼接属性配置（环境变量 + .properties 中的属性）到ReferenceConfig（自己）
         appendProperties(this);
+
         // 若未设置 generic 属性，就使用ConsumerConfig的generic属性
         if (getGeneric() == null && getConsumer() != null) {
             setGeneric(getConsumer().getGeneric());
         }
-        // 泛化接口的实现
+        // 是否是泛化接口的实现，如果是泛化接口实现的话，就直接设置当前接口为 GenericService.class
         if (ProtocolUtils.isGeneric(getGeneric())) {
             interfaceClass = GenericService.class;
             // 普通接口的实现
@@ -441,9 +442,9 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         if (isJvmRefer) {
 
             // ---  todo 为了调试本地引用临时代码，休眠一会 ------
-            try{
+            try {
                 Thread.sleep(2000);
-            }catch (Exception ex){
+            } catch (Exception ex) {
 
             }
             //------ todo 为了调试本地引用临时代码  ----------

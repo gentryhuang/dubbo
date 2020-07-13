@@ -24,13 +24,15 @@ package com.alibaba.dubbo.rpc.service;
 public interface GenericService {
 
     /**
+     * 泛化调用
+     * <p>
      * Generic invocation
      *
-     * @param method         Method name, e.g. findPerson. If there are overridden methods, parameter info is
+     * @param method         方法名        Method name, e.g. findPerson. If there are overridden methods, parameter info is
      *                       required, e.g. findPerson(java.lang.String)
-     * @param parameterTypes Parameter types
-     * @param args           Arguments
-     * @return invocation return value
+     * @param parameterTypes 参数类型数组 Parameter types
+     * @param args           参数数组        Arguments
+     * @return invocation return value 调用结果
      * @throws Throwable potential exception thrown from the invocation
      */
     Object $invoke(String method, String[] parameterTypes, Object[] args) throws GenericException;

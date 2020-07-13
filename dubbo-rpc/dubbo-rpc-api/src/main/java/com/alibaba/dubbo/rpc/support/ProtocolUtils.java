@@ -45,6 +45,17 @@ public class ProtocolUtils {
         return buf.toString();
     }
 
+    /**
+     * 判断是否开启了泛化引用，目前有三种配置项的值
+     * <ul>
+     *     <li>generic=true</li>
+     *     <li>generic=nativejava</li>
+     *     <li>generic=bean</li>
+     * </ul>
+     *
+     * @param generic
+     * @return
+     */
     public static boolean isGeneric(String generic) {
         return generic != null
                 && !"".equals(generic)
