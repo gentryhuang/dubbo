@@ -58,7 +58,6 @@ public class TaskQueue<R extends Runnable> extends LinkedBlockingQueue<Runnable>
         if (currentPoolThreadSize < executor.getMaximumPoolSize()) {
             return false;
         }
-
         // currentPoolThreadSize >= max
         return super.offer(runnable);
     }

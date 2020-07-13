@@ -16,8 +16,18 @@
  */
 package com.alibaba.dubbo.rpc.service;
 
+import com.alibaba.dubbo.rpc.filter.EchoFilter;
+import com.alibaba.dubbo.rpc.proxy.AbstractProxyFactory;
+
 /**
+ * 回声检测接口，所有消费服务自动实现EchoService 接口
+ * <p>
+ * 1 服务提供者是不实现EchoService 接口，而是通过 EchoFilter 实现 {@link EchoFilter#invoke(com.alibaba.dubbo.rpc.Invoker, com.alibaba.dubbo.rpc.Invocation)}
+ * 2 在服务引用时只需将服务引用强制转为EchoService 即可使用。原理 {@link AbstractProxyFactory#getProxy(com.alibaba.dubbo.rpc.Invoker, boolean)}
+ * 如： EchoService echoService = (EchoService)demoService; String status = echoService.$echo("OK");
+ * <p>
  * Echo service.
+ *
  * @export
  */
 public interface EchoService {

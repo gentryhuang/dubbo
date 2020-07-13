@@ -36,7 +36,7 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
     }
 
     /**
-     * 主要获取需要生成代理的接口列表
+     * 主要获取需要生成代理的接口列表 【这里回自动实现EchoService 接口】
      * <p>
      * 注意：这里会在原有Invoker对应关联的接口之上增加EchoService接口，作用是回声测试，每个服务都会自动实现EchoService接口。
      * 如果要使用回声测试，只需要将任意服务引用强制转型为EchoService即可使用： String status = echoService.$echo("OK");
@@ -59,6 +59,8 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
                 interfaces = new Class<?>[types.length + 2];
                 // 设置服务接口类和EchoService.class【用于回声测试】到 interfaces 中。这是在原有Invoker对应关联的接口之上，增加EchoService接口
                 interfaces[0] = invoker.getInterface();
+
+                // 回声测试接口
                 interfaces[1] = EchoService.class;
                 for (int i = 0; i < types.length; i++) {
                     // 加载接口类
