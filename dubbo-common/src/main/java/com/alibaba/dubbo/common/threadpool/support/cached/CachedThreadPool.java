@@ -29,6 +29,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * 实现ThreadPool 接口，缓存线程池，空闲一定时间，自动删除，需要时会重新创建
+ * <p>
  * This thread pool is self-tuned. Thread will be recycled after idle for one minute, and new thread will be created for
  * the upcoming request.
  *
@@ -38,15 +40,29 @@ public class CachedThreadPool implements ThreadPool {
 
     @Override
     public Executor getExecutor(URL url) {
+        // 线程名
         String name = url.getParameter(Constants.THREAD_NAME_KEY, Constants.DEFAULT_THREAD_NAME);
+        // 核心线程数
         int cores = url.getParameter(Constants.CORE_THREADS_KEY, Constants.DEFAULT_CORE_THREADS);
+        // 最大线程数
         int threads = url.getParameter(Constants.THREADS_KEY, Integer.MAX_VALUE);
+        // 队列数
         int queues = url.getParameter(Constants.QUEUES_KEY, Constants.DEFAULT_QUEUES);
+        // 线程存活时长
         int alive = url.getParameter(Constants.ALIVE_KEY, Constants.DEFAULT_ALIVE);
-        return new ThreadPoolExecutor(cores, threads, alive, TimeUnit.MILLISECONDS,
-                queues == 0 ? new SynchronousQueue<Runnable>() :
-                        (queues < 0 ? new LinkedBlockingQueue<Runnable>()
-                                : new LinkedBlockingQueue<Runnable>(queues)),
-                new NamedInternalThreadFactory(name, true), new AbortPolicyWithReport(name, url));
+        // 创建执行器
+        return new ThreadPoolExecutor(
+                cores,
+                threads,
+                alive,
+                TimeUnit.MILLISECONDS,
+                queues == 0 ? new SynchronousQueue<Runnable>() : (queues < 0 ? new LinkedBlockingQueue<Runnable>() : new LinkedBlockingQueue<Runnable>(queues)),
+                new NamedInternalThreadFactory(name, true),
+                new AbortPolicyWithReport(name, url)
+        );
+
+        /**
+         * 配置方式同FixedThreadPool，使用 <dubbo:parameter /> 配置
+         */
     }
 }

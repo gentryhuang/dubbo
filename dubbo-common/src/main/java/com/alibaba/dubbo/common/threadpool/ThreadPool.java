@@ -24,13 +24,18 @@ import com.alibaba.dubbo.common.extension.SPI;
 import java.util.concurrent.Executor;
 
 /**
- * ThreadPool
+ * ThreadPool,线程池接口
+ * 说明：
+ *
+ * @SPI("fixed) 注解，Dubbo SPI 拓展点，默认为 fixed
  */
 @SPI("fixed")
 public interface ThreadPool {
 
     /**
-     * Thread pool
+     * 获得对应线程池的执行器
+     *
+     * <span>@Adaptive({Constants.THREADPOOL_KEY}) 注解，基于Dubbo SPI Adaptive 机制，加载对应的线程池实现，使用 URL.threadpool 属性</span>
      *
      * @param url URL contains thread parameter
      * @return thread pool

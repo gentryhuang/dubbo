@@ -33,6 +33,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
+ * 拒绝策略实现类，这里打印JStack，分析线程状态
+ * <p>
  * Abort Policy.
  * Log warn info when abort.
  */
@@ -40,12 +42,23 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
 
     protected static final Logger logger = LoggerFactory.getLogger(AbortPolicyWithReport.class);
 
+    /**
+     * 线程
+     */
     private final String threadName;
-
+    /**
+     * URL对象
+     */
     private final URL url;
 
+    /**
+     * 最后打印时间
+     */
     private static volatile long lastPrintTime = 0;
 
+    /**
+     * 信号量
+     */
     private static Semaphore guard = new Semaphore(1);
 
     public AbortPolicyWithReport(String threadName, URL url) {
@@ -53,8 +66,15 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
         this.url = url;
     }
 
+    /**
+     * 执行拒绝逻辑
+     *
+     * @param r
+     * @param e
+     */
     @Override
     public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+        // 打印告警日志
         String msg = String.format("Thread pool is EXHAUSTED!" +
                         " Thread Name: %s, Pool Size: %d (active: %d, core: %d, max: %d, largest: %d), Task: %d (completed: %d)," +
                         " Executor status:(isShutdown:%s, isTerminated:%s, isTerminating:%s), in %s://%s:%d!",
@@ -62,46 +82,64 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
                 e.getTaskCount(), e.getCompletedTaskCount(), e.isShutdown(), e.isTerminated(), e.isTerminating(),
                 url.getProtocol(), url.getIp(), url.getPort());
         logger.warn(msg);
+
+        // 打印JStack，分析线程状态
         dumpJStack();
+
+        // 抛出 RejectedExecutionException 异常
         throw new RejectedExecutionException(msg);
     }
 
+    /**
+     * 打印JStack，用来分析线程状态
+     */
     private void dumpJStack() {
+        // 当前时间
         long now = System.currentTimeMillis();
 
-        //dump every 10 minutes
+        //10分钟打印一次
         if (now - lastPrintTime < 10 * 60 * 1000) {
             return;
         }
 
+        // 获得信号量 ,用以保证同一时间有且仅有一个线程执行打印
         if (!guard.tryAcquire()) {
             return;
         }
 
+        // 创建线程池，后台执行打印逻辑
         Executors.newSingleThreadExecutor().execute(new Runnable() {
             @Override
             public void run() {
+
+                // 获得系统
                 String dumpPath = url.getParameter(Constants.DUMP_DIRECTORY, System.getProperty("user.home"));
 
                 SimpleDateFormat sdf;
 
+                // 获得路径
                 String OS = System.getProperty("os.name").toLowerCase();
 
                 // window system don't support ":" in file name
-                if(OS.contains("win")){
+                if (OS.contains("win")) {
                     sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
-                }else {
+                } else {
                     sdf = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss");
                 }
 
                 String dateStr = sdf.format(new Date());
+
+                // 输出流
                 FileOutputStream jstackStream = null;
                 try {
                     jstackStream = new FileOutputStream(new File(dumpPath, "Dubbo_JStack.log" + "." + dateStr));
+
+                    // 打印JStack 信息
                     JVMUtil.jstack(jstackStream);
                 } catch (Throwable t) {
                     logger.error("dump jstack error", t);
                 } finally {
+                    // 释放信号量
                     guard.release();
                     if (jstackStream != null) {
                         try {
@@ -112,6 +150,7 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
                     }
                 }
 
+                // 记录最后打印时间
                 lastPrintTime = System.currentTimeMillis();
             }
         });
