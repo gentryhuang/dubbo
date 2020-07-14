@@ -22,15 +22,17 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * http invocation handler.
+ * http invocation handler. HTTP 处理器接口
+ * 说明：
+ * 不同的Protocol【基于HTTP服务的Protocol】会实现各自的HttpHandler类，并且在创建启动HttpServer的同时，会将HttpHandler对象以 port 为键，注册到DispatcherServlet中
  */
 public interface HttpHandler {
 
     /**
-     * invoke.
+     * 处理请求
      *
-     * @param request  request.
-     * @param response response.
+     * @param request  request. 请求
+     * @param response response. 响应
      * @throws IOException
      * @throws ServletException
      */

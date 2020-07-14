@@ -23,7 +23,7 @@ import com.alibaba.dubbo.remoting.http.HttpHandler;
 import com.alibaba.dubbo.remoting.http.HttpServer;
 
 /**
- * ServletHttpTransporter
+ * ServletHttpTransporter，用于创建 ServletHttpServer
  */
 public class ServletHttpBinder implements HttpBinder {
 

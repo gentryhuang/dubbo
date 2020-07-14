@@ -21,11 +21,22 @@ import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.remoting.http.HttpHandler;
 import com.alibaba.dubbo.remoting.http.support.AbstractHttpServer;
 
+/**
+ * 基于Servlet 的服务器实现类，这样方式不怎么用了，更多的是jar包形式，而不是配置web.xml。
+ */
 public class ServletHttpServer extends AbstractHttpServer {
 
     public ServletHttpServer(URL url, HttpHandler handler) {
         super(url, handler);
+
+        // 注册HttpHandler 到 DispatcherServlet 中
         DispatcherServlet.addHttpHandler(url.getParameter(Constants.BIND_PORT_KEY, 8080), handler);
     }
+
+    /**
+     * 说明，基于Servlet的服务器实现类：
+     * 1 在 <dubbo:protocol/> 配置的端口，要和外部的Servlet容器的端口保持一致
+     * 2 需要配置 DispatcherServlet到web.xml中，通过这样的方式，让外部的Servlet容器，可以进行转发
+     */
 
 }

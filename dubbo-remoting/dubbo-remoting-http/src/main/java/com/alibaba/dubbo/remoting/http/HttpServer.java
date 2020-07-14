@@ -21,10 +21,16 @@ import com.alibaba.dubbo.common.URL;
 
 import java.net.InetSocketAddress;
 
+/**
+ * 实现 Resetable 接口，HTTP服务器接口
+ * 说明：
+ * 1 提供服务在这里
+ * 2 使用在dubbo-rpc模块中 http://、rest://、hessian://、webservice:// 协议上，这几个都是基于Http服务器实现请求处理的
+ */
 public interface HttpServer extends Resetable {
 
     /**
-     * get http handler.
+     * get http handler. 获取处理器
      *
      * @return http handler.
      */

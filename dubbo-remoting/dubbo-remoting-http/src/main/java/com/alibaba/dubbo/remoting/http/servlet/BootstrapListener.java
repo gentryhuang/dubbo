@@ -21,7 +21,10 @@ import javax.servlet.ServletContextListener;
 
 /**
  * This class must be defined before something like spring's ContextLoaderListener in web.xml
- *
+ * <p>
+ * 实现 ServletContextListener接口，启动监听器
+ * 说明：
+ * 需要配置BootstrapListener到web.xml中，通过这样的方式，让外部的ServletContext对象添加到ServletManager中
  */
 public class BootstrapListener implements ServletContextListener {
 

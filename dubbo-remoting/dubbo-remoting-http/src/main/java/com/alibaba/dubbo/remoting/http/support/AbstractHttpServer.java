@@ -23,14 +23,22 @@ import com.alibaba.dubbo.remoting.http.HttpServer;
 import java.net.InetSocketAddress;
 
 /**
- * AbstractHttpServer
+ * AbstractHttpServer，实现HttpServer 接口，HTTP服务器抽象类
  */
 public abstract class AbstractHttpServer implements HttpServer {
 
+    /**
+     * URL 对象
+     */
     private final URL url;
-
+    /**
+     * 处理器
+     */
     private final HttpHandler handler;
 
+    /**
+     * 是否关闭标记
+     */
     private volatile boolean closed;
 
     public AbstractHttpServer(URL url, HttpHandler handler) {

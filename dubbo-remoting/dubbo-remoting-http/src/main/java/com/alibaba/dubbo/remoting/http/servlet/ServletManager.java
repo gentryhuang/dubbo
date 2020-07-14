@@ -22,7 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * TODO this may not be a pretty elegant solution,
- *
+ * <p>
+ * Servlet 管理器，负责管理ServletContext。注意，目前仅有 dubbo-rpc-rest模块使用到这个类
  */
 public class ServletManager {
 

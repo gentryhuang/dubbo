@@ -22,12 +22,14 @@ import com.alibaba.dubbo.common.extension.Adaptive;
 import com.alibaba.dubbo.common.extension.SPI;
 
 /**
- * HttpBinder
+ * HttpBinder  HTTP绑定器接口，用于创建对应HTTP服务器。 默认的扩展点为 'jetty'，即在未配置的情况下，使用JettyServer
  */
 @SPI("jetty")
 public interface HttpBinder {
 
     /**
+     * 基于Dubbo SPI 机制，加载对应的Server 实现。
+     *
      * bind the server.
      *
      * @param url server url.
