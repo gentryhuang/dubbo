@@ -178,26 +178,44 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
         return false;
     }
 
+    /**
+     * 销毁ExchangeClient
+     */
     @Override
     public void destroy() {
         // in order to avoid closing a client multiple times, a counter is used in case of connection per jvm, every
         // time when client.close() is called, counter counts down once, and when counter reaches zero, client will be
         // closed.
+        // 如果已经销毁，则忽略
         if (super.isDestroyed()) {
             return;
         } else {
             // double check to avoid dup close
+            // 双重检锁，避免已经关闭
             destroyLock.lock();
             try {
                 if (super.isDestroyed()) {
                     return;
                 }
+
+                // 标记关闭
                 super.destroy();
+
+                // 从缓存中移除当前Invoker
                 if (invokers != null) {
                     invokers.remove(this);
                 }
+
+                /**
+                 *  循环ExchangeClient，依次进行关闭
+                 *  说明：
+                 *   在DubboProtocol#destroy()方法中已经关闭客户端，但是DubboInvoker中有ExchangeClient缓存，当DubboInvoker需要进行销毁时，此时也应该关闭客户端连接，
+                 *   保证客户端连接确实关闭。
+                 */
+
                 for (ExchangeClient client : clients) {
                     try {
+                        // 等待时长内关闭 ExchangeClient
                         client.close(ConfigUtils.getServerShutdownTimeout());
                     } catch (Throwable t) {
                         logger.warn(t.getMessage(), t);
@@ -205,6 +223,7 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
                 }
 
             } finally {
+                // 释放锁
                 destroyLock.unlock();
             }
         }

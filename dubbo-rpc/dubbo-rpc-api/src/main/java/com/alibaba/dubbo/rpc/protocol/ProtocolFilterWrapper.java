@@ -136,6 +136,9 @@ public class ProtocolFilterWrapper implements Protocol {
         return buildInvokerChain(protocol.refer(type, url), Constants.REFERENCE_FILTER_KEY, Constants.CONSUMER);
     }
 
+    /**
+     * 关闭，没有实际逻辑，只是包了一层
+     */
     @Override
     public void destroy() {
         protocol.destroy();

@@ -76,6 +76,14 @@ public abstract class AbstractConfig implements Serializable {
         legacyProperties.put("dubbo.service.url", "dubbo.service.address");
 
         // this is only for compatibility
+
+        /**
+         * Dubbo 的优雅停机 ShutdownHook 在 AstractConfig 的静态代码块中，这保证了ShutdownHook能够给被初始化。
+         * 说明：
+         * 1 Dubbo 是 通过 JDK的ShutdownHook来完成优雅停机的
+         * 2 Dubbo 的优雅停机在服务提供方是基于 只读事件，在服务消费方法，是通过轮询响应是否返回
+         * 3 ShutdownHook本质上是一个线程，任务体在对应的run方法中
+         */
         Runtime.getRuntime().addShutdownHook(DubboShutdownHook.getDubboShutdownHook());
     }
 

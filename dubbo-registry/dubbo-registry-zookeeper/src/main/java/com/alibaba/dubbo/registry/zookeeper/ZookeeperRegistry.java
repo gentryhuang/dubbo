@@ -124,6 +124,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
     public void destroy() {
         super.destroy();
         try {
+            // 关闭 Zookeeper 客户端连接
             zkClient.close();
         } catch (Exception e) {
             logger.warn("Failed to close zookeeper client " + getUrl() + ", cause: " + e.getMessage(), e);
@@ -228,7 +229,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
 
                 // 子节点数据数组
                 List<URL> urls = new ArrayList<URL>();
-                
+
                 // 循环分类数组，其中，调用toCategoriesPath(url)方法，获得分类数组，如：/dubbo/com.alibaba.dubbo.demo.DemoService/configurators
                 for (String path : toCategoriesPath(url)) {
                     // 获得订阅的url 对应的监听器集合
@@ -277,6 +278,12 @@ public class ZookeeperRegistry extends FailbackRegistry {
         }
     }
 
+    /**
+     * 真正取消订阅的逻辑，删除对应的监听器
+     *
+     * @param url
+     * @param listener
+     */
     @Override
     protected void doUnsubscribe(URL url, NotifyListener listener) {
         ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.get(url);

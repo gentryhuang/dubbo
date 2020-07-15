@@ -67,7 +67,7 @@ public class RegistryProtocol implements Protocol {
     //To solve the problem of RMI repeated exposure port conflicts, the services that have been exposed are no longer exposed.
     //providerurl <--> exporter
     /**
-     * 绑定关系集合，key是服务提供者的URL字符串形式。用于解决rmi 重复暴露端口冲突的问题，已经暴露过的服务不再重新暴露
+     * 绑定关系集合，key是服务提供者的URL字符串形式。
      */
     private final Map<String, ExporterChangeableWrapper<?>> bounds = new ConcurrentHashMap<String, ExporterChangeableWrapper<?>>();
 
@@ -455,13 +455,21 @@ public class RegistryProtocol implements Protocol {
 
     /**
      * Invoker 销毁时注销端口和map【bounds】中服务实例等资源
+     * 说明：
+     *   此方法用来销毁 ExporterChangeableWrapper 在 bounds 的映射。
      */
     @Override
     public void destroy() {
+
+        // 获得 ExporterChangeableWrapper 数组
         List<Exporter<?>> exporters = new ArrayList<Exporter<?>>(bounds.values());
+
+        // 取消所有 Exporter 的暴露。
         for (Exporter<?> exporter : exporters) {
             exporter.unexport();
         }
+
+        // 清空 Invoker与Exporter绑定关闭的缓存
         bounds.clear();
     }
 
@@ -589,7 +597,9 @@ public class RegistryProtocol implements Protocol {
      * exporter proxy, establish the corresponding relationship between the returned exporter and the exporter exported by the protocol, and can modify the relationship at the time of override.
      * <p>
      * <p>
-     * Exporter可变的包装器，建立Invoker和Exporter的绑定关系
+     * Exporter可变的包装器，建立Invoker和Exporter的绑定关系。
+     * 说明：
+     * 保存了原有的Invoker对象，因为服务提供者可能会发生变化，比如服务提供者集成了配置规则Configurator
      *
      * @param <T>
      */
@@ -622,11 +632,15 @@ public class RegistryProtocol implements Protocol {
             this.exporter = exporter;
         }
 
+        /**
+         * 取消服务暴露
+         */
         @Override
         public void unexport() {
             String key = getCacheKey(this.originInvoker);
             // Invoker销毁时注销map中服务实例等资源
             bounds.remove(key);
+            // 取消暴露
             exporter.unexport();
         }
     }

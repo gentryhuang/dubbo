@@ -75,6 +75,11 @@ public abstract class AbstractProxyInvoker<T> implements Invoker<T> {
         return true;
     }
 
+    /**
+     * 销毁
+     * 说明：
+     * 在通过JavassistProxyFactory工厂创建Invoker时，就是创建了AbstractProxyInvoker抽象匿名对象
+     */
     @Override
     public void destroy() {
     }

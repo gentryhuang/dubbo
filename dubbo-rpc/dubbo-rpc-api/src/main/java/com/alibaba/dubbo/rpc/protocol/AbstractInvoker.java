@@ -119,6 +119,9 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
         this.available = available;
     }
 
+    /**
+     * 标记已经销毁
+     */
     @Override
     public void destroy() {
         if (!destroyed.compareAndSet(false, true)) {
@@ -127,6 +130,11 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
         setAvailable(false);
     }
 
+    /**
+     * 是否销毁
+     *
+     * @return
+     */
     public boolean isDestroyed() {
         return destroyed.get();
     }

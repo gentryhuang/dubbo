@@ -68,16 +68,20 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
         if (LOGGER.isInfoEnabled()) {
             LOGGER.info("Close all registries " + getRegistries());
         }
+        // 获得锁
         // Lock up the registry shutdown process
         LOCK.lock();
         try {
+            // 循环调用 destroy() 方法
             for (Registry registry : getRegistries()) {
                 try {
+                    // AbstractRegistry 实现了公用的销毁逻辑，取消注册和订阅
                     registry.destroy();
                 } catch (Throwable e) {
                     LOGGER.error(e.getMessage(), e);
                 }
             }
+            // 清空缓存
             REGISTRIES.clear();
         } finally {
             // Release the lock

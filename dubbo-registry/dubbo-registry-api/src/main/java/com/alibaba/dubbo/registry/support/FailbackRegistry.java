@@ -262,6 +262,12 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
     }
 
+    /**
+     * 取消订阅，移除相关的缓存。真正的取消订阅由子类 ZookeeperRegistry 执行
+     *
+     * @param url      Subscription condition, not allowed to be empty, e.g. consumer://10.20.153.10/com.alibaba.foo.BarService?version=1.0.0&application=kylin
+     * @param listener A listener of the change event, not allowed to be empty
+     */
     @Override
     public void unsubscribe(URL url, NotifyListener listener) {
         super.unsubscribe(url, listener);
@@ -515,15 +521,21 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     /**
      * 取消注册和订阅，并关闭定时器
+     * 说明：
+     * FailbackRegistry 有多种实现类，具体的看子类实现，如 ZookeeperRegistry，会关闭 Zookeeper 客户端连接
      */
     @Override
     public void destroy() {
+        // 调用父方法，取消注册和订阅
         super.destroy();
         try {
+            // 取消重试任务
             retryFuture.cancel(true);
         } catch (Throwable t) {
             logger.warn(t.getMessage(), t);
         }
+
+        // 优雅关闭线程池
         ExecutorUtil.gracefulShutdown(retryExecutor, retryPeriod);
     }
 

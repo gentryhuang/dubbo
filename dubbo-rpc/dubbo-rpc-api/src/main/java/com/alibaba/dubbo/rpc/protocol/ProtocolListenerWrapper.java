@@ -96,6 +96,9 @@ public class ProtocolListenerWrapper implements Protocol {
         return new ListenerInvokerWrapper<T>(invoker, listeners);
     }
 
+    /**
+     * 关闭，没有实际逻辑，只是包了一层
+     */
     @Override
     public void destroy() {
         protocol.destroy();

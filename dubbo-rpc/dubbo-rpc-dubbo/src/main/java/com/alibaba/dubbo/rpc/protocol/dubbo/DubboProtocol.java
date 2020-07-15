@@ -634,8 +634,15 @@ public class DubboProtocol extends AbstractProtocol {
         return client;
     }
 
+    /**
+     * 销毁所有协议的真正执行逻辑，销毁所有通信 ExchangeClient 和 ExchangeServer
+     * 说明：
+     * 为什么要关闭Server和Client，是因为一个应用程序即可能是服务提供者，又是服务消费者，因此都要关闭
+     */
     @Override
     public void destroy() {
+
+        // 销毁所有通信服务器 ExchangeServer
         for (String key : new ArrayList<String>(serverMap.keySet())) {
             ExchangeServer server = serverMap.remove(key);
             if (server != null) {
@@ -643,6 +650,8 @@ public class DubboProtocol extends AbstractProtocol {
                     if (logger.isInfoEnabled()) {
                         logger.info("Close dubbo server: " + server.getLocalAddress());
                     }
+
+                    // 在优雅停机的等待时长内关闭
                     server.close(ConfigUtils.getServerShutdownTimeout());
                 } catch (Throwable t) {
                     logger.warn(t.getMessage(), t);
@@ -650,6 +659,7 @@ public class DubboProtocol extends AbstractProtocol {
             }
         }
 
+        // 销毁所有通信客户端端 ExchangeClient
         for (String key : new ArrayList<String>(referenceClientMap.keySet())) {
             ExchangeClient client = referenceClientMap.remove(key);
             if (client != null) {
@@ -657,6 +667,8 @@ public class DubboProtocol extends AbstractProtocol {
                     if (logger.isInfoEnabled()) {
                         logger.info("Close dubbo connect: " + client.getLocalAddress() + "-->" + client.getRemoteAddress());
                     }
+
+                    // 在优雅停机的等待时长内关闭
                     client.close(ConfigUtils.getServerShutdownTimeout());
                 } catch (Throwable t) {
                     logger.warn(t.getMessage(), t);
@@ -664,6 +676,7 @@ public class DubboProtocol extends AbstractProtocol {
             }
         }
 
+        // 销毁所有的通信客户端 LazyConnectExchangeClient
         for (String key : new ArrayList<String>(ghostClientMap.keySet())) {
             ExchangeClient client = ghostClientMap.remove(key);
             if (client != null) {
@@ -671,13 +684,19 @@ public class DubboProtocol extends AbstractProtocol {
                     if (logger.isInfoEnabled()) {
                         logger.info("Close dubbo connect: " + client.getLocalAddress() + "-->" + client.getRemoteAddress());
                     }
+                    // 在优雅停机的等待时长内关闭
                     client.close(ConfigUtils.getServerShutdownTimeout());
                 } catch (Throwable t) {
                     logger.warn(t.getMessage(), t);
                 }
             }
         }
+
+
+        // 清理缓存
         stubServiceMethodsMap.clear();
+
+        // 取消服务的暴露
         super.destroy();
     }
 }

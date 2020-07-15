@@ -26,9 +26,8 @@ import java.util.List;
 
 /**
  * ListenerExporter
- *
+ * <p>
  * 实现 Exporter接口，具有监听器功能的Exporter包装器
- *
  */
 public class ListenerExporterWrapper<T> implements Exporter<T> {
 
@@ -75,6 +74,9 @@ public class ListenerExporterWrapper<T> implements Exporter<T> {
         return exporter.getInvoker();
     }
 
+    /**
+     * 取消服务暴露
+     */
     @Override
     public void unexport() {
         try {

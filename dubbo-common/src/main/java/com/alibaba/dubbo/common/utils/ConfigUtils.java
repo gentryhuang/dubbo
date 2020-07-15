@@ -304,9 +304,17 @@ public class ConfigUtils {
         return PID;
     }
 
+    /**
+     * 优雅停机的等待时长（毫秒）
+     *
+     * @return
+     */
     @SuppressWarnings("deprecation")
     public static int getServerShutdownTimeout() {
+        // 默认等待时长 10 * 1000 毫秒
         int timeout = Constants.DEFAULT_SERVER_SHUTDOWN_TIMEOUT;
+
+        // 获得 "dubbo.service.shutdown.wait" 配置项，单位：毫秒
         String value = ConfigUtils.getProperty(Constants.SHUTDOWN_WAIT_KEY);
         if (value != null && value.length() > 0) {
             try {
@@ -314,7 +322,9 @@ public class ConfigUtils {
             } catch (Exception e) {
                 // ignore
             }
+
         } else {
+            // 若为空，获得 "dubbo.service.shutdown.wait.seconds" 配置项，单位：秒。该参数已经废弃，最好使用上面的参数
             value = ConfigUtils.getProperty(Constants.SHUTDOWN_WAIT_SECONDS_KEY);
             if (value != null && value.length() > 0) {
                 try {

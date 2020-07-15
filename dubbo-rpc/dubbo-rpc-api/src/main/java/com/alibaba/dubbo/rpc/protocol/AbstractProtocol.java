@@ -73,8 +73,14 @@ public abstract class AbstractProtocol implements Protocol {
         return ProtocolUtils.serviceKey(port, serviceName, serviceVersion, serviceGroup);
     }
 
+
+    /**
+     * 取消服务的暴露
+     */
     @Override
     public void destroy() {
+
+        // 销毁协议对应的服务消费者的所有 Invoker，如： 如果是Dubbo协议，那么这里的服务消费者的所有Invoker则为DubboInvoker
         for (Invoker<?> invoker : invokers) {
             if (invoker != null) {
                 invokers.remove(invoker);
@@ -88,6 +94,8 @@ public abstract class AbstractProtocol implements Protocol {
                 }
             }
         }
+
+        // 销毁协议对应的服务提供者的所有Exporter，如：如果是Dubbo协议，那么这里的服务提供者的所有Exporter则为DubboExporter
         for (String key : new ArrayList<String>(exporterMap.keySet())) {
             Exporter<?> exporter = exporterMap.remove(key);
             if (exporter != null) {

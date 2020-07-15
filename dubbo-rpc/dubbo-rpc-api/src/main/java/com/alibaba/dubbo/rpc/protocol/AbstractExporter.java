@@ -54,12 +54,20 @@ public abstract class AbstractExporter<T> implements Exporter<T> {
         return invoker;
     }
 
+    /**
+     * 取消服务的暴露
+     */
     @Override
     public void unexport() {
+        // 已经取消暴露就直接返回
         if (unexported) {
             return;
         }
+
+        // 标记已经取消暴露
         unexported = true;
+
+        // 销毁
         getInvoker().destroy();
     }
 
