@@ -23,6 +23,9 @@ import org.apache.commons.logging.LogFactory;
 
 import java.io.File;
 
+/**
+ * 类似 Slf4jLoggerAdapter
+ */
 public class JclLoggerAdapter implements LoggerAdapter {
 
     private Level level;

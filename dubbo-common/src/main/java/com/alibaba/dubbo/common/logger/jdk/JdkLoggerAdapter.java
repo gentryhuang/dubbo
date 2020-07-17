@@ -27,6 +27,9 @@ import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.LogManager;
 
+/**
+ * JDK的日志适配器，原理同 Log4jLoggerAdapter，区别在构造方法上
+ */
 public class JdkLoggerAdapter implements LoggerAdapter {
 
     private static final String GLOBAL_LOGGER_NAME = "global";
@@ -61,35 +64,47 @@ public class JdkLoggerAdapter implements LoggerAdapter {
     }
 
     private static java.util.logging.Level toJdkLevel(Level level) {
-        if (level == Level.ALL)
+        if (level == Level.ALL) {
             return java.util.logging.Level.ALL;
-        if (level == Level.TRACE)
+        }
+        if (level == Level.TRACE) {
             return java.util.logging.Level.FINER;
-        if (level == Level.DEBUG)
+        }
+        if (level == Level.DEBUG) {
             return java.util.logging.Level.FINE;
-        if (level == Level.INFO)
+        }
+        if (level == Level.INFO) {
             return java.util.logging.Level.INFO;
-        if (level == Level.WARN)
+        }
+        if (level == Level.WARN) {
             return java.util.logging.Level.WARNING;
-        if (level == Level.ERROR)
+        }
+        if (level == Level.ERROR) {
             return java.util.logging.Level.SEVERE;
+        }
         // if (level == Level.OFF)
         return java.util.logging.Level.OFF;
     }
 
     private static Level fromJdkLevel(java.util.logging.Level level) {
-        if (level == java.util.logging.Level.ALL)
+        if (level == java.util.logging.Level.ALL) {
             return Level.ALL;
-        if (level == java.util.logging.Level.FINER)
+        }
+        if (level == java.util.logging.Level.FINER) {
             return Level.TRACE;
-        if (level == java.util.logging.Level.FINE)
+        }
+        if (level == java.util.logging.Level.FINE) {
             return Level.DEBUG;
-        if (level == java.util.logging.Level.INFO)
+        }
+        if (level == java.util.logging.Level.INFO) {
             return Level.INFO;
-        if (level == java.util.logging.Level.WARNING)
+        }
+        if (level == java.util.logging.Level.WARNING) {
             return Level.WARN;
-        if (level == java.util.logging.Level.SEVERE)
+        }
+        if (level == java.util.logging.Level.SEVERE) {
             return Level.ERROR;
+        }
         // if (level == java.util.logging.Level.OFF)
         return Level.OFF;
     }

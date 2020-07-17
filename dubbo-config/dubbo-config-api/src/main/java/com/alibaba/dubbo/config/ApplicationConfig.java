@@ -202,6 +202,15 @@ public class ApplicationConfig extends AbstractConfig {
         return logger;
     }
 
+    /**
+     * 设置日志适配器
+     * <p>
+     * 1 -Ddubbo.application.logger=slf4j
+     * 2 dubbo.application.logger=slf4j
+     * 3 <dubbo:application logger="slf4j"/>
+     *
+     * @param logger
+     */
     public void setLogger(String logger) {
         this.logger = logger;
         LoggerFactory.setLoggerAdapter(logger);

@@ -35,6 +35,8 @@ public class JclLogger implements Logger, Serializable {
         this.logger = logger;
     }
 
+    // -------------------------- 每个方法会调用org.apache.commons.logging.Log对应的方法 ------------------------/
+
     @Override
     public void trace(String msg) {
         logger.trace(msg);

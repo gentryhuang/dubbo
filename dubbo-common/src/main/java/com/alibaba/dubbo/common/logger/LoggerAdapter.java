@@ -21,7 +21,7 @@ import com.alibaba.dubbo.common.extension.SPI;
 import java.io.File;
 
 /**
- * Logger provider
+ * Logger适配器接口，负责对接不同日志库。是一个扩展点
  */
 @SPI
 public interface LoggerAdapter {

@@ -17,7 +17,7 @@
 package com.alibaba.dubbo.common.logger;
 
 /**
- * Logger interface
+ * Logger 接口，接口方法类似  Apache Common Logger接口中的方法
  * <p>
  * This interface is referred from commons-logging
  */

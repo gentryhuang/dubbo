@@ -20,13 +20,21 @@ import com.alibaba.dubbo.common.logger.Logger;
 
 import java.util.logging.Level;
 
+/**
+ * Dubbo 的 JdkLogger
+ */
 public class JdkLogger implements Logger {
 
+    /**
+     * JDK 的 Logger
+     */
     private final java.util.logging.Logger logger;
 
     public JdkLogger(java.util.logging.Logger logger) {
         this.logger = logger;
     }
+
+    // -------------------------- 每个方法会调用java.util.logging.Logger对应的方法 ------------------------/
 
     @Override
     public void trace(String msg) {

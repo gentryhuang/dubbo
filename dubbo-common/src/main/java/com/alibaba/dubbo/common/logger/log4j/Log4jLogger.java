@@ -21,11 +21,19 @@ import com.alibaba.dubbo.common.logger.support.FailsafeLogger;
 
 import org.apache.log4j.Level;
 
+/**
+ * Dubbo的 Log4jLogger 实现
+ */
 public class Log4jLogger implements Logger {
 
     private static final String FQCN = FailsafeLogger.class.getName();
 
+    /**
+     * Apache Log4j
+     */
     private final org.apache.log4j.Logger logger;
+
+    //---------------------- 每个方法都会调用org.apache.log4j.Logger 对应的方法  -------------------/
 
     public Log4jLogger(org.apache.log4j.Logger logger) {
         this.logger = logger;

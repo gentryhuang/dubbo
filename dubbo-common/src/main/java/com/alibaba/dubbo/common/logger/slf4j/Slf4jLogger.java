@@ -29,6 +29,9 @@ public class Slf4jLogger implements Logger, Serializable {
 
     private static final String FQCN = FailsafeLogger.class.getName();
 
+    /**
+     * slf4j 【Dubbo 默认是 logback 】
+     */
     private final org.slf4j.Logger logger;
 
     private final LocationAwareLogger locationAwareLogger;
@@ -41,6 +44,8 @@ public class Slf4jLogger implements Logger, Serializable {
         }
         this.logger = logger;
     }
+
+    //---------------------- 每个方法都会调用org.slf4j.Logger 对应的方法  -------------------/
 
     @Override
     public void trace(String msg) {

@@ -22,9 +22,21 @@ import com.alibaba.dubbo.common.logger.LoggerAdapter;
 
 import java.io.File;
 
+/**
+ * Slf4j 的 LoggerAdapter 实现类
+ * 说明：
+ * SLF4J (Simple logging Facade for Java) 不是一个真正的日志实现，而是一个抽象层（ abstraction layer），它允许你在后台使用任意一个日志类库。
+ * 打印日志的调用栈： Dubbo的 Slf4jLoggerAdapter -> Slf4jLogger -> 真正的Logger实现类
+ */
 public class Slf4jLoggerAdapter implements LoggerAdapter {
 
+    /**
+     * 真正日志实现的级别
+     */
     private Level level;
+    /**
+     * 真正的日志实现类文件
+     */
     private File file;
 
     @Override
