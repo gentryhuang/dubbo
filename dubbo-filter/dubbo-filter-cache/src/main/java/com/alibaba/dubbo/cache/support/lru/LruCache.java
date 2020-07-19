@@ -23,14 +23,19 @@ import com.alibaba.dubbo.common.utils.LRUCache;
 import java.util.Map;
 
 /**
- * LruCache
+ * LruCache，基于最近最少使用原则删除多余缓存，保持最热的数据被缓存
  */
 public class LruCache implements Cache {
 
+    /**
+     * 缓存集合
+     */
     private final Map<Object, Object> store;
 
     public LruCache(URL url) {
+        // 获取配置的缓存大小，没有设置就使用默认的 1000
         final int max = url.getParameter("cache.size", 1000);
+        // 创建 LRUCache 对象
         this.store = new LRUCache<Object, Object>(max);
     }
 

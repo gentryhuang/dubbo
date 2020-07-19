@@ -30,21 +30,30 @@ import javax.cache.spi.CachingProvider;
 import java.util.concurrent.TimeUnit;
 
 /**
- * JCache
+ * JCache,与JSR107集成,可以桥接各种缓存实现
  */
 public class JCache implements com.alibaba.dubbo.cache.Cache {
 
     private final Cache<Object, Object> store;
 
+    /**
+     * 使用 javax.cache.CachingProvider ，javax.cache.Cache 对象
+     *
+     * @param url
+     */
     public JCache(URL url) {
         String method = url.getParameter(Constants.METHOD_KEY, "");
         String key = url.getAddress() + "." + url.getServiceKey() + "." + method;
         // jcache parameter is the full-qualified class name of SPI implementation
         String type = url.getParameter("jcache");
 
+        // 获得 CachingProvider 对象
         CachingProvider provider = type == null || type.length() == 0 ? Caching.getCachingProvider() : Caching.getCachingProvider(type);
+        // 获得 CacheManager 对象
         CacheManager cacheManager = provider.getCacheManager();
+        // 获得 Cache 对象
         Cache<Object, Object> cache = cacheManager.getCache(key);
+
         if (cache == null) {
             try {
                 //configure the cache

@@ -25,6 +25,12 @@ import com.alibaba.dubbo.common.URL;
  */
 public class JCacheFactory extends AbstractCacheFactory {
 
+    /**
+     * 创建 JCache
+     *
+     * @param url
+     * @return
+     */
     @Override
     protected Cache createCache(URL url) {
         return new JCache(url);

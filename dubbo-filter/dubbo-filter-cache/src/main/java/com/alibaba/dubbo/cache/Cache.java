@@ -17,12 +17,22 @@
 package com.alibaba.dubbo.cache;
 
 /**
- * Cache
+ * Cache，缓存接口
  */
 public interface Cache {
 
+    /**
+     * 添加键值
+     * @param key
+     * @param value
+     */
     void put(Object key, Object value);
 
+    /**
+     * 获得值
+     * @param key
+     * @return
+     */
     Object get(Object key);
 
 }

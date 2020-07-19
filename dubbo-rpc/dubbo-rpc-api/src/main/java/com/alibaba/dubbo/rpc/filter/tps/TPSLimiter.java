@@ -19,9 +19,14 @@ package com.alibaba.dubbo.rpc.filter.tps;
 import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.rpc.Invocation;
 
+/**
+ * TPS限制器接口
+ */
 public interface TPSLimiter {
 
     /**
+     * 根据 tps 限流规则判断是否限制此次调用
+     * <p>
      * judge if the current invocation is allowed by TPS rule
      *
      * @param url        url

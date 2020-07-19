@@ -29,7 +29,10 @@ import com.alibaba.dubbo.rpc.RpcInvocation;
 import com.alibaba.dubbo.rpc.RpcResult;
 
 /**
- * ConsumerContextInvokerFilter
+ * ConsumerContextInvokerFilter，服务消费者的ContextFilter实现类
+ * 说明：
+ *  ConsumerContextFilter 会和 ContextFilter 配合使用，因为在微服务环境中，有很多链式调用。收到请求时，当前节点可以被看作一个服务提供者，由ContextFilter设置上下文。
+ *  当发起请求到其他服务，当前服务变成一个消费者，由ConsumerContextFilter设置上下文。
  */
 @Activate(group = Constants.CONSUMER, order = -10000)
 public class ConsumerContextFilter implements Filter {
@@ -44,20 +47,33 @@ public class ConsumerContextFilter implements Filter {
      */
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
+        // 设置RpcContext 对象
         RpcContext.getContext()
+                // invoker
                 .setInvoker(invoker)
+                // 服务调用参数
                 .setInvocation(invocation)
+                // 本地地址
                 .setLocalAddress(NetUtils.getLocalHost(), 0)
-                .setRemoteAddress(invoker.getUrl().getHost(),
-                        invoker.getUrl().getPort());
+                // 远程地址
+                .setRemoteAddress(invoker.getUrl().getHost(), invoker.getUrl().getPort());
+
+        // 设置 RpcInvocation 对象的 invoker 属性
         if (invocation instanceof RpcInvocation) {
             ((RpcInvocation) invocation).setInvoker(invoker);
         }
+
         try {
+            // 放行
             RpcResult result = (RpcResult) invoker.invoke(invocation);
+            // 设置Dubbo上下文的 隐式参数集合
             RpcContext.getServerContext().setAttachments(result.getAttachments());
             return result;
         } finally {
+            /**
+             * 清理隐式参数集合
+             * todo 注意：每次服务调用完成，RpcContext设置的隐式参数都会被清理
+             */
             RpcContext.getContext().clearAttachments();
         }
     }

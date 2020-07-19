@@ -30,11 +30,16 @@ import com.alibaba.dubbo.rpc.RpcException;
 import com.alibaba.dubbo.rpc.RpcResult;
 
 /**
- * CacheFilter
+ * CacheFilter，缓存结果的过滤器实现类
+ * 配置：
+ * <dubbo:reference cache="lru"/> 或者 <dubbo:service cache="lru"/> 或者 <dubbo:method cache="lru"/>
  */
 @Activate(group = {Constants.CONSUMER, Constants.PROVIDER}, value = Constants.CACHE_KEY)
 public class CacheFilter implements Filter {
 
+    /**
+     * 通过Dubbo SPI 机制，IOC注入 CacheFactory$Adaptive 对象
+     */
     private CacheFactory cacheFactory;
 
     public void setCacheFactory(CacheFactory cacheFactory) {
@@ -43,21 +48,33 @@ public class CacheFilter implements Filter {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
+        // 判断方法是否开启 Cache 功能，一个服务中可能只有部分方法开启了Cache 功能
         if (cacheFactory != null && ConfigUtils.isNotEmpty(invoker.getUrl().getMethodParameter(invocation.getMethodName(), Constants.CACHE_KEY))) {
+
+            // 基于 URL + 服务方法名 为纬度，获得Cache 对象
             Cache cache = cacheFactory.getCache(invoker.getUrl(), invocation);
+
             if (cache != null) {
+                // 获得 Cache Key
                 String key = StringUtils.toArgumentString(invocation.getArguments());
+
+                // 从缓存中获得结果，若存在就构建 RpcResult对象并返回
                 Object value = cache.get(key);
                 if (value != null) {
                     return new RpcResult(value);
                 }
+
+                // 放行
                 Result result = invoker.invoke(invocation);
+
+                // 若成功调用就缓存结果
                 if (!result.hasException() && result.getValue() != null) {
                     cache.put(key, result.getValue());
                 }
                 return result;
             }
         }
+
         return invoker.invoke(invocation);
     }
 

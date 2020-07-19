@@ -23,13 +23,22 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * ThreadLocalCache
+ * ThreadLocalCache，基于ThreadLocal，当前线程缓存。
+ * 说明：
+ * 1 相当于一个线程一个ThreadLocalCache 对象
+ * 2 目前没有清理线程的机制，需要注意内存泄漏
  */
 public class ThreadLocalCache implements Cache {
 
+    /**
+     * 线程变量
+     */
     private final ThreadLocal<Map<Object, Object>> store;
 
     public ThreadLocalCache(URL url) {
+        /**
+         * 构造方法中初始化线程变量
+         */
         this.store = new ThreadLocal<Map<Object, Object>>() {
             @Override
             protected Map<Object, Object> initialValue() {

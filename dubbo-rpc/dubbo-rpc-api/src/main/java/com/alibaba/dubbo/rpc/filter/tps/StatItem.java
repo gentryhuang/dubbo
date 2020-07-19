@@ -18,18 +18,42 @@ package com.alibaba.dubbo.rpc.filter.tps;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * 统计项类
+ */
 class StatItem {
 
+    /**
+     * 统计名，目前使用服务键
+     */
     private String name;
 
+    /**
+     * 最后重置时间
+     */
     private long lastResetTime;
-
+    /**
+     * 令牌刷新时间间隔
+     */
     private long interval;
 
+    /**
+     * 令牌数
+     */
     private AtomicInteger token;
 
+    /**
+     * 限制大小
+     */
     private int rate;
 
+    /**
+     * 构造方法
+     *
+     * @param name     服务键
+     * @param rate     限制大小
+     * @param interval 限制周期
+     */
     StatItem(String name, int rate, long interval) {
         this.name = name;
         this.rate = rate;
@@ -38,13 +62,23 @@ class StatItem {
         this.token = new AtomicInteger(rate);
     }
 
+    /**
+     * 限流规则判断是否限制此次调用
+     *
+     * @return
+     */
     public boolean isAllowable() {
+
+        /**
+         * 判断上次发放令牌的时间点到现在是否超过时间间隔，如果超过了就重新发放令牌。
+         */
         long now = System.currentTimeMillis();
         if (now > lastResetTime + interval) {
             token.set(rate);
             lastResetTime = now;
         }
 
+        // CAS，直到获得一个令牌，或者没有足够的令牌才结束
         int value = token.get();
         boolean flag = false;
         while (value > 0 && !flag) {
@@ -52,6 +86,7 @@ class StatItem {
             value = token.get();
         }
 
+        // 是否允许访问 【取决是否能够拿到令牌】
         return flag;
     }
 

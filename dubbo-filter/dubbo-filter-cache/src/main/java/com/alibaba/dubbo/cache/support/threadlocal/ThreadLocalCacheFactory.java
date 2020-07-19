@@ -21,10 +21,16 @@ import com.alibaba.dubbo.cache.support.AbstractCacheFactory;
 import com.alibaba.dubbo.common.URL;
 
 /**
- * ThreadLocalCacheFactory
+ * ThreadLocalCacheFactory，ThreadLocalCache 的 工程
  */
 public class ThreadLocalCacheFactory extends AbstractCacheFactory {
 
+    /**
+     * 创建 ThreadLocalCache
+     *
+     * @param url
+     * @return
+     */
     @Override
     protected Cache createCache(URL url) {
         return new ThreadLocalCache(url);

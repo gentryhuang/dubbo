@@ -56,6 +56,12 @@ public class ConfigUtils {
                 || "N/A".equalsIgnoreCase(value);
     }
 
+    /**
+     * 判断是否使用日志组件记录日志
+     *
+     * @param value
+     * @return
+     */
     public static boolean isDefault(String value) {
         return "true".equalsIgnoreCase(value)
                 || "default".equalsIgnoreCase(value);

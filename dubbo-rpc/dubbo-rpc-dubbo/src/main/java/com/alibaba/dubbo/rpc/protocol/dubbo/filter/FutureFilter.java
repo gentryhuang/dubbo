@@ -37,7 +37,9 @@ import java.lang.reflect.Method;
 import java.util.concurrent.Future;
 
 /**
- * 实现Filter 接口，事件通知过滤器。这里通过 @Activate(group = Constants.CONSUMER)注解指定，只有服务消费者才生效该过滤器
+ * 实现Filter 接口，事件通知过滤器。这里通过 @Activate(group = Constants.CONSUMER)注解指定，只有服务消费者才生效该过滤器.
+ * 说明：
+ *  主要实现框架在调用前后出现异常时，触发调用用户配置的回调方法
  */
 @Activate(group = Constants.CONSUMER)
 public class FutureFilter implements Filter {

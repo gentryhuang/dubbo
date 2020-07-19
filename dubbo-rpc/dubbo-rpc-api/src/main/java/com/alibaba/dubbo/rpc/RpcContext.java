@@ -43,11 +43,27 @@ import java.util.concurrent.TimeoutException;
  *
  * @export
  * @see com.alibaba.dubbo.rpc.filter.ContextFilter
+ * <p>
+ * 上下文信息
+ * 说明：
+ * 上下文中存放的是当前调用过程中所需的环境信息,每个调用都有可能产生很多中间临时信息，我们肯定不会要求每个接口都加一个上下参数一路往下传。
+ * 通常做法是放在ThreadLocal中，作为一个全局参数，当前线程中的任何一个地方都可以访问。RpcContext就是一个ThreadLocal的临时状态记录器，
+ * 当接收到RPC请求【作为服务提供者】，或发起RPC请求时【作为服务消费者】，RpcContext的状态都会发生改变，如：A调用B，B调用C，则B机器上：
+ * 1 在B调用C之前，RpcContext记录的是A调B的信息
+ * 2 在B调用C之后，RpcContext记录的是B调用C的信息
+ * 注意：
+ *  每次收到或发起RPC调用的时候，上下文信息都会发生改变。
  */
 public class RpcContext {
 
     /**
+     * RpcContext 线程变量，初始获得时，返回新的RpcContext对象
+     * <p>
      * use internal thread local to improve performance
+     */
+
+    /**
+     * 记录local的上下文
      */
     private static final InternalThreadLocal<RpcContext> LOCAL = new InternalThreadLocal<RpcContext>() {
         @Override
@@ -55,6 +71,10 @@ public class RpcContext {
             return new RpcContext();
         }
     };
+
+    /**
+     * 记录server的上下文
+     */
     private static final InternalThreadLocal<RpcContext> SERVER_LOCAL = new InternalThreadLocal<RpcContext>() {
         @Override
         protected RpcContext initialValue() {
@@ -62,33 +82,76 @@ public class RpcContext {
         }
     };
 
+    /**
+     * 隐式参数集合
+     * 说明：作用非常大，我们可以在RPC调用前，可在业务代码中添加一些自定义参数到该属性
+     */
     private final Map<String, String> attachments = new HashMap<String, String>();
+    /**
+     * todo 好像没有使用。当该服务作为消费方时，每次调用后ConsumerContextFilter会清理隐士参数，但是不会清理这属性，可以考虑使用该属性保存共享参数
+     */
     private final Map<String, Object> values = new HashMap<String, Object>();
+    /**
+     * 异步调用Future
+     */
     private Future<?> future;
-
+    /**
+     * 可调用的服务的URL对象集合，在集群容错模块实现
+     */
     private List<URL> urls;
-
+    /**
+     * 调用的服务的URL对象
+     */
     private URL url;
-
+    /**
+     * 方法名
+     */
     private String methodName;
-
+    /**
+     * 参数类型数组
+     */
     private Class<?>[] parameterTypes;
-
+    /**
+     * 参数值数组
+     */
     private Object[] arguments;
 
+    /**
+     * 本机地址
+     */
     private InetSocketAddress localAddress;
-
+    /**
+     * 远程地址
+     */
     private InetSocketAddress remoteAddress;
+
+    /**
+     * 使用urls属性替换
+     */
     @Deprecated
     private List<Invoker<?>> invokers;
+    /**
+     * 使用 url 属性替换
+     */
     @Deprecated
     private Invoker<?> invoker;
+    /**
+     * 以属性形式替换，即使用 methodName,parameterTypes,arguments 属性替换
+     */
     @Deprecated
     private Invocation invocation;
 
     // now we don't use the 'values' map to hold these objects
     // we want these objects to be as generic as possible
+    /**
+     * 请求
+     * 如：在RestProtocol中使用，代表 Http request
+     */
     private Object request;
+    /**
+     * 响应
+     * 如：在RestProtocol中使用，代表 http response
+     */
     private Object response;
 
     protected RpcContext() {

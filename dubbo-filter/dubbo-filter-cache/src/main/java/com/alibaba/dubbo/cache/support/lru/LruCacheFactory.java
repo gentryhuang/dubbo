@@ -21,10 +21,16 @@ import com.alibaba.dubbo.cache.support.AbstractCacheFactory;
 import com.alibaba.dubbo.common.URL;
 
 /**
- * LruCacheFactory
+ * LruCacheFactory，LruCache缓存 工厂类
  */
 public class LruCacheFactory extends AbstractCacheFactory {
 
+    /**
+     * 创建LruCache 对象
+     *
+     * @param url
+     * @return
+     */
     @Override
     protected Cache createCache(URL url) {
         return new LruCache(url);

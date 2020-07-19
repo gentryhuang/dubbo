@@ -26,17 +26,28 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * AbstractCacheFactory
+ * AbstractCacheFactory，Cache 工厂抽象类
  */
 public abstract class AbstractCacheFactory implements CacheFactory {
 
+    /**
+     * Cache 集合
+     * key: URL串
+     * value: Cache
+     */
     private final ConcurrentMap<String, Cache> caches = new ConcurrentHashMap<String, Cache>();
 
     @Override
     public Cache getCache(URL url, Invocation invocation) {
+        // 为URL添加参数 method
         url = url.addParameter(Constants.METHOD_KEY, invocation.getMethodName());
+        // 获得URL字符串形式
         String key = url.toFullString();
+
+        // 从缓存中获取 Cache
         Cache cache = caches.get(key);
+
+        // 不存在则创建 Cache ，并缓存
         if (cache == null) {
             caches.put(key, createCache(url));
             cache = caches.get(key);
@@ -44,6 +55,11 @@ public abstract class AbstractCacheFactory implements CacheFactory {
         return cache;
     }
 
+    /**
+     * 创建 Cache 对象，具体创建逻辑交给子类
+     * @param url
+     * @return
+     */
     protected abstract Cache createCache(URL url);
 
 }

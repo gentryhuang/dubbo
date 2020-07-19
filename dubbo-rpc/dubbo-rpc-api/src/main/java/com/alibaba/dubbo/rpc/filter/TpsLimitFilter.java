@@ -29,15 +29,24 @@ import com.alibaba.dubbo.rpc.filter.tps.TPSLimiter;
 
 /**
  * Limit TPS for either service or service's particular method
+ * 限流功能的过滤器，用于服务提供者
+ * 配置：
+ * 1 <dubbo:parameter key="tps" value=""/>,将该配置项添加到 <dubbo:service/>或 <dubbo:provider/> 或 <dubbo:protocol/>中开启
+ * 2 <dubbo:parameter key="tps.interval" value=""/> 配置项，设置TPS周期
+ * 原理：
+ * 基于令牌，即一个时间段内只分配 N 个令牌，每个请求过来都会消耗一个令牌，耗完为止，后面再来的请求都会被拒绝。
  */
 @Activate(group = Constants.PROVIDER, value = Constants.TPS_LIMIT_RATE_KEY)
 public class TpsLimitFilter implements Filter {
 
+    /**
+     * 限流器
+     */
     private final TPSLimiter tpsLimiter = new DefaultTPSLimiter();
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
-
+        // 根据tps限流规则判断是否限制此次调用，如果是就抛出异常。目前使用 TPSLimiter作为限流器的实现类
         if (!tpsLimiter.isAllowable(invoker.getUrl(), invocation)) {
             throw new RpcException(
                     "Failed to invoke service " +
