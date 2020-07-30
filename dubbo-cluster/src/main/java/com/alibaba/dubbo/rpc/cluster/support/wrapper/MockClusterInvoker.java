@@ -33,7 +33,11 @@ import com.alibaba.dubbo.rpc.support.MockInvoker;
 import java.util.List;
 
 /**
- * 由MockClusterWrapper 创建的Invoker 实现类
+ * 由MockClusterWrapper 创建的Invoker 实现类。
+ * 说明：
+ * dubbo就是通过 MockClusterInvoker 来实现服务降级的
+ * 使用：
+ * 实际使用中会通过在dubbo-admin中设置服务降级策略，即使用配置规则进行服务治理。也可以根据需要硬编码处理。
  *
  * @param <T>
  */
@@ -42,11 +46,11 @@ public class MockClusterInvoker<T> implements Invoker<T> {
     private static final Logger logger = LoggerFactory.getLogger(MockClusterInvoker.class);
 
     /**
-     * RegistryDirectory
+     * 服务目录，这里是 RegistryDirectory
      */
     private final Directory<T> directory;
     /**
-     * FailoverClusterInvoker
+     * 容错机制 ，这里是 FailoverClusterInvoker
      */
     private final Invoker<T> invoker;
 
@@ -87,11 +91,13 @@ public class MockClusterInvoker<T> implements Invoker<T> {
      */
     @Override
     public Result invoke(Invocation invocation) throws RpcException {
+
         Result result = null;
+
         // 获取mock 配置项，有多种情况
         String value = directory.getUrl().getMethodParameter(invocation.getMethodName(), Constants.MOCK_KEY, Boolean.FALSE.toString()).trim();
 
-        //1 没有mock
+        //1 没有配置 mock 参数或者 mock=false
         if (value.length() == 0 || value.equalsIgnoreCase("false")) {
 
             //没有mock 逻辑，直接调用原Invoker对象的 invoke 方法
@@ -121,6 +127,7 @@ public class MockClusterInvoker<T> implements Invoker<T> {
                     if (logger.isWarnEnabled()) {
                         logger.warn("fail-mock: " + invocation.getMethodName() + " fail-mock enabled , url : " + directory.getUrl(), e);
                     }
+
                     // 调用失败，执行 mock 逻辑，进行服务降级
                     result = doMockInvoke(invocation, e);
                 }
@@ -142,7 +149,7 @@ public class MockClusterInvoker<T> implements Invoker<T> {
         Result result = null;
         Invoker<T> minvoker;
 
-        // 路由选择Mock Invoker 集合
+        // 选择 Mock类型的Invoker 集合
         List<Invoker<T>> mockInvokers = selectMockInvoker(invocation);
 
         // 如果不存在Mock Invoker集合，则创建 MockInvoker对象
@@ -178,6 +185,8 @@ public class MockClusterInvoker<T> implements Invoker<T> {
     }
 
     /**
+     * 从服务目录拉取Mock类型的Invoker
+     * <p>
      * Return MockInvoker
      * Contract：
      * directory.list() will return a list of normal invokers if Constants.INVOCATION_NEED_MOCK is present in invocation, otherwise, a list of mock invokers will return.
@@ -200,6 +209,7 @@ public class MockClusterInvoker<T> implements Invoker<T> {
             try {
 
                 invokers = directory.list(invocation);
+
             } catch (RpcException e) {
                 if (logger.isInfoEnabled()) {
                     logger.info("Exception when try to invoke mock. Get mock invokers error for service:"

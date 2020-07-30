@@ -93,7 +93,7 @@ final public class MockInvoker<T> implements Invoker<T> {
             throw new RpcException(new IllegalAccessException("mock can not be null. url :" + url));
         }
 
-        // 对 mock 标准化处理
+        // 对 mock 标准化处理 【情况比较多】
         mock = normallizeMock(URL.decode(mock));
 
         // 1 如果mock为 'return',直接返回 值为空的RpcResult对象
@@ -225,6 +225,8 @@ final public class MockInvoker<T> implements Invoker<T> {
 
     /**
      * 获取异常对象
+     * 注意：
+     * 如果是自定义异常，必须要有单参构造器且参数类型为String
      *
      * @param throwstr
      * @return
@@ -311,6 +313,7 @@ final public class MockInvoker<T> implements Invoker<T> {
 
                 // 返回Mock对象的Invoker
                 return invoker;
+
             } catch (InstantiationException e) {
                 throw new IllegalStateException("No such empty constructor \"public " + mockClass.getSimpleName() + "()\" in mock implemention class " + mockClass.getName(), e);
             } catch (IllegalAccessException e) {
@@ -322,14 +325,36 @@ final public class MockInvoker<T> implements Invoker<T> {
     /**
      * 标准化Mock
      * <p>
-     * mock=fail:throw
-     * mock=fail:return
-     * mock=xx.Service
+     * mock的可能值：
+     * 1、显示指定Mock类
+     * mock = com.foo.BarServiceMock
+     * 2、映射拼接到自定义Mock类，形式==> 接口 + Mock
+     * - default    ---   mock = default
+     * - true
+     * - fail
+     * - force
+     * 3、throw或throw开头
+     * - mock = throw  ，调用出错，抛出一个默认的 RPCException
+     * - mock="throw com.foo.MockException ， 当调用出错时，抛出指定的 Exception
+     * 4、return 或 return开头
+     * - mock = return ,返回 值为空的RpcResult对象
+     * - mock = return xxx ，返回xxx
+     * 6、fail: 与return、throw组合，先普通执行，执行失败之后再执行相应的mock逻辑
+     * - mock = fail:throw => throw new RpcException(" mocked exception for Service degradation. ");
+     * - mock = fail:throw XxxException => throw new RpcException(RpcException.BIZ_EXCEPTION, XxxException);
+     * - mock = fail:return => return null
+     * - mock = fail:return xxx => return xxx
+     * 7、force: 与return、throw组合，强制执行相应的mock逻辑
+     * - mock = force:throw => throw new RpcException 抛出一个默认的 RPCException
+     * - mock = force:throw XxxException => throw new RpcException(XxxException);
+     * - mock = force:return => return null
+     * - mock = force:return xxx => return xxx
      *
      * @param mock
      * @return
      */
     private String normallizeMock(String mock) {
+
         // 如果mock为空，直接返回
         if (mock == null || mock.trim().length() == 0) {
             return mock;
@@ -339,7 +364,7 @@ final public class MockInvoker<T> implements Invoker<T> {
             mock = url.getServiceInterface() + "Mock";
         }
 
-        //----------- 'force:' / 'fail:' 开头仅用来表示Mock类型，是强制还是失败 ---------------/
+        //----------- mock以'force:' / 'fail:' 开头仅用来表示Mock类型，是强制还是失败 ---------------/
 
         // 如果mock 以 "fail:" 开头，则去除 前缀fail:
         if (mock.startsWith(Constants.FAIL_PREFIX)) {
