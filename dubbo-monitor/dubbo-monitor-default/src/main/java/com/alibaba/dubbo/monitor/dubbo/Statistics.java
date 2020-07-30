@@ -28,20 +28,39 @@ public class Statistics implements Serializable {
 
     private static final long serialVersionUID = -6921183057683641441L;
 
+    /**
+     * URL
+     */
     private URL url;
 
+    /**
+     * 应用名
+     */
     private String application;
-
+    /**
+     * 接口名
+     */
     private String service;
-
+    /**
+     * 方法名
+     */
     private String method;
-
+    /**
+     * 组
+     */
     private String group;
-
+    /**
+     * 版本
+     */
     private String version;
 
+    /**
+     * 客户端
+     */
     private String client;
-
+    /**
+     * 服务端
+     */
     private String server;
 
     public Statistics(URL url) {

@@ -255,14 +255,20 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @return 监控中心URL
      */
     protected URL loadMonitor(URL registryURL) {
+
         // 如果监控配置为空，就从属性配置中加载配置到MonitorConfig
         if (monitor == null) {
+            // 获取监控地址
             String monitorAddress = ConfigUtils.getProperty("dubbo.monitor.address");
+            // 获取监控协议
             String monitorProtocol = ConfigUtils.getProperty("dubbo.monitor.protocol");
+
+            // 没有配置就直接返回
             if ((monitorAddress == null || monitorAddress.length() == 0) && (monitorProtocol == null || monitorProtocol.length() == 0)) {
                 return null;
             }
 
+            // 创建MonitorConfig
             monitor = new MonitorConfig();
             if (monitorAddress != null && monitorAddress.length() > 0) {
                 monitor.setAddress(monitorAddress);
@@ -271,6 +277,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                 monitor.setProtocol(monitorProtocol);
             }
         }
+
         // 为MonitorConfig加载配置【启动参数变量和properties配置到配置对象】
         appendProperties(monitor);
 
@@ -294,8 +301,10 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
 
         appendParameters(map, monitor);
         appendParameters(map, application);
+
         // 获得监控地址
         String address = monitor.getAddress();
+
         // 如果启动参数配置了监控中心地址，就进行覆盖，启动参数优先级最高
         String sysaddress = System.getProperty("dubbo.monitor.address");
         if (sysaddress != null && sysaddress.length() > 0) {
@@ -313,6 +322,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                     map.put(Constants.PROTOCOL_KEY, "dubbo");
                 }
             }
+
             // 解析地址，创建Dubbo URL 对象
             return UrlUtils.parseURL(address, map);
 

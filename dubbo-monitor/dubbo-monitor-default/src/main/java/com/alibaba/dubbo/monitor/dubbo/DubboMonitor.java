@@ -44,8 +44,14 @@ public class DubboMonitor implements Monitor {
 
     private static final int LENGTH = 10;
 
+    /**
+     * 统计数据线程池
+     */
     private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3, new NamedThreadFactory("DubboMonitorSendTimer", true));
 
+    /**
+     * 统计数据线程执行结果对象
+     */
     private final ScheduledFuture<?> sendFuture;
 
     private final Invoker<MonitorService> monitorInvoker;
@@ -54,18 +60,26 @@ public class DubboMonitor implements Monitor {
 
     private final long monitorInterval;
 
+    /**
+     * 统计结果集
+     */
     private final ConcurrentMap<Statistics, AtomicReference<long[]>> statisticsMap = new ConcurrentHashMap<Statistics, AtomicReference<long[]>>();
 
     public DubboMonitor(Invoker<MonitorService> monitorInvoker, MonitorService monitorService) {
         this.monitorInvoker = monitorInvoker;
         this.monitorService = monitorService;
+
+        // 统计数据时间间隔，默认1分钟
         this.monitorInterval = monitorInvoker.getUrl().getPositiveParameter("interval", 60000);
-        // collect timer for collecting statistics data
+
+        /**
+         * 默认每隔1分钟执行一次，调用MonitorService发送 statisticsMap 中的统计数据
+         */
         sendFuture = scheduledExecutorService.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
-                // collect data
                 try {
+                    // 发送数据数据
                     send();
                 } catch (Throwable t) {
                     logger.error("Unexpected error occur at send statistic, cause: " + t.getMessage(), t);
@@ -74,12 +88,19 @@ public class DubboMonitor implements Monitor {
         }, monitorInterval, monitorInterval, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     *
+     */
     public void send() {
         logger.debug("Send statistics to monitor " + getUrl());
+
         String timestamp = String.valueOf(System.currentTimeMillis());
+
+        // 遍历统计数据
         for (Map.Entry<Statistics, AtomicReference<long[]>> entry : statisticsMap.entrySet()) {
             // get statistics data
             Statistics statistics = entry.getKey();
+
             AtomicReference<long[]> reference = entry.getValue();
             long[] numbers = reference.get();
             long success = numbers[0];
@@ -92,6 +113,7 @@ public class DubboMonitor implements Monitor {
             long maxOutput = numbers[7];
             long maxElapsed = numbers[8];
             long maxConcurrent = numbers[9];
+
             String version = getUrl().getParameter(Constants.DEFAULT_PROTOCOL);
 
             // send statistics data
@@ -109,6 +131,9 @@ public class DubboMonitor implements Monitor {
                             MonitorService.MAX_CONCURRENT, String.valueOf(maxConcurrent),
                             Constants.DEFAULT_PROTOCOL, version
                     );
+
+
+            // 发送数据
             monitorService.collect(url);
 
             // reset
@@ -135,6 +160,11 @@ public class DubboMonitor implements Monitor {
         }
     }
 
+    /**
+     * 统计数据
+     *
+     * @param url
+     */
     @Override
     public void collect(URL url) {
         // data to collect from url
@@ -144,8 +174,10 @@ public class DubboMonitor implements Monitor {
         int output = url.getParameter(MonitorService.OUTPUT, 0);
         int elapsed = url.getParameter(MonitorService.ELAPSED, 0);
         int concurrent = url.getParameter(MonitorService.CONCURRENT, 0);
+
         // init atomic reference
         Statistics statistics = new Statistics(url);
+
         AtomicReference<long[]> reference = statisticsMap.get(statistics);
         if (reference == null) {
             statisticsMap.putIfAbsent(statistics, new AtomicReference<long[]>());

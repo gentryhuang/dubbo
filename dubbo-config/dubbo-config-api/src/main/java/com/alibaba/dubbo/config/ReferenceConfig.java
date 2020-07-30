@@ -502,12 +502,15 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 // 循环数组，添加到 urls 中
                 if (us != null && !us.isEmpty()) {
                     for (URL u : us) {
+
                         // 加载监控中心 URL
                         URL monitorUrl = loadMonitor(u);
+
                         // 服务引用配置对象 map，带上监控中心的 URL
                         if (monitorUrl != null) {
                             map.put(Constants.MONITOR_KEY, URL.encode(monitorUrl.toFullString()));
                         }
+                        
                         // 注册中心的地址，带上服务引用的配置参数集合map，作为 refer 参数添加到注册中心的URL中，并且需要编码。通过这样的方式，注册中心的URL中，包含了服务引用的配置。
                         urls.add(u.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
                     }

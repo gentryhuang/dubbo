@@ -29,16 +29,29 @@ public class MonitorConfig extends AbstractConfig {
 
     private static final long serialVersionUID = -1184681514659198203L;
 
+    /**
+     * 协议
+     */
     private String protocol;
-
+    /**
+     * 地址
+     */
     private String address;
-
+    /**
+     * 用户名
+     */
     private String username;
-
+    /**
+     * 密码
+     */
     private String password;
-
+    /**
+     * 服务组
+     */
     private String group;
-
+    /**
+     * 版本
+     */
     private String version;
 
     private String interval;

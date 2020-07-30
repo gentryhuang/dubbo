@@ -26,7 +26,7 @@ import com.alibaba.dubbo.rpc.Protocol;
 import com.alibaba.dubbo.rpc.ProxyFactory;
 
 /**
- * DefaultMonitorFactory
+ * DefaultMonitorFactory，用于创建MonitorService
  */
 public class DubboMonitorFactory extends AbstractMonitorFactory {
 
@@ -44,20 +44,29 @@ public class DubboMonitorFactory extends AbstractMonitorFactory {
 
     @Override
     protected Monitor createMonitor(URL url) {
+
         url = url.setProtocol(url.getParameter(Constants.PROTOCOL_KEY, "dubbo"));
+
         if (url.getPath() == null || url.getPath().length() == 0) {
             url = url.setPath(MonitorService.class.getName());
         }
         String filter = url.getParameter(Constants.REFERENCE_FILTER_KEY);
+
         if (filter == null || filter.length() == 0) {
             filter = "";
         } else {
             filter = filter + ",";
         }
+
         url = url.addParameters(Constants.CLUSTER_KEY, "failsafe", Constants.CHECK_KEY, String.valueOf(false),
                 Constants.REFERENCE_FILTER_KEY, filter + "-monitor");
+
+        // 引用Invoker
         Invoker<MonitorService> monitorInvoker = protocol.refer(MonitorService.class, url);
+
+        // 创建Monitor代理
         MonitorService monitorService = proxyFactory.getProxy(monitorInvoker);
+
         return new DubboMonitor(monitorInvoker, monitorService);
     }
 

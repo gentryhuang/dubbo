@@ -41,12 +41,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * AbstractMonitorFactory. (SPI, Singleton, ThreadSafe)
+ * AbstractMonitorFactory. (SPI, Singleton, ThreadSafe) // 监控工厂抽象类
  */
 public abstract class AbstractMonitorFactory implements MonitorFactory {
     private static final Logger logger = LoggerFactory.getLogger(AbstractMonitorFactory.class);
 
-    // lock for getting monitor center
+    /**
+     * 锁 ，用于获取监控中心进行加锁
+     */
     private static final ReentrantLock LOCK = new ReentrantLock();
 
     // monitor centers Map<RegistryAddress, Registry>
@@ -60,6 +62,12 @@ public abstract class AbstractMonitorFactory implements MonitorFactory {
         return Collections.unmodifiableCollection(MONITORS.values());
     }
 
+    /**
+     * 获取Monitor
+     *
+     * @param url
+     * @return
+     */
     @Override
     public Monitor getMonitor(URL url) {
         url = url.setPath(MonitorService.class.getName()).addParameter(Constants.INTERFACE_KEY, MonitorService.class.getName());

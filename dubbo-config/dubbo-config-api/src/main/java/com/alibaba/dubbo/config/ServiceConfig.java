@@ -622,12 +622,15 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                     for (URL registryURL : registryURLs) {
                         // dynamic属性：服务是否动态注册，如果设为false,注册后将显示disable状态，需要人工启用，并且服务提供者停止时，也不会自动下线，需要人工禁用
                         url = url.addParameterIfAbsent(Constants.DYNAMIC_KEY, registryURL.getParameter(Constants.DYNAMIC_KEY));
+
                         // 获取监控中心URL
                         URL monitorUrl = loadMonitor(registryURL);
+
                         if (monitorUrl != null) {
                             // 监控URL不能空，就将监控中心的URL作为monitor参数添加到服务提供者的URL中，并且需要编码。通过这样方式，服务提供者的URL中就包含了监控中心的配置
                             url = url.addParameterAndEncoded(Constants.MONITOR_KEY, monitorUrl.toFullString());
                         }
+
                         if (logger.isInfoEnabled()) {
                             logger.info("Register dubbo service " + interfaceClass.getName() + " url " + url + " to registry " + registryURL);
                         }

@@ -21,7 +21,7 @@ import com.alibaba.dubbo.common.extension.Adaptive;
 import com.alibaba.dubbo.common.extension.SPI;
 
 /**
- * MonitorFactory. (SPI, Singleton, ThreadSafe)
+ * MonitorFactory. (SPI, Singleton, ThreadSafe)  // 监控工厂，是Dubbo的扩展点，默认为 dubbo
  */
 @SPI("dubbo")
 public interface MonitorFactory {
