@@ -47,12 +47,12 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 合并结果集Invoker，MergeableClusterInvoker串起了整个合并器逻辑。
+ * 合并结果集Invoker，MergeableClusterInvoker串起了整个合并器逻辑。按组合并返回结果，一般接口一样，但有多种实现，用group区分，消费者需从每种group中调用一次返回结果，然后合并结果返回
  * 说明：
  * 1 对于Mergeable容错模式，可以在dubbo:reference标签中通过merger="true"开启，合并时可以通过group属性指定需要合并哪些分组的结果。
- * 2 默认会根据方法的返回值类型自动匹配合并起Merger，但是如果同一个类型有多个不同的合并器实现，那么就不能使用merger=true了，需要在参数中指定合并器的名字，merger="xxx"
+ * 2 默认会根据方法的返回值类型自动匹配合并器Merger，但是如果同一个类型有多个不同的合并器实现，那么就不能使用merger=true了，需要在参数中指定合并器的名字，merger="xxx"
  * 3 如果想调用 返回结果的指定方法 进行合并，如：返回结果是个Set，想调用Set#addAll方法，则可以配置 merger=".addAll" 配置来实现
- * 4 可是使用自定义方法合并结果，配置： merger="xxx"
+ * 4 使用自定义方法合并结果，配置： merger="xxx"
  * 如果想
  * 调用涉及部分：
  * MergeableCuster#join -> 生成MergeableClusterInvoker 对象，处理合并逻辑 -> 使用MergerFactory工厂获取Merge接口实现 -> 完成合并逻辑
@@ -101,6 +101,7 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
                     return invoker.invoke(invocation);
                 }
             }
+            // 没有可用的Invoker，就尝试调用第一个Invoker
             return invokers.iterator().next().invoke(invocation);
         }
 
@@ -112,7 +113,7 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
             returnType = null;
         }
 
-        // 保存异步执行返回的Future，用于等待后续结果
+        // 保存异步执行返回的Future，用于等待后续结果。key的值是服务键 [结构： group/serviceInterface:version]
         Map<String, Future<Result>> results = new HashMap<String, Future<Result>>();
 
         // 遍历Invoker列表，把RPC调用任务提交到线程池，将调用Future加入到results集合中
@@ -144,7 +145,7 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
                 // 在超时时间内阻塞等待执行结果
                 Result r = future.get(timeout, TimeUnit.MILLISECONDS);
 
-                // 执行异常，忽略
+                // 如果异步执行有异常(包括超时), 则打印error级别的日志,但最终的结果会部分数据缺失。
                 if (r.hasException()) {
                     log.error("Invoke " + getGroupDescFromServiceKey(entry.getKey()) +
                                     " failed: " + r.getException().getMessage(),
@@ -183,7 +184,7 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
          *     <dubbo:method name="getMenuItems" merger=".addAll" />
          * </dubbo:reference>
          */
-        // 如果merger以 "." 开头，则直接通过反射调用"."后的的方法合并结果集。如：配置的是 merger=".addAll",返回类型是List，则调用List.addAll方法来合并结果集
+        // 如果merger以 "." 开头，则直接通过反射调用"."后的的方法合并结果集。如：配置的是 merger=".addAll",那么调用的就是结果类型的原生方法。如服务返回结果类型是List，则就是调用List.addAll方法来合并结果集
         if (merger.startsWith(".")) {
 
             // 字符串截取，得到要调用的方法名
@@ -195,6 +196,7 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
                  * 通过反射获得真正的方法对象
                  * 说明：
                  *  合并方法（如例子：addAll）的参数类型必须是返回结果类型
+                 *
                  */
                 method = returnType.getMethod(merger, returnType);
 
@@ -209,20 +211,27 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
                 method.setAccessible(true);
             }
 
+            // 先拿到第一个结果
             result = resultList.remove(0).getValue();
 
+            /*
+             这里有点绕，举个例子：
+             假设：服务接口返回结果是List类型，配置的merger=".allAll"。
+             流程：if条件判断会失败，因为List的 addAll 方法 返回类型是 布尔类型。进入else条件中，调用addAll方法，把服务接口返回的List结果直接合并
+            */
 
             // 调用方法进行合并
             try {
-                // 如果返回类型不为void，并且方法返回类型和结果的类型相同，则反射调用方法合并结果，并修改result
+                // 如果返回类型不为void，并且方法返回类型和服务的返回结果的类型相同，则 反射调用方法合并结果，并修改result
                 if (method.getReturnType() != void.class && method.getReturnType().isAssignableFrom(result.getClass())) {
 
-                    // 循环调用合并方法，进行合并
+                    // 遍历剩下的结果集
                     for (Result r : resultList) {
+                        // 根据配置的merge,如：merger=".addAll"，对剩下的结果依次调用addAll方法进行合并
                         result = method.invoke(result, r.getValue());
                     }
 
-                    // 方法返回类型不匹配，则直接把结果合并进去即可
+                    // 方法返回类型和服务接口结果类型不匹配，则直接调用方法把结果合并进去即可
                 } else {
                     for (Result r : resultList) {
                         method.invoke(result, r.getValue());
@@ -233,16 +242,17 @@ public class MergeableClusterInvoker<T> implements Invoker<T> {
             }
 
 
-            // 二、基于Merger合并器
+            // 二、merger不是以'.'开头，则基于Merger合并器
         } else {
             Merger resultMerger;
 
             // 当 merger 为 "default" 或 "true" 时，调用 MergerFactory#getMerger(Class<T> returnType) 方法，根据返回值类型自动匹配 Merger
             if (ConfigUtils.isDefault(merger)) {
 
+                // 由Merger工厂根据接口返回类型获取Merger
                 resultMerger = MergerFactory.getMerger(returnType);
 
-                // 获取配置的merger
+                // 获取配置的merger，由Merger工厂根据类型获取Merger
             } else {
                 resultMerger = ExtensionLoader.getExtensionLoader(Merger.class).getExtension(merger);
             }
