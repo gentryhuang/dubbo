@@ -19,6 +19,9 @@ package com.alibaba.dubbo.rpc.cluster.merger;
 
 import com.alibaba.dubbo.rpc.cluster.Merger;
 
+/**
+ * DoubleArrayMerger
+ */
 public class DoubleArrayMerger implements Merger<double[]> {
 
     @Override

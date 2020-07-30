@@ -20,17 +20,21 @@ import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.rpc.cluster.configurator.AbstractConfigurator;
 
 /**
- * AbsentConfigurator
- *
+ * AbsentConfigurator，直接覆盖添加，即 配置Url的parameters部分 直接 覆盖 url的parameters部分，如果出现相同key，则以配置Url为主
  */
 public class OverrideConfigurator extends AbstractConfigurator {
 
+    /**
+     * 构造方法会调用父类的构造方法
+     * @param url
+     */
     public OverrideConfigurator(URL url) {
         super(url);
     }
 
     @Override
     public URL doConfigure(URL currentUrl, URL configUrl) {
+        // 覆盖添加
         return currentUrl.addParameters(configUrl.getParameters());
     }
 

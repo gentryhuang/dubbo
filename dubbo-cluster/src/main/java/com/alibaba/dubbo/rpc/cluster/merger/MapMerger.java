@@ -21,6 +21,9 @@ import com.alibaba.dubbo.rpc.cluster.Merger;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * MapMerger
+ */
 public class MapMerger implements Merger<Map<?, ?>> {
 
     @Override
@@ -28,7 +31,11 @@ public class MapMerger implements Merger<Map<?, ?>> {
         if (items.length == 0) {
             return null;
         }
+
+        // 结果
         Map<Object, Object> result = new HashMap<Object, Object>();
+
+        // 合并多个map
         for (Map<?, ?> item : items) {
             if (item != null) {
                 result.putAll(item);

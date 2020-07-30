@@ -23,14 +23,21 @@ import com.alibaba.dubbo.rpc.cluster.Directory;
 
 /**
  * {@link FailoverClusterInvoker}
- *
- * 失败转移，当出现失败时，重试其他服务器，通常用于读操作，但重试会带来更长延迟
- *
+ * <p>
+ * 创建 当出现失败时重试其他服务的Invoker 的Cluster，通常用于读操作，但重试会带来更长延迟
  */
 public class FailoverCluster implements Cluster {
 
     public final static String NAME = "failover";
 
+    /**
+     * 创建 FailoverClusterInvoker
+     *
+     * @param directory Directory 对象
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Invoker<T> join(Directory<T> directory) throws RpcException {
         // 创建FailoverClusterInvoker实例

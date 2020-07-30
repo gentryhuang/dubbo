@@ -550,7 +550,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 }
                 // 有注册中心
                 if (registryURL != null) {
-                    // 对有注册中心的只用 AvailableCluster进行Invoker的合并 【todo 集群容错】
+                    // 对有注册中心的只用 AvailableCluster进行Invoker的合并，这里是AvailableCluster，即服务调用时仅调用第一个可用的Invoker 【todo 集群容错】
                     URL u = registryURL.addParameter(Constants.CLUSTER_KEY, AvailableCluster.NAME);
                     // 创建StaticDirectory实例，并由Cluster对多个Invoker进行合并
                     invoker = cluster.join(new StaticDirectory(u, invokers));

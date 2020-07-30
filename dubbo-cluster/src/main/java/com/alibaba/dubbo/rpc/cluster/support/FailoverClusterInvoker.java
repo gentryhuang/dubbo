@@ -39,6 +39,9 @@ import java.util.Set;
  * Note that retry causes latency.
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Failover">Failover</a>
+ * 失败自动切换，当出现失败，重试其它服务器。通常用于读操作。
+ * 注意：
+ * 重试会带来延迟
  */
 public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
@@ -48,39 +51,66 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
         super(directory);
     }
 
+    /**
+     * 循环，查找一个Invoker 对象，进行调用，直到成功
+     *
+     * @param invocation  调用信息
+     * @param invokers    获选Invoker 集合
+     * @param loadbalance 负载均衡器
+     * @return
+     * @throws RpcException
+     */
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Result doInvoke(Invocation invocation, final List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
+
+        // 校验候选Invoker 集合是否为空
         List<Invoker<T>> copyinvokers = invokers;
         checkInvokers(copyinvokers, invocation);
-        // 默认是 2+1 次
+
+        // 获取配置的重试次数，默认是 2+1 次
         int len = getUrl().getMethodParameter(invocation.getMethodName(), Constants.RETRIES_KEY, Constants.DEFAULT_RETRIES) + 1;
         if (len <= 0) {
             len = 1;
         }
-        // retry loop.
-        RpcException le = null; // last exception.
-        List<Invoker<T>> invoked = new ArrayList<Invoker<T>>(copyinvokers.size()); // invoked invokers.
+
+        // 保存最后一次调用异常【如果调用出现异常的情况】
+        RpcException le = null;
+
+        // 保存已经调用过的Invoker集合
+        List<Invoker<T>> invoked = new ArrayList<Invoker<T>>(copyinvokers.size());
+
+        // 负载均衡器选择出来的Invoker的网络地址
         Set<String> providers = new HashSet<String>(len);
 
+        // 如果出现调用失败，则重试其他服务。[失败重试机制的核心逻辑]
         for (int i = 0; i < len; i++) {
             /**
              * 重试时进行重新选择 Invoker列表，避免重试时 Invoker列表已发生改变。需要注意的是：如果列表发生了改变，那么invoked 判断会失效
              */
             if (i > 0) {
+                // 校验Invoker是否销毁
                 checkWhetherDestroyed();
+                // 通过 Directory 获取路由过滤的服务提供者Invokers集合
                 copyinvokers = list(invocation);
-                // check again
+                // 再次检验Invoker 是否为空
                 checkInvokers(copyinvokers, invocation);
             }
 
-            // 使用负载均衡器选择出来一个Invoker
+            // 从候选Invoker集合中选择一个Invoker 【粘滞Invoker不能用，会使用负载均衡器】
             Invoker<T> invoker = select(loadbalance, invocation, copyinvokers, invoked);
+
+            // 保存选择出来的Invoker
             invoked.add(invoker);
+
+            // 保存已经选择出来的Invoker 列表到 上下文
             RpcContext.getContext().setInvokers((List) invoked);
 
             try {
+                // RPC 调用
                 Result result = invoker.invoke(invocation);
+
+                // 重试过程中，打印最后一次调用的异常信息
                 if (le != null && logger.isWarnEnabled()) {
                     logger.warn("Although retry the method " + invocation.getMethodName()
                             + " in the service " + getInterface().getName()
@@ -93,17 +123,24 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
                             + le.getMessage(), le);
                 }
                 return result;
+
             } catch (RpcException e) {
-                if (e.isBiz()) { // biz exception.
+                // 如果是业务性质的异常，不再重试，直接抛出
+                if (e.isBiz()) {
                     throw e;
                 }
                 le = e;
+
+                // 其它异常统一封装成 RpcException
             } catch (Throwable e) {
                 le = new RpcException(e.getMessage(), e);
             } finally {
+                // 保存选中的Invoker的地址
                 providers.add(invoker.getUrl().getAddress());
             }
         }
+
+        // 最大重试次数用完还是调用失败的话，就抛出RpcException异常，输出最后一次异常信息
         throw new RpcException(le != null ? le.getCode() : 0, "Failed to invoke the method "
                 + invocation.getMethodName() + " in the service " + getInterface().getName()
                 + ". Tried " + len + " times of the providers " + providers

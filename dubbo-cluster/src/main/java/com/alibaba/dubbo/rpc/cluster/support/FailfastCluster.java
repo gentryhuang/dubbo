@@ -23,7 +23,7 @@ import com.alibaba.dubbo.rpc.cluster.Directory;
 
 /**
  * {@link FailfastClusterInvoker}
- *
+ * 创建快速失败的Invoker的 Cluster。创建的Invoker 只发起一次调用，失败立即报错。
  */
 public class FailfastCluster implements Cluster {
 

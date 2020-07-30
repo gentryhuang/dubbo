@@ -22,13 +22,13 @@ import com.alibaba.dubbo.rpc.cluster.Cluster;
 import com.alibaba.dubbo.rpc.cluster.Directory;
 
 /**
- * BroadcastCluster
- *
+ * BroadcastCluster，创建 广播调用所有提供者 的Invoekr 的Cluster
  */
 public class BroadcastCluster implements Cluster {
 
     @Override
     public <T> Invoker<T> join(Directory<T> directory) throws RpcException {
+        // 创建 BroadcastClusterInvoker 对象
         return new BroadcastClusterInvoker<T>(directory);
     }
 

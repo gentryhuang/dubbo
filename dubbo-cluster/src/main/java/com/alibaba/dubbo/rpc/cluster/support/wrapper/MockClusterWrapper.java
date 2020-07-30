@@ -22,21 +22,30 @@ import com.alibaba.dubbo.rpc.cluster.Cluster;
 import com.alibaba.dubbo.rpc.cluster.Directory;
 
 /**
- * mock impl
- *
+ * 实现 Cluster接口，MockClusterWrapper实现类，注意它是个Wrapper类，对应的Cluster对象都会被它所包装。
  */
 public class MockClusterWrapper implements Cluster {
 
+    /**
+     * 真正的Cluster 对象
+     */
     private Cluster cluster;
 
     public MockClusterWrapper(Cluster cluster) {
         this.cluster = cluster;
     }
 
+    /**
+     * 创建MockClusterInvoker对象
+     *
+     * @param directory Directory 对象
+     * @param <T>
+     * @return
+     * @throws RpcException
+     */
     @Override
     public <T> Invoker<T> join(Directory<T> directory) throws RpcException {
-        return new MockClusterInvoker<T>(directory,
-                this.cluster.join(directory));
+        return new MockClusterInvoker<T>(directory, this.cluster.join(directory));
     }
 
 }

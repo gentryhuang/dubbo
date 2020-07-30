@@ -24,7 +24,9 @@ import com.alibaba.dubbo.rpc.RpcException;
 import java.util.List;
 
 /**
- * Router. (SPI, Prototype, ThreadSafe)
+ * Router. (SPI, Prototype, ThreadSafe) 路由规则接口，实现了Comparable接口，可排序
+ * 说明：
+ * 一个路由对象对应一条路由规则
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Routing">Routing</a>
  *
@@ -34,6 +36,8 @@ import java.util.List;
 public interface Router extends Comparable<Router> {
 
     /**
+     * 获取路由规则URL
+     * <p>
      * get the router url.
      *
      * @return url
@@ -41,12 +45,14 @@ public interface Router extends Comparable<Router> {
     URL getUrl();
 
     /**
+     * 路由，筛选匹配的Invoker 集合
+     * <p>
      * route.
      *
-     * @param invokers
+     * @param invokers   Invoker 集合
      * @param url        refer url
      * @param invocation
-     * @return routed invokers
+     * @return routed invokers 路由后的Invoker 集合
      * @throws RpcException
      */
     <T> List<Invoker<T>> route(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException;

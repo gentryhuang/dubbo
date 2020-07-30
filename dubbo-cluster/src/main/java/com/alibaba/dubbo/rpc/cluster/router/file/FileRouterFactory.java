@@ -27,10 +27,19 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 
+/**
+ * 实现RouterFactory，基于文件读取路由规则
+ */
 public class FileRouterFactory implements RouterFactory {
 
+    /**
+     * 拓展名
+     */
     public static final String NAME = "file";
 
+    /**
+     * RouterFactory$Adaptive 对象, Dubbo IOC注入
+     */
     private RouterFactory routerFactory;
 
     public void setRouterFactory(RouterFactory routerFactory) {
@@ -40,23 +49,42 @@ public class FileRouterFactory implements RouterFactory {
     @Override
     public Router getRouter(URL url) {
         try {
+
+            // router 配置项，默认为 script
+
             // Transform File URL into Script Route URL, and Load
             // file:///d:/path/to/route.js?router=script ==> script:///d:/path/to/route.js?type=js&rule=<file-content>
             String protocol = url.getParameter(Constants.ROUTER_KEY, ScriptRouterFactory.NAME); // Replace original protocol (maybe 'file') with 'script'
-            String type = null; // Use file suffix to config script type, e.g., js, groovy ...
+
+            // 使用文件后缀作为类型
+            // Use file suffix to config script type, e.g., js, groovy ...
+            String type = null;
             String path = url.getPath();
+
+
             if (path != null) {
                 int i = path.lastIndexOf('.');
                 if (i > 0) {
                     type = path.substring(i + 1);
                 }
             }
+
+            // 从文件中读取配置规则
             String rule = IOUtils.read(new FileReader(new File(url.getAbsolutePath())));
 
+            // 创建路由规则URL
             boolean runtime = url.getParameter(Constants.RUNTIME_KEY, false);
-            URL script = url.setProtocol(protocol).addParameter(Constants.TYPE_KEY, type).addParameter(Constants.RUNTIME_KEY, runtime).addParameterAndEncoded(Constants.RULE_KEY, rule);
 
+            // protocol 决定使用哪种路由，默认为script
+            URL script = url.setProtocol(protocol)
+                    .addParameter(Constants.TYPE_KEY, type)
+                    .addParameter(Constants.RUNTIME_KEY, runtime)
+                    // 路由规则
+                    .addParameterAndEncoded(Constants.RULE_KEY, rule);
+
+            // 获得 Router 对象
             return routerFactory.getRouter(script);
+
         } catch (IOException e) {
             throw new IllegalStateException(e.getMessage(), e);
         }

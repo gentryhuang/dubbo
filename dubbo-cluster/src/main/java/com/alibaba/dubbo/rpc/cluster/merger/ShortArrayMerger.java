@@ -19,15 +19,24 @@ package com.alibaba.dubbo.rpc.cluster.merger;
 
 import com.alibaba.dubbo.rpc.cluster.Merger;
 
+/**
+ * Short数组Merger
+ */
 public class ShortArrayMerger implements Merger<short[]> {
 
     @Override
     public short[] merge(short[]... items) {
         int total = 0;
+
+        // 计算结果数组大小
         for (short[] array : items) {
             total += array.length;
         }
+
+        // 结果数组
         short[] result = new short[total];
+
+        // 进行合并
         int index = 0;
         for (short[] array : items) {
             for (short item : array) {

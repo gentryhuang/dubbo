@@ -39,21 +39,36 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * ScriptRouter
- *
+ * ScriptRouter，基于脚本的 Router 实现类
+ * 说明：
+ * 脚本路由规则支持 JDK 脚本引擎的所有脚本，比如：javascript, jruby, groovy 等，
+ * 通过 type=javascript 参数设置脚本类型，缺省为 javascript。
  */
 public class ScriptRouter implements Router {
 
     private static final Logger logger = LoggerFactory.getLogger(ScriptRouter.class);
 
+    /**
+     * 脚本类型 与脚本引擎的映射缓存
+     */
     private static final Map<String, ScriptEngine> engines = new ConcurrentHashMap<String, ScriptEngine>();
 
+    /**
+     * 脚本路由规则
+     */
     private final ScriptEngine engine;
-
+    /**
+     * 路由规则优先级
+     */
     private final int priority;
 
+    /**
+     * 路由规则内容
+     */
     private final String rule;
-
+    /**
+     * 路由规则 URL
+     */
     private final URL url;
 
     public ScriptRouter(URL url) {
@@ -88,14 +103,20 @@ public class ScriptRouter implements Router {
     @SuppressWarnings("unchecked")
     public <T> List<Invoker<T>> route(List<Invoker<T>> invokers, URL url, Invocation invocation) throws RpcException {
         try {
+
             List<Invoker<T>> invokersCopy = new ArrayList<Invoker<T>>(invokers);
             Compilable compilable = (Compilable) engine;
             Bindings bindings = engine.createBindings();
             bindings.put("invokers", invokersCopy);
             bindings.put("invocation", invocation);
             bindings.put("context", RpcContext.getContext());
+
+            // 编译
             CompiledScript function = compilable.compile(rule);
+            // 执行脚本
             Object obj = function.eval(bindings);
+
+            // 根据结果类型，转换成 (List<Invoker<T>> 类型返回
             if (obj instanceof Invoker[]) {
                 invokersCopy = Arrays.asList((Invoker<T>[]) obj);
             } else if (obj instanceof Object[]) {
@@ -106,6 +127,7 @@ public class ScriptRouter implements Router {
             } else {
                 invokersCopy = (List<Invoker<T>>) obj;
             }
+
             return invokersCopy;
         } catch (ScriptException e) {
             //fail then ignore rule .invokers.

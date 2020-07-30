@@ -23,7 +23,8 @@ import com.alibaba.dubbo.rpc.cluster.Directory;
 
 /**
  * {@link FailbackClusterInvoker}
- *
+ * <p>
+ * 创建失败自动恢复的Invoker的 Cluster，因为会记录失败请求，定时重发
  */
 public class FailbackCluster implements Cluster {
 

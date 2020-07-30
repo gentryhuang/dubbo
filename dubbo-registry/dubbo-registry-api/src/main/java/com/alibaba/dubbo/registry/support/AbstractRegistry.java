@@ -125,6 +125,13 @@ public abstract class AbstractRegistry implements Registry {
 
     public AbstractRegistry(URL url) {
         setUrl(url);
+
+        /**
+         * 可以指定注册中心磁盘缓存文件，配置方式：
+         * 1 使用file属性指定  <dubbo:registry address="xxx" file="/opt/xxx"/>
+         * 2 使用save.file属性指定 <dubbo:registry address="xxx" save.file="/opt/xxx"/>
+         * 3 不显示指定的话，使用默认值：System.getProperty("user.home") + "/.dubbo/dubbo-registry-" + 应用名 + "-" + url.getAddress() + ".cache"
+         */
         // Start file save timer
         syncSaveFile = url.getParameter(Constants.REGISTRY_FILESAVE_SYNC_KEY, false);
         // 获得 file

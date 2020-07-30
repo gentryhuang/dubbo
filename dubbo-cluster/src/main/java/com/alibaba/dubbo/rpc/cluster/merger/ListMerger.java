@@ -22,6 +22,9 @@ import com.alibaba.dubbo.rpc.cluster.Merger;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * ListMerger
+ */
 public class ListMerger implements Merger<List<?>> {
 
     @Override

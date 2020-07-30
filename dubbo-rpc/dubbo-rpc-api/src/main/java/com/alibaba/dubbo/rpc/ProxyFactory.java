@@ -28,10 +28,12 @@ import com.alibaba.dubbo.common.extension.SPI;
 public interface ProxyFactory {
 
     /**
+     * 创建代理对象，在引用服务的过程会调用该方法
+     * <p>
      * create proxy.
      *
-     * @param invoker
-     * @return proxy
+     * @param invoker 消费者对提供者调用的Invoker
+     * @return proxy 代理对象
      */
     @Adaptive({Constants.PROXY_KEY})
     <T> T getProxy(Invoker<T> invoker) throws RpcException;
@@ -46,12 +48,14 @@ public interface ProxyFactory {
     <T> T getProxy(Invoker<T> invoker, boolean generic) throws RpcException;
 
     /**
+     * 创建Invoker，在暴露服务时会调用
+     * <p>
      * create invoker.
      *
      * @param <T>
-     * @param proxy
-     * @param type
-     * @param url
+     * @param proxy Service对象
+     * @param type  Service接口类型
+     * @param url   Service对应的Dubbo URL
      * @return invoker
      */
     @Adaptive({Constants.PROXY_KEY})

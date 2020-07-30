@@ -25,13 +25,28 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * Merger工厂类，获取指定类对应的Merger对象
+ */
 public class MergerFactory {
 
-    private static final ConcurrentMap<Class<?>, Merger<?>> mergerCache =
-            new ConcurrentHashMap<Class<?>, Merger<?>>();
+    /**
+     * 类的Merger映射缓存
+     */
+    private static final ConcurrentMap<Class<?>, Merger<?>> mergerCache = new ConcurrentHashMap<Class<?>, Merger<?>>();
 
+    /**
+     * 根据类型获取具体的Merger对象
+     *
+     * @param returnType 类型
+     * @param <T>
+     * @return
+     */
     public static <T> Merger<T> getMerger(Class<T> returnType) {
+
         Merger result;
+
+        // 数组类型
         if (returnType.isArray()) {
             Class type = returnType.getComponentType();
             result = mergerCache.get(type);
@@ -39,9 +54,13 @@ public class MergerFactory {
                 loadMergers();
                 result = mergerCache.get(type);
             }
+
+            // 获取不到就使用 ArrayMerger
             if (result == null && !type.isPrimitive()) {
                 result = ArrayMerger.INSTANCE;
             }
+
+            // 普通类型
         } else {
             result = mergerCache.get(returnType);
             if (result == null) {
@@ -52,9 +71,13 @@ public class MergerFactory {
         return result;
     }
 
+    /**
+     * 静态方法，用于初始化所有的Merger拓宽对象，并放入缓存中
+     */
     static void loadMergers() {
-        Set<String> names = ExtensionLoader.getExtensionLoader(Merger.class)
-                .getSupportedExtensions();
+        // 获取Merger扩展点扩展实现的名称
+        Set<String> names = ExtensionLoader.getExtensionLoader(Merger.class).getSupportedExtensions();
+        // 遍历扩展名，根据扩展名获取Merger 扩展实现，并放入缓存
         for (String name : names) {
             Merger m = ExtensionLoader.getExtensionLoader(Merger.class).getExtension(name);
             mergerCache.putIfAbsent(ReflectUtils.getGenericClass(m.getClass()), m);

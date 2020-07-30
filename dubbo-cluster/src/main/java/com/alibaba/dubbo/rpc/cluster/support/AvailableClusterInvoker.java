@@ -26,18 +26,33 @@ import com.alibaba.dubbo.rpc.cluster.LoadBalance;
 import java.util.List;
 
 /**
- * AvailableCluster
- *
+ * AvailableCluster，AvailableCluster Invoker 实现类
  */
 public class AvailableClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
+    /**
+     * 构造方法
+     *
+     * @param directory
+     */
     public AvailableClusterInvoker(Directory<T> directory) {
         super(directory);
     }
 
+    /**
+     * 选择一个可用的Invoker执行调用
+     *
+     * @param invocation
+     * @param invokers
+     * @param loadbalance
+     * @return
+     * @throws RpcException
+     */
     @Override
     public Result doInvoke(Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
+        // 循环候选的Invoker 集合，调用首个可用的 Invoker 对象
         for (Invoker<T> invoker : invokers) {
+            // 可用，则发起RPC调用
             if (invoker.isAvailable()) {
                 return invoker.invoke(invocation);
             }

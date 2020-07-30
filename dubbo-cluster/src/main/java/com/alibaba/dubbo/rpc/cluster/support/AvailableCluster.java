@@ -27,8 +27,7 @@ import com.alibaba.dubbo.rpc.cluster.LoadBalance;
 import java.util.List;
 
 /**
- * AvailableCluster
- *
+ * AvailableCluster。创建使用使用首个可用的服务Invoker的 Cluster，目前用于多注册中心引用
  */
 public class AvailableCluster implements Cluster {
 
@@ -36,7 +35,6 @@ public class AvailableCluster implements Cluster {
 
     @Override
     public <T> Invoker<T> join(Directory<T> directory) throws RpcException {
-
         return new AbstractClusterInvoker<T>(directory) {
             @Override
             public Result doInvoke(Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {

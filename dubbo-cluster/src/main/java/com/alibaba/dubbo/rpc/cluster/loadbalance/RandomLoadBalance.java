@@ -24,12 +24,20 @@ import java.util.List;
 import java.util.Random;
 
 /**
- * random load balance.
+ * random load balance，加权随机算法的实现
+ * 说明：
+ * 本质上就是每个服务提供者的权重占总权重的比例，比例越大就越有可能选中
  */
 public class RandomLoadBalance extends AbstractLoadBalance {
 
+    /**
+     * 扩展点名称
+     */
     public static final String NAME = "random";
 
+    /**
+     * 随机数生成器
+     */
     private final Random random = new Random();
 
     /**
@@ -43,24 +51,37 @@ public class RandomLoadBalance extends AbstractLoadBalance {
      */
     @Override
     protected <T> Invoker<T> doSelect(List<Invoker<T>> invokers, URL url, Invocation invocation) {
+
         // Invoker的个数
         int length = invokers.size();
-        // 权重总合
+
+        // 算有的Invoker权重总合
         int totalWeight = 0;
+
         // 每个Invoker是否具有相同的权重
         boolean sameWeight = true;
+
+        // 计算总权重，并检测每个服务提供者的权重是否相同
         for (int i = 0; i < length; i++) {
+
             // 获取当前Invoker的权重
             int weight = getWeight(invokers.get(i), invocation);
+
+            // 计算权重总
             totalWeight += weight;
+
+            // 判断每个服务提供者是否具有相同的权重【每一次都会和前一个服务提供者的权重相比】
             if (sameWeight && i > 0 && weight != getWeight(invokers.get(i - 1), invocation)) {
                 sameWeight = false;
             }
         }
+
+        // 权重不相等，获取随机数，并计算随机数落在哪个区间上
         if (totalWeight > 0 && !sameWeight) {
-            // If (not every invoker has the same weight & at least one invoker's weight>0), select randomly based on totalWeight.
+            // 基于总权重生成一个随机数，[0,totalWeight]之间的数
             int offset = random.nextInt(totalWeight);
-            // Return a invoker based on the random value.
+
+            // 随机数落入哪个区间，随机数 - 当前遍历的服务提供者的权重 是否 小于0 是关键
             for (int i = 0; i < length; i++) {
                 offset -= getWeight(invokers.get(i), invocation);
                 if (offset < 0) {
@@ -68,7 +89,8 @@ public class RandomLoadBalance extends AbstractLoadBalance {
                 }
             }
         }
-        // 如果权重相同或权重为0则均等随机
+
+        // 如果所有服务提供者权重相同或权重为0则均等随机
         return invokers.get(random.nextInt(length));
     }
 

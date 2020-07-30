@@ -30,6 +30,7 @@ public class UrlUtils {
 
     /**
      * 解析注册中心地址，创建Dubbo URL数组
+     *
      * @param address
      * @param defaults
      * @return
@@ -56,7 +57,7 @@ public class UrlUtils {
      * 解析单个 URL，将defaults属性集合 里的参数合并到 注册中心地址address中，合并逻辑：
      * 可以把address 认为是url,defaults认为是defaultURL。如果url有不存在的属性时，从defaultURL获得对应的属性，设置到url中
      *
-     * @param address 注册中心地址
+     * @param address  注册中心地址
      * @param defaults 参数集合
      * @return Dubbo URL
      */
@@ -378,7 +379,7 @@ public class UrlUtils {
         String providerInterface = providerUrl.getServiceInterface();
         if (!(Constants.ANY_VALUE.equals(consumerInterface) || StringUtils.isEquals(consumerInterface, providerInterface)))
             return false;
-         // 匹配类目是否相等
+        // 匹配类目是否相等
         if (!isMatchCategory(providerUrl.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY),
                 consumerUrl.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY))) {
             return false;
@@ -400,47 +401,77 @@ public class UrlUtils {
                 && (consumerClassifier == null || Constants.ANY_VALUE.equals(consumerClassifier) || StringUtils.isEquals(consumerClassifier, providerClassifier));
     }
 
+    /**
+     * 判断 value 是否匹配 matches/mismatches
+     * 说明：
+     * param参数是为了支持从URL中读取参数
+     *
+     * @param pattern 匹配规则
+     * @param value   待和匹配值进行匹配的值
+     * @param param   消息者URL
+     * @return 是否匹配
+     */
     public static boolean isMatchGlobPattern(String pattern, String value, URL param) {
+        // 以美元符 `$` 开头，表示引用消费者参数，param参数为消费者URL
         if (param != null && pattern.startsWith("$")) {
             pattern = param.getRawParameter(pattern.substring(1));
         }
+
+        // 进行匹配
         return isMatchGlobPattern(pattern, value);
     }
 
     public static boolean isMatchGlobPattern(String pattern, String value) {
-        if ("*".equals(pattern))
-            return true;
-        if ((pattern == null || pattern.length() == 0)
-                && (value == null || value.length() == 0))
-            return true;
-        if ((pattern == null || pattern.length() == 0)
-                || (value == null || value.length() == 0))
-            return false;
 
+        // 全匹配，通配符支持
+        if ("*".equals(pattern)) {
+            return true;
+        }
+
+        // 匹配规则和待匹配值全部为空，认为两者相等，即匹配
+        if ((pattern == null || pattern.length() == 0) && (value == null || value.length() == 0)) {
+            return true;
+        }
+
+        // 匹配规则和待匹配值有一个为空，不匹配
+        if ((pattern == null || pattern.length() == 0) || (value == null || value.length() == 0)) {
+            return false;
+        }
+
+        // 确定 匹配规则中通配符 * 的位置
         int i = pattern.lastIndexOf('*');
-        // doesn't find "*"
+
+        // 匹配规则中不包含通配符，此时直接比较匹配值和待匹配值 是否相等即可，并返回比较结果
         if (i == -1) {
             return value.equals(pattern);
         }
-        // "*" is at the end
+
+        // 通配符 "*" 在匹配规则尾部，比如 192.168.25.*
         else if (i == pattern.length() - 1) {
+            // 判断待匹配值是否符合含有通配符的匹配规则
             return value.startsWith(pattern.substring(0, i));
         }
-        // "*" is at the beginning
+
+        // 通配符 "*" 在匹配规则头部，如：*。168.25.100
         else if (i == 0) {
+            // 判断待匹配值是否符合含有通配符的匹配规则
             return value.endsWith(pattern.substring(i + 1));
         }
-        // "*" is in the middle
+
+        // 通配符 "*" 在匹配规则中间位置
         else {
+            // 以通配符 * 分隔，获取前后缀
             String prefix = pattern.substring(0, i);
             String suffix = pattern.substring(i + 1);
+
+            // 判断匹配值是否以 前缀开头且以后缀结尾
             return value.startsWith(prefix) && value.endsWith(suffix);
         }
     }
 
     /**
-     *
      * 两个URL的服务键关键参数是否匹配【组 + 接口 + 版本】
+     *
      * @param pattern
      * @param value
      * @return

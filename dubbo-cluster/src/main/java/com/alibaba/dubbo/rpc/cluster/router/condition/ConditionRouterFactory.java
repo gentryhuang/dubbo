@@ -21,11 +21,13 @@ import com.alibaba.dubbo.rpc.cluster.Router;
 import com.alibaba.dubbo.rpc.cluster.RouterFactory;
 
 /**
- * ConditionRouterFactory
- *
+ * ConditionRouterFactory，条件路由工厂
  */
 public class ConditionRouterFactory implements RouterFactory {
 
+    /**
+     * 拓展名
+     */
     public static final String NAME = "condition";
 
     @Override

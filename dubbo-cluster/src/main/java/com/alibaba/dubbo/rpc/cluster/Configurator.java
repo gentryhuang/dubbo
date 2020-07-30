@@ -20,20 +20,23 @@ import com.alibaba.dubbo.common.URL;
 
 /**
  * Configurator. (SPI, Prototype, ThreadSafe)
- *
+ * <p>
+ * 配置规则接口，实现了Comparable接口，可排序
+ * 说明：
+ * 1 一个Configurator对象，对应一条配置规则。Configurator有优先级的要求，所以实现了Comparable接口
+ * 2 配置规则URL格式同Dubbo的URL
  */
 public interface Configurator extends Comparable<Configurator> {
 
     /**
-     * get the configurator url.
+     * 获得配置URL，里面带有配置规则
      *
      * @return configurator url.
      */
     URL getUrl();
 
     /**
-     * Configure the provider url.
-     * O
+     * 设置配置规则到指定URl中
      *
      * @param url - old rovider url.
      * @return new provider url.

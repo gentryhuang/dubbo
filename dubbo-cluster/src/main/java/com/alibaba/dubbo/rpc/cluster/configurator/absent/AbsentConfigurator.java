@@ -20,11 +20,17 @@ import com.alibaba.dubbo.common.URL;
 import com.alibaba.dubbo.rpc.cluster.configurator.AbstractConfigurator;
 
 /**
- * AbsentConfigurator
- *
+ * AbsentConfigurator，不存在时添加，即当url的parameters部分中不存在配置Url的parameters部分的键值对参数，才会添加，存在则使用url自己的
+ * 说明：
+ * 目前dubbo-admin项目暂时未使用 absent的配置规则
  */
 public class AbsentConfigurator extends AbstractConfigurator {
 
+    /**
+     * 构造方法会调用父类的构造方法
+     *
+     * @param url
+     */
     public AbsentConfigurator(URL url) {
         super(url);
     }

@@ -20,6 +20,9 @@ import com.alibaba.dubbo.rpc.cluster.Merger;
 
 import java.lang.reflect.Array;
 
+/**
+ * ArrayMerger
+ */
 public class ArrayMerger implements Merger<Object[]> {
 
     public static final ArrayMerger INSTANCE = new ArrayMerger();

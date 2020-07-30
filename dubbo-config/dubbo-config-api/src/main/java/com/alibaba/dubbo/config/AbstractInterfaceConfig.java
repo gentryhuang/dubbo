@@ -371,6 +371,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @param interfaceClass
      */
     protected void checkStubAndMock(Class<?> interfaceClass) {
+
         if (ConfigUtils.isNotEmpty(local)) {
             Class<?> localClass = ConfigUtils.isDefault(local) ? ReflectUtils.forName(interfaceClass.getName() + "Local") : ReflectUtils.forName(local);
             if (!interfaceClass.isAssignableFrom(localClass)) {
@@ -393,19 +394,33 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                 throw new IllegalStateException("No such constructor \"public " + localClass.getSimpleName() + "(" + interfaceClass.getName() + ")\" in local implementation class " + localClass.getName());
             }
         }
+
+        // mock 配置校验
         if (ConfigUtils.isNotEmpty(mock)) {
+            // 如果mock以 'return' 开头，则去掉该前缀
             if (mock.startsWith(Constants.RETURN_PREFIX)) {
+                // 获取return 指定的内容
                 String value = mock.substring(Constants.RETURN_PREFIX.length());
+
                 try {
+                    // 解析return指定的内容，并转换成对应的返回类型
                     MockInvoker.parseMockValue(value);
+
                 } catch (Exception e) {
                     throw new IllegalStateException("Illegal mock json value in <dubbo:service ... mock=\"" + mock + "\" />");
                 }
+
+                // 不是以 'return' 开头
             } else {
+                // 获得Mock类
                 Class<?> mockClass = ConfigUtils.isDefault(mock) ? ReflectUtils.forName(interfaceClass.getName() + "Mock") : ReflectUtils.forName(mock);
+
+                // 校验是否实现接口
                 if (!interfaceClass.isAssignableFrom(mockClass)) {
                     throw new IllegalStateException("The mock implementation class " + mockClass.getName() + " not implement interface " + interfaceClass.getName());
                 }
+
+                // 校验是否有默认的构造方法
                 try {
                     mockClass.getConstructor(new Class<?>[0]);
                 } catch (NoSuchMethodException e) {

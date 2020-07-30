@@ -29,10 +29,14 @@ import java.util.List;
  * <a href="http://en.wikipedia.org/wiki/Directory_service">Directory Service</a>
  *
  * @see com.alibaba.dubbo.rpc.cluster.Cluster#join(Directory)
+ * 说明：
+ * 一个Directory仅对应一个服务类型，对应该服务类型的多个服务
  */
 public interface Directory<T> extends Node {
 
     /**
+     * 获得服务类型，如：com.alibaba.dubbo.demo.DemoService
+     * <p>
      * get service type.
      *
      * @return service type.
@@ -40,6 +44,8 @@ public interface Directory<T> extends Node {
     Class<T> getInterface();
 
     /**
+     * 获得所有服务Invoker 集合
+     * <p>
      * list invokers.
      *
      * @return invokers

@@ -33,9 +33,11 @@ import java.util.List;
  * Usually used to write audit logs and other operations
  *
  * <a href="http://en.wikipedia.org/wiki/Fail-safe">Fail-safe</a>
- *
+ * <p>
+ * 失败安全，出现异常时，仅打印日志，不抛出异常。给调用方返回一个空的RpcResult对象
  */
 public class FailsafeClusterInvoker<T> extends AbstractClusterInvoker<T> {
+
     private static final Logger logger = LoggerFactory.getLogger(FailsafeClusterInvoker.class);
 
     public FailsafeClusterInvoker(Directory<T> directory) {
@@ -45,12 +47,20 @@ public class FailsafeClusterInvoker<T> extends AbstractClusterInvoker<T> {
     @Override
     public Result doInvoke(Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         try {
+
+            // 校验候选Invoker 列表是否为空，为空则抛出异常
             checkInvokers(invokers, invocation);
+
+            // 从候选Invoker集合中选择一个Invoker 【粘滞Invoker不能用，会使用负载均衡器】
             Invoker<T> invoker = select(loadbalance, invocation, invokers, null);
+
+            // 执行Rpc调用
             return invoker.invoke(invocation);
+
+            // 忽略异常
         } catch (Throwable e) {
             logger.error("Failsafe ignore exception: " + e.getMessage(), e);
-            return new RpcResult(); // ignore
+            return new RpcResult();
         }
     }
 }

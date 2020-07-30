@@ -596,8 +596,9 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
          */
         URL url = new URL(name, host, port, (contextPath == null || contextPath.length() == 0 ? "" : contextPath + "/") + path, map);
 
+        // 如果存在当前协议对应的 ConfiguratorFactory 扩展实现，就创建配置规则器 Configurator，将配置规则应用到url todo 这里应该不会存在把？
         if (ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class).hasExtension(url.getProtocol())) {
-            // 加载ConfiguratorFactory ，并生成Configurator 配置 url    todo 不知道有啥用
+            // 加载ConfiguratorFactory ，并生成Configurator，将配置规则应用到url中
             url = ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class).getExtension(url.getProtocol()).getConfigurator(url).configure(url);
         }
 

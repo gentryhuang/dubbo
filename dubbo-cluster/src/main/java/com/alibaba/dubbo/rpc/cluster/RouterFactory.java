@@ -21,7 +21,7 @@ import com.alibaba.dubbo.common.extension.Adaptive;
 import com.alibaba.dubbo.common.extension.SPI;
 
 /**
- * RouterFactory. (SPI, Singleton, ThreadSafe)
+ * RouterFactory. (SPI, Singleton, ThreadSafe)  Router工厂接口，用户创建Router。 是Dubbo的扩展点，没有默认值
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Routing">Routing</a>
  *
@@ -32,6 +32,8 @@ import com.alibaba.dubbo.common.extension.SPI;
 public interface RouterFactory {
 
     /**
+     * 通过具体的RouterFactory拓展实现创建Router，使用URL.protocol属性加载对应的RouterFactory拓展实现。
+     * <p>
      * Create router.
      *
      * @param url

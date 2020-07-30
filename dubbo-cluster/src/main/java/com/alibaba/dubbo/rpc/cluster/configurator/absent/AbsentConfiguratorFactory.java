@@ -21,8 +21,7 @@ import com.alibaba.dubbo.rpc.cluster.Configurator;
 import com.alibaba.dubbo.rpc.cluster.ConfiguratorFactory;
 
 /**
- * AbsentConfiguratorFactory
- *
+ * AbsentConfiguratorFactory，实现 ConfiguratorFactory 接口，AbsentConfigurator的工厂
  */
 public class AbsentConfiguratorFactory implements ConfiguratorFactory {
 

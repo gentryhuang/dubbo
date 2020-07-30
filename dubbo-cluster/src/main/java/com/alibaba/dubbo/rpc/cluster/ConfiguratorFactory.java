@@ -22,12 +22,17 @@ import com.alibaba.dubbo.common.extension.SPI;
 
 /**
  * ConfiguratorFactory. (SPI, Singleton, ThreadSafe)
- *
+ * <p>
+ * 1  Configurator工厂接口，Dubbo SPI扩展点，没有默认值。
+ * 2  @Adaptive("protocol")注解，基于Dubbo 自适应机制加载对应的ConfiguratorFactory实现，即根据配置规则Url的protocol属性，获取Configurator实现，
+ * 目前配置URL中的协议支持 override和absent，对应的实现分别为：OverrideConfiguratorFactory 和 AbsentConfiguratorFactory
  */
 @SPI
 public interface ConfiguratorFactory {
 
     /**
+     * 创建Configurator 配置规则对象
+     * <p>
      * get the configurator instance.
      *
      * @param url - configurator url.
