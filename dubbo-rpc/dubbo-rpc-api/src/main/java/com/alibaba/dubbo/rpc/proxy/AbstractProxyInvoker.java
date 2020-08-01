@@ -105,7 +105,7 @@ public abstract class AbstractProxyInvoker<T> implements Invoker<T> {
     }
 
     /**
-     * 由创建的实例来复写
+     * 由具体子类覆写 【默认情况使用 JavassistProxyFactory 创建的一个匿名类对象】
      *
      * @param proxy          服务实例
      * @param methodName     方法名

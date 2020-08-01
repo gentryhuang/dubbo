@@ -85,7 +85,7 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
     }
 
     /**
-     * 获得所有服务Invoker 集合
+     * 获得调用信息对应的Invoker 集合
      *
      * @param invocation 调用信息
      * @return Invoker 列表

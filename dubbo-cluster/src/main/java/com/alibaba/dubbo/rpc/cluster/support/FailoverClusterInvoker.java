@@ -86,7 +86,7 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
         // 如果出现调用失败，则重试其他服务。[失败重试机制的核心逻辑]
         for (int i = 0; i < len; i++) {
             /**
-             * 重试时进行重新选择 Invoker列表，避免重试时 Invoker列表已发生改变。需要注意的是：如果列表发生了改变，那么invoked 判断会失效
+             * 重试时： 1 要进行重新选择 Invoker列表，避免重试时 Invoker列表已发生改变。需要注意的是：如果列表发生了改变，那么invoked 判断会失效。 2 校验Invoker是否可用
              */
             if (i > 0) {
                 // 校验Invoker是否销毁
@@ -97,7 +97,7 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
                 checkInvokers(copyinvokers, invocation);
             }
 
-            // 从候选Invoker集合中选择一个Invoker 【粘滞Invoker不能用，会使用负载均衡器】
+            // 从候选Invoker集合中选择一个Invoker 【粘滞Invoker不能用，才会使用负载均衡器】
             Invoker<T> invoker = select(loadbalance, invocation, copyinvokers, invoked);
 
             // 保存选择出来的Invoker

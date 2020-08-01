@@ -109,11 +109,13 @@ public class NettyHandler extends SimpleChannelHandler {
      */
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        // 获取封装了Netty的Channe的 Dubbo的NettyChannel
+        // 获取封装了Netty通道的 Dubbo的NettyChannel
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.getChannel(), url, handler);
         try {
+            // 接收消息
             handler.received(channel, e.getMessage());
         } finally {
+            // 从缓存中移除 Netty通道关联的 Dubbo的NettyChannel
             NettyChannel.removeChannelIfDisconnected(ctx.getChannel());
         }
     }

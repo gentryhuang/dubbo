@@ -329,7 +329,7 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
         if (send_reconnect && !isConnected()) {
             connect();
         }
-        // 获取通道，NettyChannel 实例，其内部channel实例 就是 NioClientSocketChannel 实例
+        // 获取通道，NettyChannel 实例，其内部channel实例就是 NioClientSocketChannel 实例
         Channel channel = getChannel();
         //TODO Can the value returned by getChannel() be null? need improvement.
         if (channel == null || !channel.isConnected()) {

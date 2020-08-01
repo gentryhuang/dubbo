@@ -50,7 +50,7 @@ public class AllChannelHandler extends WrappedChannelHandler {
         // 获取线程池
         ExecutorService cexecutor = getExecutorService();
         try {
-            // 创建ChannelEventRunnable对象，用于将连接事件派发到线程池执行
+            // 创建ChannelEventRunnable对象，用于将连接事件任务派发到线程池执行
             cexecutor.execute(new ChannelEventRunnable(channel, handler, ChannelState.CONNECTED));
         } catch (Throwable t) {
             throw new ExecutionException("connect event", channel, getClass() + " error when process connected event .", t);
@@ -58,15 +58,17 @@ public class AllChannelHandler extends WrappedChannelHandler {
     }
 
     /**
-     * 处理断开事件
+     * 处理断开连接事件
      *
      * @param channel
      * @throws RemotingException
      */
     @Override
     public void disconnected(Channel channel) throws RemotingException {
+        // 获取线程池
         ExecutorService cexecutor = getExecutorService();
         try {
+            // 创建ChannelEventRunnable对象，用于将断开连接事件任务派发到线程池执行
             cexecutor.execute(new ChannelEventRunnable(channel, handler, ChannelState.DISCONNECTED));
         } catch (Throwable t) {
             throw new ExecutionException("disconnect event", channel, getClass() + " error when process disconnected event .", t);
@@ -87,15 +89,17 @@ public class AllChannelHandler extends WrappedChannelHandler {
 
         ExecutorService cexecutor = getExecutorService();
         try {
-            // 将请求和响应消息派发到线程池中处理
+            // 将请求和响应消息派发到线程池中处理，ChannelEventRunnable对象作为任务载体
             cexecutor.execute(new ChannelEventRunnable(channel, handler, ChannelState.RECEIVED, message));
         } catch (Throwable t) {
             //TODO A temporary solution to the problem that the exception information can not be sent to the opposite end after the thread pool is full. Need a refactoring
             //fix The thread pool is full, refuses to call, does not return, and causes the consumer to wait for time out
+
+            // 如果是请求消息，并且出现了线程池满了的异常
             if (message instanceof Request && t instanceof RejectedExecutionException) {
                 Request request = (Request) message;
 
-                // 如果通信方式为双向通信，将错误信息封装到Response 中，并返回给服务消费方
+                // 如果通信方式为双向通信，将错误信息封装到Response 中，并返回给服务消费方。防止消费端等待超时
                 if (request.isTwoWay()) {
                     String msg = "Server side(" + url.getIp() + "," + url.getPort() + ") threadpool is exhausted ,detail msg:" + t.getMessage();
                     Response response = new Response(request.getId(), request.getVersion());

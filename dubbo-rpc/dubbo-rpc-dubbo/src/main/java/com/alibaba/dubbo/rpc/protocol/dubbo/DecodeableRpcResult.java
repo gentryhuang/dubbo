@@ -213,6 +213,7 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
 
                 // 反序列化失败，设置 CLIENT_ERROR 状态到 Response 对象中
                 response.setStatus(Response.CLIENT_ERROR);
+
                 // 设置异常信息
                 response.setErrorMessage(StringUtils.toString(e));
             } finally {

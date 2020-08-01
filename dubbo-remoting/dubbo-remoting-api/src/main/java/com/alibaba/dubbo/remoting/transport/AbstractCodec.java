@@ -43,8 +43,10 @@ public abstract class AbstractCodec implements Codec2 {
      * @throws IOException
      */
     protected static void checkPayload(Channel channel, long size) throws IOException {
+        //  8M
         int payload = Constants.DEFAULT_PAYLOAD;
         if (channel != null && channel.getUrl() != null) {
+            // 获取配置的 允许最大的消息大小，默认 为 8 * 1024 * 1024;  8M
             payload = channel.getUrl().getParameter(Constants.PAYLOAD_KEY, Constants.DEFAULT_PAYLOAD);
         }
         if (payload > 0 && size > payload) {

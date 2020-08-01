@@ -34,7 +34,7 @@ import com.alibaba.dubbo.remoting.exchange.support.DefaultFuture;
 import java.net.InetSocketAddress;
 
 /**
- * ExchangeReceiver  实现ExchangeChannel接口，基于消息头部(Header)的信息交换通道实现类
+ * HeaderExchangeChannel  实现ExchangeChannel接口，基于消息头部(Header)的信息交换通道实现类
  */
 final class HeaderExchangeChannel implements ExchangeChannel {
 
@@ -152,13 +152,13 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         req.setVersion(Version.getProtocolVersion());
         // 需要响应
         req.setTwoWay(true);
-        // 具体数据 todo 待验证是否为 RpcInvocation
+        // 具体数据 为 RpcInvocation
         req.setData(request);
         /**
          *  创建DefaultFuture 对象,该对象在接受到服务端响应的时候会用到。
          *  1 netty从宏观上看是一个异步非阻塞的框架，所以当执行channel.send(req)的时候，其内部执行到netty发送消息时，不会等待结果，直接返回。为了实现“异步转为同步”，使用了DefaultFuture这个辅助类
          *  2 在创建 DefaultFuture对象时，会把该对象放到缓存Map {@link DefaultFuture#FUTURES }
-         *  3 在HeaderExchangeChannel.request(Object request, int timeout)，在还没有等到客户端的响应回来的时候，就直接将future返回了
+         *  3 在NettyClient.request(Object request, int timeout)，在还没有等到客户端的响应回来的时候，就直接将future返回了
          *  4 netty是异步非阻塞的，那么假设现在我发了1w个Request，后来返回来1w个Response，那么怎么对应Request和Response呢？如果对应不上，最起码的唤醒就会有问题。为了解决这个问题提，Request和Response中都有一个属性id，Response中的属性mId就是Request中的mId
          */
         DefaultFuture future = new DefaultFuture(channel, req, timeout);

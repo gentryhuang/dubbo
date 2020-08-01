@@ -10,7 +10,7 @@ import org.apache.dubbo.config.annotation.Service;
  * <p>
  * desc：
  */
-@Service
+@Service(timeout = 500000000)
 public class DemoServiceImpl implements IDemoService {
 
     @Override

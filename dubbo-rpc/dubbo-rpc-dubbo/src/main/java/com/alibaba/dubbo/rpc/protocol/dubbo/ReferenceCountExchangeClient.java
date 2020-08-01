@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * dubbo protocol support class. 实现 ExchangeClient 接口，支持指向计数的信息交换客户端实现类。
+ * dubbo protocol support class. 实现 ExchangeClient 接口，主要实现了引用计数功能。使用装饰器模式。
  */
 @SuppressWarnings("deprecation")
 final class ReferenceCountExchangeClient implements ExchangeClient {
@@ -40,7 +40,7 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
      */
     private final URL url;
     /**
-     * 引用计数变量： 每当该对象被引用一次refenceCount 都会进行自增。 每当close 方法被调用时，referenceCount 就会进行自减
+     * 引用计数变量： 每当该对象被引用一次refenceCount 都会进行自增。 每当close方法被调用时，referenceCount 就会进行自减
      */
     private final AtomicInteger refenceCount = new AtomicInteger(0);
 
@@ -50,19 +50,19 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
      */
     private final ConcurrentMap<String, LazyConnectExchangeClient> ghostClientMap;
     /**
-     * 客户端 【类型是： HeaderExchangeClient】
+     * 客户端 【类型是： HeaderExchangeClient】，被装饰对象
      */
     private ExchangeClient client;
 
     /**
-     * 将HeaderExchangeClient 实例封装为ReferenceCountExchangeClient
+     * 将HeaderExchangeClient 实例封装为ReferenceCountExchangeClient。
      *
      * @param client
      * @param ghostClientMap
      */
     public ReferenceCountExchangeClient(ExchangeClient client, ConcurrentMap<String, LazyConnectExchangeClient> ghostClientMap) {
         this.client = client;
-        // 指向加一
+        // 引用计数递增
         refenceCount.incrementAndGet();
         this.url = client.getUrl();
         if (ghostClientMap == null) {
@@ -217,7 +217,7 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
     }
 
     /**
-     * 引用计数自增，该方法由外部调用
+     * 该方法一般由外部调用，引用计数递增
      */
     public void incrementAndGetCount() {
         refenceCount.incrementAndGet();

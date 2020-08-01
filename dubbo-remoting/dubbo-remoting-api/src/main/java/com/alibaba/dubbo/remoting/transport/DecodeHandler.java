@@ -28,10 +28,11 @@ import com.alibaba.dubbo.remoting.exchange.Response;
 import com.alibaba.dubbo.remoting.transport.dispatcher.ChannelEventRunnable;
 
 /**
- * 实现 AbstractChannelHandlerDelegate 抽象类，解码处理器，处理接收到的消息。
+ * 实现 AbstractChannelHandlerDelegate 抽象类，解码处理器。主要包含了一些解码逻辑。
  * 说明：
- * 1 DecodeHandler 存在的意义就是保证请求或响应对象可在线程池中被解码[该对象在线程池中工作{@link ChannelEventRunnable#handler}]
- * 2 解码完毕后，完全解码后的 Request 对象会继续传给下一个Handler
+ * 1 请求解码可在IO线程上执行，也可在线程池中执行，取决于配置
+ * 2 DecodeHandler 存在的意义就是保证请求或响应对象可在线程池中被解码[该对象在线程池中工作{@link ChannelEventRunnable#handler}]
+ * 3 解码完毕后，完全解码后的 Request 对象会继续传给下一个Handler
  */
 public class DecodeHandler extends AbstractChannelHandlerDelegate {
 
@@ -45,7 +46,7 @@ public class DecodeHandler extends AbstractChannelHandlerDelegate {
      * 覆写了 received(channel,message)方法
      *
      * @param channel
-     * @param message
+     * @param message RpcInvocation 或 RpcResult
      * @throws RemotingException
      */
     @Override

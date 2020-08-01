@@ -106,9 +106,11 @@ public abstract class Wrapper {
     private static AtomicLong WRAPPER_CLASS_COUNTER = new AtomicLong(0);
 
     /**
-     * Wrapper 用于“包裹”目标类，Wrapper 是一个抽象类，仅可通过 getWrapper(Class) 方法创建子类。在创建 Wrapper 子类的过程中，子类代码生成逻辑会对 getWrapper 方法传入的 Class 对象进行解析，
-     * 拿到诸如类方法，类成员变量等信息，以及生成 invokeMethod 方法代码 和其他一些方法代码。代码生成完毕后，通过 Javassist 生成 Class 对象，最后再通过反射创建 Wrapper 实例。
-     * 1 【invokeMethod方法封装了传入的Class的方法】
+     * Wrapper 用于“包裹”目标类，Wrapper 是一个抽象类，仅可通过 getWrapper(Class) 方法创建子类。在创建 Wrapper 子类的过程中，
+     * 子类代码生成逻辑会对 getWrapper 方法传入的 Class 对象进行解析，拿到诸如类方法，类成员变量等信息，以及生成 invokeMethod 方法代码
+     * 和其他一些方法代码。代码生成完毕后，通过 Javassist 生成 Class 对象，最后再通过反射创建 Wrapper 实例。
+     * 关键一点：
+     * 实现的invokeMethod方法封装了传入的Class的方法
      *
      * @param c Class instance.
      * @return Wrapper instance(not null).
@@ -584,7 +586,7 @@ public abstract class Wrapper {
     }
 
     /**
-     * 调用方法
+     * 抽象方法，Dubbo在运行时会通过 Javassist 框架 为 Wrapper生成实现类，并实现该方法，该方法会根据调用信息调用具体的服务
      *
      * @param instance 被调用的对象
      * @param mn       方法名

@@ -58,7 +58,7 @@ public class NettyClient extends AbstractClient {
     private ClientBootstrap bootstrap;
 
     /**
-     * Netty 通道 - 连接到Netty的服务端后，该属性会被赋值为该链接，即Netty的通道
+     * Netty 通道 - 连接到Netty的服务端后，该属性的值就是对应的链接，即Netty的通道 {@link org.jboss.netty.channel.Channel}
      */
     private volatile Channel channel;
 
@@ -208,6 +208,7 @@ public class NettyClient extends AbstractClient {
         if (c == null || !c.isConnected()) {
             return null;
         }
+        //获取NettyChannel对象，内部封装了Netty的Channel通道
         return NettyChannel.getOrAddChannel(c, getUrl(), this);
     }
 

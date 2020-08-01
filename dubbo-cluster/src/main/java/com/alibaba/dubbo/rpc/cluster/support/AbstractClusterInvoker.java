@@ -366,7 +366,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             loadbalance = ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(invokers.get(0).getUrl().getMethodParameter(RpcUtils.getMethodName(invocation), Constants.LOADBALANCE_KEY, Constants.DEFAULT_LOADBALANCE));
         }
 
-        // 如果是异步操作，则添加InvocationId 调用编号
+        // 如果是异步操作，则添加Id 调用编号 到 invocation的attachment 中
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
 
         // 执行调用，具体的由子Cluster的Invoker 实现类执行

@@ -117,7 +117,7 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
     @Override
     public Object decode(Channel channel, InputStream input) throws IOException {
 
-        // 获取序列化方式
+        // 获取序列化方式，然后通过反序列化得到所需的调用信息
         ObjectInput in = CodecSupport.getSerialization(channel.getUrl(), serializationType).deserialize(channel.getUrl(), input);
 
         /** 和编码设置的参数对应，写什么读什么 */
@@ -135,11 +135,14 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
         setMethodName(in.readUTF());
 
         try {
+            // 参数列表
             Object[] args;
+            // 参数类型列表
             Class<?>[] pts;
 
             // 通过反序列化得到参数类型字符串，如： Ljava/lang/String
             String desc = in.readUTF();
+
             if (desc.length() == 0) {
                 pts = DubboCodec.EMPTY_CLASS_ARRAY;
                 args = DubboCodec.EMPTY_OBJECT_ARRAY;

@@ -37,7 +37,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * 实现 ResponseFuture 接口，默认响应Future 实现类。同时，它也是所有DefaultFuture的管理容器
+ * 实现 ResponseFuture 接口，默认响应Future 实现类。同时，它也是所有DefaultFuture的管理容器，因为会把自身引用保存进来
  */
 public class DefaultFuture implements ResponseFuture {
 
@@ -52,7 +52,7 @@ public class DefaultFuture implements ResponseFuture {
 
     /**
      * Future 集合
-     * key: 请求编号
+     * key: 请求编号id
      * value: DefaultFuture
      */
     private static final Map<Long, DefaultFuture> FUTURES = new ConcurrentHashMap<Long, DefaultFuture>();
@@ -117,9 +117,10 @@ public class DefaultFuture implements ResponseFuture {
     public DefaultFuture(Channel channel, Request request, int timeout) {
         this.channel = channel;
         this.request = request;
+        // 设置请求id，这个id是和响应关联的，非常重要
         this.id = request.getId();
         this.timeout = timeout > 0 ? timeout : channel.getUrl().getPositiveParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
-        // put into waiting map.
+        // put into waiting map. 加入 <Long, DefaultFuture> 映射关系到 FUTURES 中
         FUTURES.put(id, this);
         CHANNELS.put(id, channel);
     }
@@ -216,7 +217,11 @@ public class DefaultFuture implements ResponseFuture {
             try {
                 // 等待完成或超时
                 while (!isDone()) {
+
+                    // 调用结果没有返回，就等待指定的时间
                     done.await(timeout, TimeUnit.MILLISECONDS);
+
+                    // 如果调用结果成功返回，或等待超时，跳出while循环，继续执行后面逻辑
                     if (isDone() || System.currentTimeMillis() - start > timeout) {
                         break;
                     }
@@ -246,6 +251,10 @@ public class DefaultFuture implements ResponseFuture {
         CHANNELS.remove(id);
     }
 
+    /**
+     * 判断调用结果是否返回，是判断 response 字段是否为空
+     * @return
+     */
     @Override
     public boolean isDone() {
         return response != null;

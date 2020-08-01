@@ -116,7 +116,7 @@ final class NettyChannel extends AbstractChannel {
         boolean success = true;
         int timeout = 0;
         try {
-            // 这里已经是netty的东西了，发送消息（包含请求和响应消息）
+            // 这里已经是netty的东西了，发送消息（可以是请求消息，也可以是响应消息）
             ChannelFuture future = channel.write(message);
             /**
              * sent 的值源于 <dubbo:method sent="true/false"/> 中 sent 的配置值：
@@ -125,6 +125,7 @@ final class NettyChannel extends AbstractChannel {
              * 3 默认情况下，sent = false
              */
             if (sent) {
+                // 获取超时时间
                 timeout = getUrl().getPositiveParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
                 // 等待消息发出，若在规定时间没能发出，success将会被赋值为 false
                 success = future.await(timeout);

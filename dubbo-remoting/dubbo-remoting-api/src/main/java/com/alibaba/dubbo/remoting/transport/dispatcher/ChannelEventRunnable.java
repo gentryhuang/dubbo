@@ -59,11 +59,11 @@ public class ChannelEventRunnable implements Runnable {
     @Override
     public void run() {
 
-        // 检测通道状态，对于请求或响应消息，此时 state = RECEIVED
+        // 检测通道状态，如果是请求或响应消息， 那么state = RECEIVED
         if (state == ChannelState.RECEIVED) {
             try {
 
-                // 将 channel 和 message 传递给 ChannelHandler 对象，用于后续的调用
+                // 将 channel 和 message 传递给 ChannelHandler 对象，用于后续的调用。todo 这里的 ChannelHandler 就是 DecodeHandler
                 handler.received(channel, message);
             } catch (Exception e) {
                 logger.warn("ChannelEventRunnable handle " + state + " operation error, channel is " + channel

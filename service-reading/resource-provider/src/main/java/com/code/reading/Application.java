@@ -19,7 +19,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class Application {
     public static void main(String[] args) {
         SpringApplication springApplication = new  SpringApplication(Application.class);
-        springApplication.setBannerMode(Banner.Mode.CONSOLE);
+        springApplication.setBannerMode(Banner.Mode.LOG);
         springApplication.setWebApplicationType(WebApplicationType.SERVLET);
         springApplication.run(args);
     }

@@ -138,6 +138,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
             // 封装请求状态和结果
             res.setStatus(Response.OK);
             res.setResult(result);
+
         } catch (Throwable e) {
 
             // 若调用过程出现异常，则设置 SERVICE_ERROR，表示服务端异常
@@ -244,16 +245,20 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
 
             // 如果是请求 【服务端收到客户端的请求】
             if (message instanceof Request) {
+
                 // handle request.
                 Request request = (Request) message;
+
                 // 处理事件请求
                 if (request.isEvent()) {
                     handlerEvent(channel, request);
 
                     // 处理普通请求
                 } else {
+
                     // 需要响应，要将响应写回请求方
                     if (request.isTwoWay()) {
+
                         Response response = handleRequest(exchangeChannel, request);
 
                         // 将调用结果返回给服务消费端  todo 问题： 1 channel 类型 ？
@@ -268,6 +273,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
                 // 处理响应 【客户端收到服务端的响应】
             } else if (message instanceof Response) {
                 handleResponse(channel, (Response) message);
+
                 // 处理String
             } else if (message instanceof String) {
 

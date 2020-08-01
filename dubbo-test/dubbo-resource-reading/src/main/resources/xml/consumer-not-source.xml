@@ -9,7 +9,7 @@
        http://dubbo.apache.org/schema/dubbo/dubbo.xsd">
 
     <!-- 两个以上会报错。 协议，注册中心可以多个，以及服务提供者可以多个 -->
-    <dubbo:application name="xml-demo-consumer"/>
+    <dubbo:application name="xml-remote-consumer"/>
 
     <!-- 注册中心 - zk -->
      <dubbo:registry address="zookeeper://127.0.0.1:2181"/>
@@ -19,7 +19,7 @@
 
     <!-- 引入服务-->
     <!-- 引入远程服务 -->
-    <dubbo:reference interface="com.code.reading.service.IDemoService" id="notSourceDemoService" check="false"/>
+    <dubbo:reference interface="com.code.reading.service.IDemoService" id="remoteDemoService" check="false"/>
 
 
 </beans>

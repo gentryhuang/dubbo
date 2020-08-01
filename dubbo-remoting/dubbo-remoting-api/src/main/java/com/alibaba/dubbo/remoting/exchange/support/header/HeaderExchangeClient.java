@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * DefaultMessageClient
  * <p>
- * 实现 ExchangeClient 接口，基于消息头部( Header )的信息交换客户端实现类。
+ * 实现 ExchangeClient 接口，基于消息头部( Header )的信息交换客户端实现类。主要实现了心跳逻辑
  */
 public class HeaderExchangeClient implements ExchangeClient {
 
@@ -54,7 +54,7 @@ public class HeaderExchangeClient implements ExchangeClient {
      */
     private final Client client;
     /**
-     * 信息交换通道 [类型：HeaderExchangeChannel]
+     * 信息交换通道 [类型：HeaderExchangeChannel]，被装饰对象
      */
     private final ExchangeChannel channel;
     /**
