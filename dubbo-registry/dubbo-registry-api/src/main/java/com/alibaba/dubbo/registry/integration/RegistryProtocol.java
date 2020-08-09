@@ -395,7 +395,7 @@ public class RegistryProtocol implements Protocol {
         // 分组聚合 group="a,b" or group="*"
         if (group != null && group.length() > 0) {
             if ((Constants.COMMA_SPLIT_PATTERN.split(group)).length > 1 || "*".equals(group)) {
-                // 通过SPI加载MergeableCluster实例，并调用doRefer继续执行引用服务逻辑。【不同下面的，这里调用#getMergeableCluster()方法，获得可合并的Cluster对象】
+                // 通过SPI加载MergeableCluster实例，并调用doRefer继续执行引用服务逻辑。【注意：这里调用#getMergeableCluster()方法，获得可合并的Cluster对象】
                 return doRefer(getMergeableCluster(), registry, type, url);
             }
         }
@@ -422,7 +422,6 @@ public class RegistryProtocol implements Protocol {
         /**
          * 1 创建RegistryDirectory对象【服务目录】，并设置注册中心到它的属性，该对象包含了注册中心的所有服务提供者 List<Invoker>
          * 2 其中在其父类AbstractDirectory中会创建List<Router>routers
-         *
          */
         RegistryDirectory<T> directory = new RegistryDirectory<T>(type, url);
         // 设置注册中心和协议

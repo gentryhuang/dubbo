@@ -29,17 +29,17 @@ import java.util.List;
 public class DubboBootstrap {
 
     /**
-     * The list of ServiceConfig
+     * 服务配置对象列表
      */
     private List<ServiceConfig> serviceConfigList;
 
     /**
-     * Whether register the shutdown hook during start?
+     * 启动期间是否注册 钩子
      */
     private final boolean registerShutdownHookOnStart;
 
     /**
-     * The shutdown hook used when Dubbo is running under embedded environment
+     * 在嵌入式环境下[Main方法]运行Dubbo时使用的 钩子
      */
     private DubboShutdownHook shutdownHook;
 
@@ -67,38 +67,52 @@ public class DubboBootstrap {
         return this;
     }
 
+    /**
+     * dubbo引导程序 - start
+     * 1 是否注册shutdown hook
+     * 2 服务暴露
+     */
     public void start() {
+        // 启动期间是否注册过shutdown hook
         if (registerShutdownHookOnStart) {
             registerShutdownHook();
         } else {
-            // DubboShutdown hook has been registered in AbstractConfig,
-            // we need to remove it explicitly
+            // 如果DubboShutdown hook 已经注册到系统中，需要移除掉
             removeShutdownHook();
         }
+        // 循环服务配置对象，依次进行服务暴露
         for (ServiceConfig serviceConfig: serviceConfigList) {
             serviceConfig.export();
         }
     }
 
+    /**
+     * dubbo引导程序 - stop
+     * 1 取消服务暴露
+     * 2
+     */
     public void stop() {
         for (ServiceConfig serviceConfig: serviceConfigList) {
             serviceConfig.unexport();
         }
+        // 执行 shutdown hook 释放资源
         shutdownHook.destroyAll();
+
+        // 如果启动期已经注册过，则从系统中移除 todo ??? 为什么还要注册到系统，直接根据spring销毁事件然后执行释放任务不就可以了吗？
         if (registerShutdownHookOnStart) {
             removeShutdownHook();
         }
     }
 
     /**
-     * Register the shutdown hook
+     * 注册 shutdown hook
      */
     public void registerShutdownHook() {
         Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
 
     /**
-     * Remove this shutdown hook
+     * 移除 shutdown hook
      */
     public void removeShutdownHook() {
         try {

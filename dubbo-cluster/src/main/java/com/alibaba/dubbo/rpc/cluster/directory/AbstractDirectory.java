@@ -55,7 +55,7 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
 
     /**
      * 消费者 URL
-     * 注意：如果没有显示嗲用构造方法，那么该属性的值为 url的值
+     * 注意：如果没有显示调用用构造方法，那么该属性的值为 url的值
      */
     private volatile URL consumerUrl;
 

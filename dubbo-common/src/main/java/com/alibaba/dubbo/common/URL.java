@@ -100,7 +100,7 @@ public final class URL implements Serializable {
      */
     private final String path;
     /**
-     * 参数集合（实际上就是Service对应的配置项，该属性通过AbstractConfig#appendParameter方法生成的）
+     * 参数集合
      */
     private final Map<String, String> parameters;
 

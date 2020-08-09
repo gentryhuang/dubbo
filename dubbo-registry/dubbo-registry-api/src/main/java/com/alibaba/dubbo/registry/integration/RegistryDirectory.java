@@ -137,7 +137,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     private volatile List<Configurator> configurators;
 
     /**
-     * URL串和服务提供者Invoker的映射
+     * URL串和服务提供者Invoker的映射，注意：String为没有合并消费端参数的URL串
      * <p>
      * Map<url, Invoker> cache service url to invoker mapping.
      */
@@ -369,7 +369,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
 
     /**
-     * 转换invokerUrl列表 为Invoker Map 的转换规则如下：
+     * 转换invokerUrl列表 为Invoker Map集合 的转换规则如下：
      * 1 如果url【invokerUrls】 已经被转换为 invoker ，则不再重新引用，直接从缓存中获取，注意如果 url 中任何一个参数变更也会重新引用
      * 2 如果传入的invoker列表[invokerUrls]不为空，则表示最新的Invoker 列表
      * 3 如果传入的invokerUrl列表为空，则说明只是override规则或者route规则发生改变，需要重新交叉对比，决定是否需要重新引用
@@ -629,6 +629,8 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
 
 
             // 如果服务端 URL 发生改变，则重新引用 【是否改变： 看缓存urlInvokerMap中是否包含变更的URL串，或者缓存urlInvokerMap 为空】
+
+            // 缓存key为没有合并消费端参数的URL，不管消费端如何合并参数，如果服务端URL发生变化，则重新refer
             // Cache key is url that does not merge with consumer side parameters, regardless of how the consumer combines parameters, if the server url changes, then refer again
             Map<String, Invoker<T>> localUrlInvokerMap = this.urlInvokerMap;
             Invoker<T> invoker = localUrlInvokerMap == null ? null : localUrlInvokerMap.get(key);

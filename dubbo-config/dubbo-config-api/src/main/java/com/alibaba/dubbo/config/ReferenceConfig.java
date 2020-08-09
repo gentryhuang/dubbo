@@ -69,7 +69,9 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
      */
     private static final Protocol refprotocol = ExtensionLoader.getExtensionLoader(Protocol.class).getAdaptiveExtension();
 
-
+    /**
+     * 自适应 Cluster 拓展实现
+     */
     private static final Cluster cluster = ExtensionLoader.getExtensionLoader(Cluster.class).getAdaptiveExtension();
 
     /**
@@ -80,8 +82,13 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
      * 服务引用URL数组
      */
     private final List<URL> urls = new ArrayList<URL>();
-    // interface name
+    /**
+     * 服务接口名
+     */
     private String interfaceName;
+    /**
+     * 服务接口
+     */
     private Class<?> interfaceClass;
     // client type
     private String client;
@@ -226,6 +233,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         // 是否是泛化接口的实现，如果是泛化接口实现的话，就直接设置当前接口为 GenericService.class
         if (ProtocolUtils.isGeneric(getGeneric())) {
             interfaceClass = GenericService.class;
+
             // 普通接口的实现
         } else {
             try {
@@ -234,6 +242,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
             } catch (ClassNotFoundException e) {
                 throw new IllegalStateException(e.getMessage(), e);
             }
+
             // 校验接口和方法
             checkInterfaceAndMethods(interfaceClass, methods);
         }
@@ -277,6 +286,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 resolve = properties.getProperty(interfaceName);
             }
         }
+
         // 设置直连提供者的 url
         if (resolve != null && resolve.length() > 0) {
             url = resolve;
@@ -288,7 +298,9 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                 }
             }
         }
-        // 不通过系统属性指定，就使用配置的（在配置的前提下），如：<dubbo:reference id="xxxService" interface="com.alibaba.xxx.XxxService" url="dubbo://localhost:20890" />
+
+
+        // 不通过系统属性指定，就使用配置的直连（在配置的前提下），如：<dubbo:reference id="xxxService" interface="com.alibaba.xxx.XxxService" url="dubbo://localhost:20890" />
 
         // 尝试从ConsumerConfig 对象中，读取 application,module,registries,monitor 配置对象
         if (consumer != null) {
@@ -510,7 +522,7 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
                         if (monitorUrl != null) {
                             map.put(Constants.MONITOR_KEY, URL.encode(monitorUrl.toFullString()));
                         }
-                        
+
                         // 注册中心的地址，带上服务引用的配置参数集合map，作为 refer 参数添加到注册中心的URL中，并且需要编码。通过这样的方式，注册中心的URL中，包含了服务引用的配置。
                         urls.add(u.addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map)));
                     }

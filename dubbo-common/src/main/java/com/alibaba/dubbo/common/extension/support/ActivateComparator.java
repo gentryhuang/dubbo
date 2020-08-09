@@ -23,7 +23,7 @@ import com.alibaba.dubbo.common.extension.SPI;
 import java.util.Comparator;
 
 /**
- * OrderComparetor
+ * OrderComparetor，激活扩展排序器： 优先按照before/after属性，然后再按照order属性
  */
 public class ActivateComparator implements Comparator<Object> {
 

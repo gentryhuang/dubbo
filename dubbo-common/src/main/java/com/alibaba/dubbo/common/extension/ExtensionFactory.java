@@ -17,17 +17,17 @@
 package com.alibaba.dubbo.common.extension;
 
 /**
- * ExtensionFactory
+ * ExtensionFactory 扩展工厂，是dubbo的一个扩展点。主要用于获取 扩展实现对象所需的依赖属性 ，然后完成依赖注入
  */
 @SPI
 public interface ExtensionFactory {
 
     /**
-     * Get extension.
+     * Get extension. 获得扩展对象
      *
-     * @param type object type.
-     * @param name object name.
-     * @return object instance.
+     * @param type object type. 扩展接口
+     * @param name object name. 扩展名
+     * @return object instance. 扩展实现实例
      */
     <T> T getExtension(Class<T> type, String name);
 

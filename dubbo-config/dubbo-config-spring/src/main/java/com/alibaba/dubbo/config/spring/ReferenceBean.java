@@ -60,6 +60,7 @@ public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean,
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
+        // dubbo 和 spring容器打通
         SpringExtensionFactory.addApplicationContext(applicationContext);
     }
 

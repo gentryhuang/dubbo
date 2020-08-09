@@ -88,6 +88,7 @@ public class Main {
             // 当配置JVM启动参数带有 -Ddubbo.shutdown.hook=true时，添加关闭的ShutdownHook
             if ("true".equals(System.getProperty(SHUTDOWN_HOOK_KEY))) {
 
+                // 优雅停机
                 Runtime.getRuntime().addShutdownHook(new Thread("dubbo-container-shutdown-hook") {
                     @Override
                     public void run() {

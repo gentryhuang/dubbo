@@ -28,6 +28,9 @@ import org.springframework.context.event.ContextRefreshedEvent;
  */
 public class DubboApplicationListener implements ApplicationListener<ApplicationEvent> {
 
+    /**
+     * Dubbo引导程序
+     */
     private DubboBootstrap dubboBootstrap;
 
     public DubboApplicationListener() {
@@ -38,10 +41,16 @@ public class DubboApplicationListener implements ApplicationListener<Application
         this.dubboBootstrap = dubboBootstrap;
     }
 
+    /**
+     * 监听spring事件
+     * @param applicationEvent
+     */
     @Override
     public void onApplicationEvent(ApplicationEvent applicationEvent) {
+        // spring容器刷新完成
         if (applicationEvent instanceof ContextRefreshedEvent) {
             dubboBootstrap.start();
+            // spring容器销毁
         } else if (applicationEvent instanceof ContextClosedEvent) {
             dubboBootstrap.stop();
         }

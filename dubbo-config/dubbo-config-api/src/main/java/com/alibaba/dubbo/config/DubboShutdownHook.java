@@ -35,7 +35,7 @@ public class DubboShutdownHook extends Thread {
     private static final Logger logger = LoggerFactory.getLogger(DubboShutdownHook.class);
 
     /**
-     * ShutdownHook
+     * ShutdownHook,类属性
      */
     private static final DubboShutdownHook dubboShutdownHook = new DubboShutdownHook("DubboShutdownHook");
 
@@ -86,7 +86,7 @@ public class DubboShutdownHook extends Thread {
          *
          * 说明：
          * 这里的Protocol比较多，大体上可以分两类：
-         * 1 和Registry相关的Protocol，RegistryProtocol关注服务的注册
+         * 1 和Registry相关的Protocol，RegistryProtocol,关注服务的注册
          * 2 具体协议，如 DubboProtocol、httpProtocol等,关注服务的暴露和引用
          */
         ExtensionLoader<Protocol> loader = ExtensionLoader.getExtensionLoader(Protocol.class);

@@ -211,8 +211,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
                     for (String service : services) {
                         service = URL.decode(service);
                         anyServices.add(service);
-                        subscribe(url.setPath(service).addParameters(Constants.INTERFACE_KEY, service,
-                                Constants.CHECK_KEY, String.valueOf(false)), listener);
+                        subscribe(url.setPath(service).addParameters(Constants.INTERFACE_KEY, service, Constants.CHECK_KEY, String.valueOf(false)), listener);
                     }
                 }
 

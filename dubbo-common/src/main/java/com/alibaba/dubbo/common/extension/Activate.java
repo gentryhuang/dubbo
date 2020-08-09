@@ -25,6 +25,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * 1 该注解用于设置扩展实现类被自动激活的加载条件，如：过滤器扩展点有多个实现，那么就可以使用该注解设置激活条件，在获取自动激活扩展实现时需要符合条件才能获取到。
+ * 2 框架通过{@link com.alibaba.dubbo.common.extension.ExtensionLoader}的{@link ExtensionLoader#getActivateExtension}方法获得激活条件的扩展实现集合。
+ * <p>
  * Activate. This annotation is useful for automatically activate certain extensions with the given criteria,
  * for examples: <code>@Activate</code> can be used to load certain <code>Filter</code> extension when there are
  * multiple implementations.
@@ -44,6 +47,8 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.METHOD})
 public @interface Activate {
     /**
+     * group过滤条件。在调用{@link ExtensionLoader#getActivateExtension(URL, String, String)} 方法时，如果传入的group参数符合该注解设置的group属性值，那么就匹配
+     * <p>
      * Activate the current extension when one of the groups matches. The group passed into
      * {@link ExtensionLoader#getActivateExtension(URL, String, String)} will be used for matching.
      *
@@ -53,6 +58,8 @@ public @interface Activate {
     String[] group() default {};
 
     /**
+     * key过滤条件。在调用{@link ExtensionLoader#getActivateExtension(URL, String, String)} 方法时，如果url中的参数中存在该注解设置的key值，那么就匹配。
+     * <p>
      * Activate the current extension when the specified keys appear in the URL's parameters.
      * <p>
      * For example, given <code>@Activate("cache, validation")</code>, the current extension will be return only when
@@ -66,6 +73,8 @@ public @interface Activate {
     String[] value() default {};
 
     /**
+     * 排序属性
+     * <p>
      * Relative ordering info, optional
      *
      * @return extension list which should be put before the current one
@@ -73,6 +82,8 @@ public @interface Activate {
     String[] before() default {};
 
     /**
+     * 排序属性
+     * <p>
      * Relative ordering info, optional
      *
      * @return extension list which should be put after the current one
@@ -80,6 +91,8 @@ public @interface Activate {
     String[] after() default {};
 
     /**
+     * 排序属性
+     * <p>
      * Absolute ordering info, optional
      *
      * @return absolute ordering info

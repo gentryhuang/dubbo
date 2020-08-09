@@ -25,7 +25,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Provide helpful information for {@link ExtensionLoader} to inject dependency extension instance.
+ * 在{@link ExtensionLoader}生成Extension的Adaptive Instance时，为{@link ExtensionLoader}提供信息。自适应扩展标记。
  *
  * @see ExtensionLoader
  * @see URL
@@ -35,6 +35,18 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE, ElementType.METHOD})
 public @interface Adaptive {
     /**
+     * 根据URL的Key获取对应的Value作为自适应拓展名。比如，<code>String[] {"key1", "key2"}</code>，表示
+     * <ul>
+     *   <li>先在URL上找key1的Value作为自适应拓展名；
+     *   <li>key1没有Value，则使用key2的Value作为自适应拓展名。
+     *   <li>key2没有Value，就使用缺省的扩展。即： 如果{@link URL}这些Key都没有Value，使用 用 缺省的扩展（在接口的{@link SPI}中设定的值）
+     *   <li>如果没有设定缺省扩展，则方法调用会抛出{@link IllegalStateException}。
+     * </ul>
+     * <p>
+     * 如果不设置则缺省使用拓展接口类名的点分隔小写字串。如：对于Extension接口{@code com.alibaba.dubbo.xxx.YyyInvokerWrapper}的缺省值为<code>String[] {"yyy.invoker.wrapper"}</code>
+     * <p>
+     * <p>
+     * <p>
      * Decide which target extension to be injected. The name of the target extension is decided by the parameter passed
      * in the URL, and the parameter names are given by this method.
      * <p>
@@ -56,5 +68,14 @@ public @interface Adaptive {
      * @return parameter key names in URL
      */
     String[] value() default {};
+
+    /**
+     * 小结：
+     * 1 一个拓展接口，有且仅有一个 Adaptive 拓展实现类
+     * 2 @Adaptive 注解，可添加类或方法上，分别代表了两种不同的使用方式。
+     *   (1)第一种，标记在类上，代表手动实现它是一个拓展接口的 Adaptive 拓展实现类（使用了装饰者模式）它主要作用于固定已知类。目前 Dubbo 项目里，只有 ExtensionFactory 拓展的实现类 AdaptiveExtensionFactory 和Compiler 拓展的实现AdaptiveCompiler  有这么用。
+     *   (2)第二种，标记在拓展接口的方法上，代表自动生成代码实现该接口的 Adaptive 拓展实现类，拓展的加载逻辑需由框架自动生成。这依赖dubbo的URL
+     */
+
 
 }

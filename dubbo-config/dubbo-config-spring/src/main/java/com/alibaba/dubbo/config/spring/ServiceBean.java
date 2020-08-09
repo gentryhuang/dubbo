@@ -86,7 +86,8 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {// 当前加载的上下文
         this.applicationContext = applicationContext;
-        SpringExtensionFactory.addApplicationContext(applicationContext); // 为Spring拓展工厂注入上下文
+        // 为Spring拓展工厂注入上下文 ,todo dubbo和Spring容器打通
+        SpringExtensionFactory.addApplicationContext(applicationContext);
         if (applicationContext != null) {
             SPRING_CONTEXT = applicationContext;
             try {

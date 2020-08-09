@@ -637,13 +637,15 @@ public class DubboProtocol extends AbstractProtocol {
     /**
      * 销毁所有协议的真正执行逻辑，销毁所有通信 ExchangeClient 和 ExchangeServer
      * 说明：
-     * 为什么要关闭Server和Client，是因为一个应用程序即可能是服务提供者，又是服务消费者，因此都要关闭
+     * 1 为什么要关闭Server和Client，是因为一个应用程序即可能是服务提供者，又是服务消费者，因此都要关闭
+     * 2 这里是先注销了服务提供者，再注销服务消费者，是因为对于一个RPC调用，服务提供者属于上游，先切断上游服务。
      */
     @Override
     public void destroy() {
 
         // 销毁所有通信服务器 ExchangeServer
         for (String key : new ArrayList<String>(serverMap.keySet())) {
+            // 先从缓存中删除通信服务器
             ExchangeServer server = serverMap.remove(key);
             if (server != null) {
                 try {
@@ -651,7 +653,7 @@ public class DubboProtocol extends AbstractProtocol {
                         logger.info("Close dubbo server: " + server.getLocalAddress());
                     }
 
-                    // 在优雅停机的等待时长内关闭
+                    // 在优雅停机的等待时长内关闭 [保证了服务平滑的下线]
                     server.close(ConfigUtils.getServerShutdownTimeout());
                 } catch (Throwable t) {
                     logger.warn(t.getMessage(), t);
@@ -661,6 +663,7 @@ public class DubboProtocol extends AbstractProtocol {
 
         // 销毁所有通信客户端端 ExchangeClient
         for (String key : new ArrayList<String>(referenceClientMap.keySet())) {
+            // 先从缓存中删除通信客户端
             ExchangeClient client = referenceClientMap.remove(key);
             if (client != null) {
                 try {
@@ -668,7 +671,7 @@ public class DubboProtocol extends AbstractProtocol {
                         logger.info("Close dubbo connect: " + client.getLocalAddress() + "-->" + client.getRemoteAddress());
                     }
 
-                    // 在优雅停机的等待时长内关闭
+                    // 在优雅停机的等待时长内关闭 【保证在处理的请求能够尽可能的在优雅停机时间内完成处理】
                     client.close(ConfigUtils.getServerShutdownTimeout());
                 } catch (Throwable t) {
                     logger.warn(t.getMessage(), t);

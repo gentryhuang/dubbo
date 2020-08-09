@@ -33,7 +33,7 @@ public class SpringContainer implements Container {
     private static final Logger logger = LoggerFactory.getLogger(SpringContainer.class);
 
     /**
-     * Spring 配置属性
+     * 指定spring配置文件的地址，在dubbo.properties中 dubbo.spring.config=xxx
      */
     public static final String SPRING_CONFIG = "dubbo.spring.config";
     /**
@@ -42,8 +42,7 @@ public class SpringContainer implements Container {
     public static final String DEFAULT_SPRING_CONFIG = "classpath*:META-INF/spring/*.xml";
 
     /**
-     * Spring 上线文
-     * 静态属性，全局唯一
+     * Spring 上下文 ，静态属性，全局唯一
      */
     static ClassPathXmlApplicationContext context;
 
@@ -68,7 +67,7 @@ public class SpringContainer implements Container {
         // 添加监听器
         context.addApplicationListener(new DubboApplicationListener());
 
-        // 监听容器关闭
+        // 监听容器关闭 [注意停机实现]
         context.registerShutdownHook();
 
         // 刷新Spring容器

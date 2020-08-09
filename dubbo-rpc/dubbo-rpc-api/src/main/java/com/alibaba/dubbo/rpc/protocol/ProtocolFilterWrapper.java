@@ -47,7 +47,7 @@ public class ProtocolFilterWrapper implements Protocol {
      * 创建带Filter链的Invoker 对象
      *
      * @param invoker Invoker对象
-     * @param key     获取URL参数名 【用于获得ServiceConfig或ReferenceConfig配置的自定义过滤器】
+     * @param key     URL中参数名 【如：用于获得ServiceConfig或ReferenceConfig配置的自定义过滤器】
      * @param group   分组 【暴露服务时：group=provider; 引用服务时：group=consumer】
      * @param <T>
      * @return 在执行的时候执行Filter 

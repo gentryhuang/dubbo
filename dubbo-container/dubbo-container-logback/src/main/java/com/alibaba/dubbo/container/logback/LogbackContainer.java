@@ -95,14 +95,14 @@ public class LogbackContainer implements Container {
         Logger rootLogger = loggerContext.getLogger(Logger.ROOT_LOGGER_NAME);
         rootLogger.detachAndStopAllAppenders();
 
-        // appender
+        // 创建日志追加器
         RollingFileAppender<ILoggingEvent> fileAppender = new RollingFileAppender<ILoggingEvent>();
         fileAppender.setContext(loggerContext);
         fileAppender.setName("application");
         fileAppender.setFile(file);
         fileAppender.setAppend(true);
 
-        // policy
+        // 创建滚动策略
         TimeBasedRollingPolicy<ILoggingEvent> policy = new TimeBasedRollingPolicy<ILoggingEvent>();
         policy.setContext(loggerContext);
         policy.setMaxHistory(maxHistory);
@@ -111,7 +111,7 @@ public class LogbackContainer implements Container {
         policy.start();
         fileAppender.setRollingPolicy(policy);
 
-        // encoder
+        // 格式
         PatternLayoutEncoder encoder = new PatternLayoutEncoder();
         encoder.setContext(loggerContext);
         encoder.setPattern("%date [%thread] %-5level %logger (%file:%line\\) - %msg%n");

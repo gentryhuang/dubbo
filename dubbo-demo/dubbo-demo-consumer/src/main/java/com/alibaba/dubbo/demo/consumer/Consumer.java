@@ -19,9 +19,11 @@ package com.alibaba.dubbo.demo.consumer;
 import com.alibaba.dubbo.demo.DemoService;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
+import java.io.IOException;
+
 public class Consumer {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         //Prevent to get IPV6 address,this way only work in debug mode
         //But you can pass use -Djava.net.preferIPv4Stack=true,then it work well whether in debug mode or not
         System.setProperty("java.net.preferIPv4Stack", "true");
@@ -29,13 +31,16 @@ public class Consumer {
         context.start();
         DemoService demoService = (DemoService) context.getBean("demoService"); // get remote service proxy
 
-
-
         while (true) {
             try {
-                System.out.println("5s后将发起调用......");
-                Thread.sleep(5000);
+
+
+                System.out.println("10s后主机将爆炸 💥 💥 💥 ......");
+
+                Thread.sleep(10000);
+
                 String hello = demoService.sayHello("world"); // call remote method
+
                 System.out.println(hello); // get result
 
             } catch (Throwable throwable) {

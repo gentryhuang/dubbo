@@ -24,7 +24,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marker for extension interface
+ * 扩展点接口的标识。
  * <p/>
  * Changes on extension configuration file <br/>
  * Use <code>Protocol</code> as an example, its configuration file 'META-INF/dubbo/com.xxx.Protocol' is changes from: <br/>
@@ -57,7 +57,7 @@ import java.lang.annotation.Target;
 public @interface SPI {
 
     /**
-     * default extension name
+     * @return 缺省扩展名
      */
     String value() default "";
 

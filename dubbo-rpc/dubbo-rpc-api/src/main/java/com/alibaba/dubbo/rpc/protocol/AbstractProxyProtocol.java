@@ -35,7 +35,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * 说明：
  * 1 为其子类HttpProtocol、RestProtocol、HessianProtocol、RmiProtocol、WebServiceProtocol，提供公用的服务暴露、服务引用的 公用方法，
  * 同时定义了一些抽象方法，用于不同子类协议实现类的自定义逻辑
- * 2 注意 DubboProtocol等协议不继承该类，而是直接继承AbstractProtocol
+ * 2 注意 DubboProtocol等协议不继承该类，而是直接继承AbstractProtoco，这也说明了Dubbo协议进行服务暴露和引用和 基于Http协议的协议实现是不同的。 todo 这个区别很重要
  */
 public abstract class AbstractProxyProtocol extends AbstractProtocol {
 
