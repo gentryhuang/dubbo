@@ -39,22 +39,22 @@ import java.util.regex.Pattern;
 public class JavassistCompiler extends AbstractCompiler {
 
     /**
-     * 正则 - 匹配import
+     * 匹配import
      */
     private static final Pattern IMPORT_PATTERN = Pattern.compile("import\\s+([\\w\\.\\*]+);\n");
 
     /**
-     * 正则 - 匹配 extents
+     * 匹配 extents
      */
     private static final Pattern EXTENDS_PATTERN = Pattern.compile("\\s+extends\\s+([\\w\\.]+)[^\\{]*\\{\n");
 
     /**
-     * 正则 - 匹配 implements
+     * 匹配 implements
      */
     private static final Pattern IMPLEMENTS_PATTERN = Pattern.compile("\\s+implements\\s+([\\w\\.]+)\\s*\\{\n");
 
     /**
-     * 正则匹配方法
+     * 正则匹配方法/属性
      */
     private static final Pattern METHODS_PATTERN = Pattern.compile("\n(private|public|protected)\\s+");
 
@@ -72,20 +72,24 @@ public class JavassistCompiler extends AbstractCompiler {
         ClassPool pool = new ClassPool(true);
         // 设置类搜索路径
         pool.appendClassPath(new LoaderClassPath(ClassHelper.getCallerClassLoader(getClass())));
+
         // 匹配import
         Matcher matcher = IMPORT_PATTERN.matcher(source);
         // 引入包名
         List<String> importPackages = new ArrayList<String>();
         // 引入类名
         Map<String, String> fullNames = new HashMap<String, String>();
+
+        // 匹配import，导入依赖包
         while (matcher.find()) {
             String pkg = matcher.group(1);
-            // 引用整个包下的类/接口
+            // 导入整个包下的类/接口
             if (pkg.endsWith(".*")) {
                 String pkgName = pkg.substring(0, pkg.length() - 2);
                 pool.importPackage(pkgName);
                 importPackages.add(pkgName);
-                // 引用指定类/接口
+
+                // 导入指定类/接口
             } else {
                 int pi = pkg.lastIndexOf('.');
                 if (pi > 0) {
@@ -98,6 +102,7 @@ public class JavassistCompiler extends AbstractCompiler {
         }
 
         String[] packages = importPackages.toArray(new String[0]);
+
         // 匹配extends
         matcher = EXTENDS_PATTERN.matcher(source);
         CtClass cls;
@@ -120,6 +125,7 @@ public class JavassistCompiler extends AbstractCompiler {
             // 创建 CtClass 对象
             cls = pool.makeClass(name);
         }
+
         // 匹配 implements
         matcher = IMPLEMENTS_PATTERN.matcher(source);
         if (matcher.find()) {
@@ -141,9 +147,11 @@ public class JavassistCompiler extends AbstractCompiler {
                 cls.addInterface(pool.get(ifaceClass));
             }
         }
+
         // 获得类中的内容，即 { } 内的内容
         String body = source.substring(source.indexOf("{") + 1, source.length() - 1);
-        // 匹配 method ，使用分隔的方式，实际上，分隔出来的不仅仅有方法。
+
+        // 匹配 方法、属性
         String[] methods = METHODS_PATTERN.split(body);
         for (String method : methods) {
             method = method.trim();
@@ -160,7 +168,8 @@ public class JavassistCompiler extends AbstractCompiler {
                 }
             }
         }
-        // 生成类，JavassistCompiler.class.getProtectionDomain() 用于设置保护
+
+        // 生成类
         return cls.toClass(ClassHelper.getCallerClassLoader(getClass()), JavassistCompiler.class.getProtectionDomain());
     }
 

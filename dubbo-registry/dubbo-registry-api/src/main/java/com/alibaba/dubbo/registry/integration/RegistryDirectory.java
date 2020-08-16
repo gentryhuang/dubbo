@@ -96,7 +96,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
     private final Map<String, String> queryMap;
     /**
      * 原始的目录URL
-     * 如：zookeeper://192.168.100.1:2181/xxxx
+     * 如：zookeeper://127.0.0.1:2181/com.alibaba.dubbo.registry.RegistryService?application=demo-consumer&check=false&dubbo=2.0.2&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello&pid=2379&qos.port=33333&register.ip=10.1.14.50&side=consumer&timestamp=1597137172748
      */
     private final URL directoryUrl;
     /**
@@ -381,13 +381,13 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
      * 1 终极目标就是初始化RegistryDirectory的两个属性： urlInvokerMap和methodInvokerMap
      * 2 该方法也是保证RegistryDirectory 随注册中心服务配置变更而变化的关键
      *
-     * @param invokerUrls
+     * @param invokerUrls  .../providers 路径下的子路径列表
      */
     private void refreshInvoker(List<URL> invokerUrls) {
         /**
          * 当invokerUrls集合大小为1，并且协议是 empty://，说明所有的服务都已经下线了，即禁用所有服务。如果使用注册中心为 Zookeeper，可参见 {@link ZookeeperRegistry#toUrlsWithEmpty}
          *
-         * todo 当订阅URL对应的没有数据变更时（没有数据变更也会创建一个empty协议的URL），不需要重新引入服务。把相关的缓存删除即可，这个是理解错误的，带调试的时候分析为什么之前理解错了？？？？
+         * todo 当订阅URL对应的没有数据变更时（没有数据变更也会创建一个empty协议的URL），不需要重新引入服务。把相关的缓存删除即可，这个是理解错误的，待调试的时候分析为什么之前理解错了？？？？
          */
         if (invokerUrls != null && invokerUrls.size() == 1 && invokerUrls.get(0) != null && Constants.EMPTY_PROTOCOL.equals(invokerUrls.get(0).getProtocol())) {
             // 设置禁止访问，因为没有服务提供者
@@ -410,7 +410,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             if (invokerUrls.isEmpty() && this.cachedInvokerUrls != null) {
                 invokerUrls.addAll(this.cachedInvokerUrls);
 
-                // 传入的invokerUrls非空，说明服务提供者发生了改变，此时更新 缓存的服务提供者Invoker的URL集合 cachedInvokerUrls
+                // 传入的invokerUrls非空，说明服务提供者发生了改变或第一次全量拉取数据，此时更新 缓存的服务提供者Invoker的URL集合 cachedInvokerUrls
             } else {
 
                 this.cachedInvokerUrls = new HashSet<URL>();
@@ -424,7 +424,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                 return;
             }
 
-            // 将变更的URL列表转成 URL串和服务提供者Invoker的映射
+            // 将变更的URL列表转成 URL串 到 服务提供者Invoker的 映射
             Map<String, Invoker<T>> newUrlInvokerMap = toInvokers(invokerUrls);// Translate url list to Invoker map
 
             // 将上一步得到的 newUrlInvokerMap 转换成 方法名到Invoker列表的映射
@@ -439,7 +439,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             // 如果引用多分组，那么就按照 method + group 聚合Invoker集合
             this.methodInvokerMap = multiGroup ? toMergeMethodInvokerMap(newMethodInvokerMap) : newMethodInvokerMap;
 
-            //  保存为本地缓存 【 服务提供者Invoker的Map，这个属性中保存的Invoker在待用的时候就会取出，很关键】
+            //  保存为本地缓存 【 服务提供者Invoker的Map，这个属性中保存的Invoker在待使用的时候就会取出，很关键】
             this.urlInvokerMap = newUrlInvokerMap;
 
             try {
@@ -614,7 +614,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
                 continue;
             }
 
-            // 合并URL数据
+            // 合并URL数据，即将 配置规则，消费端配置参数合并到服务提供者URl中
             URL url = mergeUrl(providerUrl);
 
             // URL字符串
@@ -673,7 +673,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
             }
         }
 
-        // 情况keys标记集合
+        // 清空keys标记集合
         keys.clear();
 
         // 返回变更URL对应的 InvokerMap

@@ -40,10 +40,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * ConditionRouter，基于条件表达式的Router实现类
+ * ConditionRouter，基于条件表达式的Router实现类,路由规则在发起一次RPC调用前起到过滤目标服务器地址的作用，过滤后的地址列表，将作为消费端最终发起RPC调用的备选地址。
  * 流程说明：
- * 1 对用户配置的路由规则进行解析，得到匹配项集合即其对应的匹配值集合和不匹配值集合，
- * 2 当需要进行匹配的时候，根据已经解析好的规则对消费者URL或服务提供者URL进行匹配，以达到过滤Invoker的目的
+ * 1 对用户配置的路由规则进行解析，得到匹配项集合,即其对应的匹配值集合和不匹配值集合，
+ * 2 当需要进行匹配的时候，根据已经解析好的规则对 消费者URL或服务提供者URL 进行匹配，以达到过滤Invoker的目的，即消费者快要符合哪些规则，提供者要符合哪些规则
  */
 public class ConditionRouter implements Router, Comparable<Router> {
 
@@ -72,12 +72,14 @@ public class ConditionRouter implements Router, Comparable<Router> {
      * 消费者匹配条件集合，通过解析条件表达式规则 '=>' 之前的部分
      * key: 匹配项
      * value: 匹配项对应的匹配对 【包含匹配项对应的 匹配值集合/不匹配值集合 】
+     * 效果：所有参数和消费者的 URL 进行对比，当消费者满足匹配条件时，对该消费者执行后面的过滤规则。
      */
     private final Map<String, MatchPair> whenCondition;
     /**
      * 提供者地址列表的过滤条件，通过解析条件表达式规则 '=>' 之后的部分
      * key: 匹配项
      * value: 匹配项对应的匹配对 【包含匹配项对应的 匹配值集合/不匹配值集合 】
+     * 效果：所有参数和提供者的 URL 进行对比，消费者最终只拿到过滤后的地址列表。
      */
     private final Map<String, MatchPair> thenCondition;
 
@@ -101,7 +103,7 @@ public class ConditionRouter implements Router, Comparable<Router> {
                 throw new IllegalArgumentException("Illegal route rule!");
             }
 
-            // 剔除掉路由规则中的consumer.或者provider todo 为什么？
+            // 剔除掉路由规则中的consumer.或者provider. ，如 consumer.host != 192.168.0.1 & method = * => provider.host != 10.75.25.66 ，剔除调前缀才是真正的规则
             rule = rule.replace("consumer.", "").replace("provider.", "");
 
             // 根据 "=>" 拆分路由规则

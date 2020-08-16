@@ -109,23 +109,30 @@ public abstract class AbstractZookeeperClient<TargetChildListener> implements Zo
 
     /**
      * 1 根据path从ConcurrentMap<String, ConcurrentMap<ChildListener, TargetChildListener>> childListeners获取ConcurrentMap<ChildListener, TargetChildListener>，没有就创建
-     * 2 根据ChildListener获取TargetChildListener，没有就创建，TargetChildListener是真正的监听path的子节点变化的监听器
+     * 2 根据ChildListener获取TargetChildListener，没有就创建，TargetChildListener是真正的监听path的子节点变化的zk监听器对象
      * createTargetChildListener(String path, final ChildListener listener)：创建一个真正的用来执行当path节点的子节点发生变化时的逻辑
      * 3 addTargetChildListener(path, targetListener)：将刚刚创建出来的子节点监听器订阅path的变化，这样之后，path的子节点发生了变化时，TargetChildListener才会执行相应的逻辑。
      * 而实际上TargetChildListener又会调用ChildListener的实现类的childChanged(String parentPath, List<String> currentChilds)方法，而该实现类【ChildListener的实现类】正好是ZookeeperRegistry中实现的匿名内部类，
      * 在该匿名内部类的childChanged(String parentPath, List<String> currentChilds)方法中，调用了ZookeeperRegistry.notify(URL url, NotifyListener listener, List<URL> urls)
+     *
+     * @param path     订阅url 映射的路径
+     * @param listener 订阅url 映射的路径下子节点的监听器
      */
     @Override
     public List<String> addChildListener(String path, final ChildListener listener) {
-        // 1 一顿获取和创建：ConcurrentMap<categorypath, ConcurrentMap<ZookeeperRegistry的内部类ChildListener实例, TargetChildListener>> childListeners，这里主要是创建TargetChildListener
+
+        // 1 获取/创建：ConcurrentMap<categorypath, ConcurrentMap<ZookeeperRegistry的内部类ChildListener实例, TargetChildListener>> childListeners，这里主要是创建TargetChildListener
         ConcurrentMap<ChildListener, TargetChildListener> listeners = childListeners.get(path);
+
         if (listeners == null) {
             childListeners.putIfAbsent(path, new ConcurrentHashMap<ChildListener, TargetChildListener>());
             listeners = childListeners.get(path);
         }
+
         // 获得是否已经有该监听器
         TargetChildListener targetListener = listeners.get(listener);
-        // 监听器不存在，进行创建
+
+        // zk监听器对象不存在，进行创建
         if (targetListener == null) {
             /**
              * 1 创建一个监听path子节点的watcher【CuratorZookeeperClient实现】或 IZkChildListener 【ZkclientZookeeperClient实现】
@@ -134,6 +141,7 @@ public abstract class AbstractZookeeperClient<TargetChildListener> implements Zo
             listeners.putIfAbsent(listener, createTargetChildListener(path, listener));
             targetListener = listeners.get(listener);
         }
+
         // 向 Zookeeper ，真正发起订阅，即为 path添加TargetChildListener监听器实例
         return addTargetChildListener(path, targetListener);
     }

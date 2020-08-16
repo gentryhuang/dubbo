@@ -413,6 +413,13 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         // 把attributes集合添加到StaticContext进行缓存，为了以后的事件通知
         StaticContext.getSystemContext().putAll(attributes);
 
+        try{
+            System.out.println(" ref = createProxy(map); is begin.....");
+            Thread.sleep(5000);
+        }catch (Exception ex){
+
+        }
+
         // 创建Service 代理对象
         ref = createProxy(map);
 

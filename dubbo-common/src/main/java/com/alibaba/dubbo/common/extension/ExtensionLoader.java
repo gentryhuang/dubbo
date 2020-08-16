@@ -111,6 +111,9 @@ public class ExtensionLoader<T> {
 
     /**
      * 扩展点实现工厂，用于向扩展对象中注入依赖属性，一般通过调用 {@link #injectExtension(Object)} 方法进行实现
+     * 特别说明：
+     *  除了ExtensionFactory扩展接口，其余的所有扩展接口的ExtensionLoader对象都会拥有一个自己的扩展工厂，即 objectFactory = AdaptiveExtensionFactory；
+     * @see ExtensionLoader 构造方法
      */
     private final ExtensionFactory objectFactory;
 
@@ -704,7 +707,12 @@ public class ExtensionLoader<T> {
             // dubbo ioc ，向创建的扩展点实现对象注入依赖属性 [todo dubbo ioc实现，进行setter注入]
             injectExtension(instance);
 
-            // 如果当前扩展点存在 Wrapper类型 的扩展实现类，则创建Wrapper实例 【构造方法会包装传进来的instance 对象】，最终返回的是Wrapper实例。[todo dubbo aop实现]
+            /**
+             * 如果当前扩展点存在 Wrapper扩展实现类，则创建Wrapper实例 【构造方法会包装传进来的instance 对象】，最终返回的是Wrapper实例。[todo dubbo aop实现]
+             * 注意：
+             *  如果当前扩展点存在 Wrapper扩展实现类，那么从ExtensionLoader 中获得的实际上是 Wrapper 类的实例，Wrapper 持有了实际的扩展点实现类，因此调用方法时调用的是Wrapper类中的方法，并非直接调用扩展点的真正实现。
+             *  即 如果在Wrapper的方法中不显示调用扩展点的真正实现的话，那么结果一定不是预期的
+             */
             Set<Class<?>> wrapperClasses = cachedWrapperClasses;
             if (wrapperClasses != null && !wrapperClasses.isEmpty()) {
                 for (Class<?> wrapperClass : wrapperClasses) {
@@ -947,7 +955,9 @@ public class ExtensionLoader<T> {
                         try {
 
                             /**
-                             * 拆分 key=value ，name为拓展名 line为拓展实现类名。注意这里name可能为空,这种情况扩展名会自动生成（因为Dubbo SPI兼容Java SPI）
+                             * 拆分 key=value ，name为拓展名 line为拓展实现类名。注意：
+                             * 1 这里name可能为空,这种情况扩展名会自动生成（因为Dubbo SPI兼容Java SPI，Dubbo SPI配置强调key=value格式，应该尽可能遵守规则）
+                             * 2 扩展名只对普通扩展才有意义，对自适应扩展、Wrapper是没用的，之所以要配置，是为了统一dubbo spi配置规则
                              */
 
                             String name = null;
@@ -965,7 +975,7 @@ public class ExtensionLoader<T> {
                             // 加载当前行对应的扩展点配置
                             if (line.length() > 0) {
                                 /**
-                                 * 1 通过反射，根据名称获取扩展点实现类，并指定初始化
+                                 * 1 通过反射，根据名称获取扩展点实现类
                                  * 2 对扩展实现类进行分类缓存
                                  */
                                 loadClass(extensionClasses, resourceURL, Class.forName(line, true, classLoader), name);
@@ -993,7 +1003,7 @@ public class ExtensionLoader<T> {
      * @param extensionClasses 扩展实现类集合
      * @param resourceURL      文件内容资源
      * @param clazz            扩展点实现类
-     * @param name             扩展名
+     * @param name             扩展名  【只对普通扩展才有意义】
      * @throws NoSuchMethodException
      */
     private void loadClass(Map<String, Class<?>> extensionClasses, java.net.URL resourceURL, Class<?> clazz, String name) throws NoSuchMethodException {
@@ -1009,7 +1019,8 @@ public class ExtensionLoader<T> {
         /**
          * 1、自适应扩展类
          * 说明：
-         * 当前扩展点实现类是否标注@Adaptive注解，标记的话就是自适应扩展类，需要缓存到 cachedAdaptiveClass 属性中，然后结束逻辑，即不会进行下面的 Wrapper、普通扩展类以及自动激活类逻辑判断。
+         * （1）当前扩展点实现类是否标注@Adaptive注解，标记的话就是自适应扩展类，直接缓存到 cachedAdaptiveClass 属性中，然后结束逻辑，即不会进行下面的 Wrapper、普通扩展类以及自动激活类逻辑判断。
+         * （2）自适应固定扩展实现类其实不需要配置扩展名，即使配置了也用不到，因为自适应扩展类和自适应扩展对象整个转换闭环都用不到扩展名。之所以配置，是为了统一规则。
          */
         if (clazz.isAnnotationPresent(Adaptive.class)) {
             // 一个扩展点有且仅允许一个自适应扩展实现类，如果符合条件就加入到缓存中，否则抛出异常
@@ -1024,7 +1035,8 @@ public class ExtensionLoader<T> {
             /**
              *  2、Wrapper类型 （该类需要有有一个参数的构造方法，且这个参数类型是当前的扩展点type）
              *  说明：
-             *  当前扩展点实现类如果属于Wrapper类，需要缓存到 cachedWrapperClasses 属性集合中，然后结束逻辑，即不会进行下面的 普通扩展类以及自动激活类逻辑判断。
+             *  （1）当前扩展点实现类如果属于Wrapper类，直接缓存到 cachedWrapperClasses 属性集合中，然后结束逻辑，即不会进行下面的 普通扩展类以及自动激活类逻辑判断。
+             *  （2）Wrapper类其实不需要配置扩展名，即使配置了也用不到。之所以配置，是为了统一规则。
              */
         } else if (isWrapperClass(clazz)) {
             Set<Class<?>> wrappers = cachedWrapperClasses;
@@ -1177,7 +1189,7 @@ public class ExtensionLoader<T> {
         String code = createAdaptiveExtensionClassCode();
         // 获取类加载器
         ClassLoader classLoader = findClassLoader();
-        // 获取Compiler自适应扩展实现类
+        // 获取Compiler自适应扩展对象
         com.alibaba.dubbo.common.compiler.Compiler compiler = ExtensionLoader.getExtensionLoader(com.alibaba.dubbo.common.compiler.Compiler.class).getAdaptiveExtension();
         // 动态编译，生成Class
         return compiler.compile(code, classLoader);
@@ -1500,13 +1512,18 @@ public class ExtensionLoader<T> {
                     codeBuilder.append(ets[i].getCanonicalName());
                 }
             }
+
+            // 方法开始符号
             codeBuilder.append(" {");
 
             // 包括方法体内容
             codeBuilder.append(code.toString());
 
+            // 追加方法结束符号
             codeBuilder.append("\n}");
         }
+
+        // 追加类的结束符号
         codeBuilder.append("\n}");
         if (logger.isDebugEnabled()) {
             logger.debug(codeBuilder.toString());

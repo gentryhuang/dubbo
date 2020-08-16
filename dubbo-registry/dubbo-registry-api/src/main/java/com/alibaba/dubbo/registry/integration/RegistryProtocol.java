@@ -29,6 +29,7 @@ import com.alibaba.dubbo.registry.NotifyListener;
 import com.alibaba.dubbo.registry.Registry;
 import com.alibaba.dubbo.registry.RegistryFactory;
 import com.alibaba.dubbo.registry.RegistryService;
+import com.alibaba.dubbo.registry.support.FailbackRegistry;
 import com.alibaba.dubbo.registry.support.ProviderConsumerRegTable;
 import com.alibaba.dubbo.rpc.Exporter;
 import com.alibaba.dubbo.rpc.Invoker;
@@ -158,7 +159,7 @@ public class RegistryProtocol implements Protocol {
      * 1 服务导出
      * 2 服务注册
      * 3 数据订阅
-     *
+     * <p>
      * 说明：
      * RegistryProtocol通过向注册中心注册OverrideListener监听器，从而集成配置规则到 服务提供者 中
      *
@@ -201,6 +202,7 @@ public class RegistryProtocol implements Protocol {
 
         /** 使用OverrideListener 对象，服务暴露时会订阅配置规则 configurators[为了在服务配置发生变化时，重新导出服务。具体的使用场景应该当我们通过 Dubbo 管理后台修改了服务配置后，Dubbo 得到服务配置被修改的通知，然后重新导出服务] */
 
+        // FIXME 提供者订阅时，会影响同一JVM即暴露服务，又引用同一服务的的场景，因为subscribed以服务名为缓存的key，导致订阅信息覆盖
         // 1）根据registeredProviderUrl来获取 订阅URL : overrideSubscribeUrl 【provider://...?...&category=configurators&check=false】
         final URL overrideSubscribeUrl = getSubscribedOverrideUrl(registeredProviderUrl);
         // 2) 创建OverrideListener 监听器
@@ -446,8 +448,9 @@ public class RegistryProtocol implements Protocol {
 
         /** 向注册中心订阅服务提供者 + 路由规则 + 配置规则节点下的数据，完成订阅后，RegistryDirectory会收到这几个子节点信息
          * 注意：
-         *   第一次发起订阅时会进行一次数据拉取，同时触发RegistryDirectory#notify方法，这里的通知数据是某一个类目的全量数据，如：providers,router，configurators类目数据。
+         * 1 第一次发起订阅时会进行一次数据拉取，同时触发RegistryDirectory#notify方法，这里的通知数据是某一个类目的全量数据，如：providers,router，configurators类目数据。
          *   并且当通知providers数据时，在RegistryDirectory#toInvokers方法内完成Invoker转换
+         * 2 当注册中心宕机，订阅会失败进入catch 逻辑 --->  {@link FailbackRegistry#subscribe(com.alibaba.dubbo.common.URL, com.alibaba.dubbo.registry.NotifyListener)}
          *
          */
         directory.subscribe(subscribeUrl.addParameter(Constants.CATEGORY_KEY,
@@ -455,7 +458,7 @@ public class RegistryProtocol implements Protocol {
                         + "," + Constants.CONFIGURATORS_CATEGORY
                         + "," + Constants.ROUTERS_CATEGORY));
 
-        /**创建Invoker对象 ，可能有多个服务提供者，因此需要将多个服务提供者合并为一个// todo 集群容错
+        /**创建Invoker对象 ，可能有多个服务提供者，因此需要将多个服务提供者合并为一个
          *
          * 由于一个服务可能部署在多台服务器上，这样就会在 providers 产生多个节点，这个时候就需要 Cluster 将多个服务节点合并为一个，并生成一个 Invoker，这一个Invoker代表了多个。
          * Cluster默认为FailoverCluster实例，支持服务调用重试
@@ -539,8 +542,10 @@ public class RegistryProtocol implements Protocol {
         @Override
         public synchronized void notify(List<URL> urls) {
             logger.debug("original override urls: " + urls);
+
             // 获取匹配的规则配置URL列表
             List<URL> matchedUrls = getMatchedUrls(urls, subscribeUrl);
+
             logger.debug("subscribe url: " + subscribeUrl + ", override urls: " + matchedUrls);
             // 没有匹配的
             if (matchedUrls.isEmpty()) {
@@ -557,12 +562,14 @@ public class RegistryProtocol implements Protocol {
             } else {
                 invoker = originInvoker;
             }
-            // 获取服务提供者的URL信息
+
+            // 获取服务提供者的URL信息 ， 从 export 参数获取
             URL originUrl = RegistryProtocol.this.getProviderUrl(invoker);
 
-            // 在doLocalExport方法中已经存放在这里
+            // 在doLocalExport方法中已经存放在这里，获取服务提供者URL串，从export 参数获取
             String key = getCacheKey(originInvoker);
 
+            // 判断服务是否暴露过
             ExporterChangeableWrapper<?> exporter = bounds.get(key);
 
             if (exporter == null) {
@@ -570,13 +577,13 @@ public class RegistryProtocol implements Protocol {
                 return;
             }
 
-            //获得Invoker当前的URL对象，可能已经被之前的配置规则合并过
+            //获得Invoker当前的URL对象，可能已经被之前的配置规则合并过。
             URL currentUrl = exporter.getInvoker().getUrl();
 
-            //基于originUrl，合并配置规则，生成新的 newUrl 对象
+            //基于originUrl，合并配置规则，生成新的 newUrl 对象 。 todo 配置规则生效的地方
             URL newUrl = getConfigedInvokerUrl(configurators, originUrl);
 
-            // 对修改了URL的Invoker重新暴露
+            // 配置规则生效，需要重新暴露服务
             if (!currentUrl.equals(newUrl)) {
                 // 重新将invoker 暴露为exporter
                 RegistryProtocol.this.doChangeLocalExport(originInvoker, newUrl);
@@ -600,7 +607,7 @@ public class RegistryProtocol implements Protocol {
                     overrideUrl = url.addParameter(Constants.CATEGORY_KEY, Constants.CONFIGURATORS_CATEGORY);
                 }
 
-                // 检查是不是要应用到当前服务上
+                // 根据关键属性匹配
                 if (UrlUtils.isMatch(currentSubscribe, overrideUrl)) {
                     result.add(url);
                 }

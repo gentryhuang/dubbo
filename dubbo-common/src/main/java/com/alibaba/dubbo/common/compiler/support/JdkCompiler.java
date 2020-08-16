@@ -55,16 +55,27 @@ import java.util.Set;
  */
 public class JdkCompiler extends AbstractCompiler {
 
+    /**
+     * JavaCompiler 对象
+     */
     private final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
 
     private final DiagnosticCollector<JavaFileObject> diagnosticCollector = new DiagnosticCollector<JavaFileObject>();
 
+    /**
+     * 类加载器
+     */
     private final ClassLoaderImpl classLoader;
-
+    /**
+     * 管理文件的读取/输出位置
+     */
     private final JavaFileManagerImpl javaFileManager;
 
     private volatile List<String> options;
 
+    /**
+     * 构造方法
+     */
     public JdkCompiler() {
         options = new ArrayList<String>();
         options.add("-source");
@@ -100,22 +111,40 @@ public class JdkCompiler extends AbstractCompiler {
         int i = name.lastIndexOf('.');
         String packageName = i < 0 ? "" : name.substring(0, i);
         String className = i < 0 ? name : name.substring(i + 1);
+
+        // 1 创建JavaFileObject 对象
         JavaFileObjectImpl javaFileObject = new JavaFileObjectImpl(className, sourceCode);
-        javaFileManager.putFileForInput(StandardLocation.SOURCE_PATH, packageName,
-                className + ClassUtils.JAVA_EXTENSION, javaFileObject);
+
+        // 2 JavaFileManager 管理类文件的输入和输出位置
+        javaFileManager.putFileForInput(StandardLocation.SOURCE_PATH, packageName, className + ClassUtils.JAVA_EXTENSION, javaFileObject);
+
+        // 3 调用JavaCompiler.CompilationTask 的call方法 把JavaFileObject对象 编译成具体的类
         Boolean result = compiler.getTask(null, javaFileManager, diagnosticCollector, options,
-                null, Arrays.asList(javaFileObject)).call();
+                null, Arrays.asList(javaFileObject))
+                .call();
+
         if (result == null || !result) {
             throw new IllegalStateException("Compilation failed. class: " + name + ", diagnostics: " + diagnosticCollector);
         }
+
+        // 加载生成的类
         return classLoader.loadClass(name);
     }
 
+    /**
+     * 用于把字符串代码包装成一个文件对象，并提供获取二进制流的接口。
+     */
     private static final class JavaFileObjectImpl extends SimpleJavaFileObject {
 
         private final CharSequence source;
         private ByteArrayOutputStream bytecode;
 
+        /**
+         * 构造方法
+         *
+         * @param baseName 类名
+         * @param source   字符串代码
+         */
         public JavaFileObjectImpl(final String baseName, final CharSequence source) {
             super(ClassUtils.toURI(baseName + ClassUtils.JAVA_EXTENSION), Kind.SOURCE);
             this.source = source;
@@ -154,6 +183,9 @@ public class JdkCompiler extends AbstractCompiler {
         }
     }
 
+    /**
+     * 管理文件的读取和输出位置
+     */
     private static final class JavaFileManagerImpl extends ForwardingJavaFileManager<JavaFileManager> {
 
         private final ClassLoaderImpl classLoader;

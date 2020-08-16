@@ -352,7 +352,7 @@ public class DubboProtocol extends AbstractProtocol {
         String key = serviceKey(url);
         //2.2 创建dubboExporter对象
         DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap);
-        //2.3 把创建的DubboExporter添加到缓存中
+        //2.3 把创建的DubboExporter添加到缓存中,相同则覆盖
         exporterMap.put(key, exporter);
 
         //export an stub service for dispatching event todo 和本地存根有关，具体用途暂不清楚，先跳过

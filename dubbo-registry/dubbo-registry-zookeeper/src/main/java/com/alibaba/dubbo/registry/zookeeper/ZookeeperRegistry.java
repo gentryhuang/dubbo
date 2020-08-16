@@ -28,6 +28,7 @@ import com.alibaba.dubbo.remoting.zookeeper.ChildListener;
 import com.alibaba.dubbo.remoting.zookeeper.StateListener;
 import com.alibaba.dubbo.remoting.zookeeper.ZookeeperClient;
 import com.alibaba.dubbo.remoting.zookeeper.ZookeeperTransporter;
+import com.alibaba.dubbo.remoting.zookeeper.support.AbstractZookeeperClient;
 import com.alibaba.dubbo.rpc.RpcException;
 
 import java.util.ArrayList;
@@ -88,7 +89,11 @@ public class ZookeeperRegistry extends FailbackRegistry {
         this.root = group;
         // 创建 Zookeeper 客户端，默认为 CuratorZookeeperTransporter，由SPI确定具体的实例。创建好Zookeeper客户端，意味着注册中心的创建完成【Zookeeper服务端必需先启动，Dubbo应用作为Zookeeper的客户端进行连接，然后操作Zookeeper】
         zkClient = zookeeperTransporter.connect(url);
-        // 添加 StateListener 状态监听器【这里知针对失败重连】，该监听器，在重连时，调用恢复方法 recover()，重新发起注册和订阅
+        /**
+         * 添加 StateListener 状态监听器，该监听器在重连时，调用恢复方法 recover()，重新发起注册和订阅【将之前已经注册和订阅的数据进行重试】
+         * 注意：
+         *  StateListener 不是真正意义上的监听器，这里就是创建了一个匿名对象，其中的 #stateChanged 方法触发需要主动调用该匿名对象的该方法 {@link AbstractZookeeperClient#stateChanged(int)}
+         */
         zkClient.addStateListener(new StateListener() {
             @Override
             public void stateChanged(int state) {
@@ -231,42 +236,49 @@ public class ZookeeperRegistry extends FailbackRegistry {
 
                 // 循环分类数组，其中，调用toCategoriesPath(url)方法，获得分类数组，如：/dubbo/com.alibaba.dubbo.demo.DemoService/configurators
                 for (String path : toCategoriesPath(url)) {
-                    // 获得订阅的url 对应的监听器集合
+
+                    // 获得分类路径（由订阅的url得到的） 对应的监听器映射
                     ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.get(url);
+
                     // 不存在，进行创建
                     if (listeners == null) {
                         zkListeners.putIfAbsent(url, new ConcurrentHashMap<NotifyListener, ChildListener>());
                         listeners = zkListeners.get(url);
                     }
+
                     /**
-                     * 对监听器集合处理 ConcurrentMap<URL, ConcurrentMap<NotifyListener, ChildListener>> zkListeners。
-                     * 获得listener(NotifyListener)对应的ChildListener对象，没有就会创建这里创建出来的ChildListener实例中的childChanged方法实际上
-                     * 就是最终当parentPath[即toCategoriesPath方法处理后的元素path]下的currentChilds发生变化时，执行的逻辑。其中会回调NotifyListener#notify方法
+                     * 获得listener(NotifyListener)对应的ChildListener对象，没有就会创建。注意：ChildListener的childChanged方法实际上就是
+                     * 当parentPath[即toCategoriesPath方法处理后的path]下的currentChilds发生变化时回调的方法，该方法内部又会回调NotifyListener#notify方法
                      */
 
                     ChildListener zkListener = listeners.get(listener);
                     if (zkListener == null) {
                         listeners.putIfAbsent(listener, new ChildListener() {
                             @Override
-                            public void childChanged(String parentPath, List<String> currentChilds) {
-                                // 变更时，调用 notity方法，回调 NotifyListener 【增量】,用来监听子节点列表的变化。todo 注意：即使是变动的情况下，传过来的也是全量数据，回头验证一下
+                            public void childChanged(String parentPath, List<String> currentChilds) { // parentPath ： 订阅url映射的路径， currentChilds:  parentPath 下的路径集合 [当parentPath下的路径有变动，会把该路径下的所有路径都拉出来]
+                                // 变更时，调用 notity方法，回调 NotifyListener ,用来监听子节点列表的变化。todo 注意：即使是变动的情况下，传过来的也是全量数据，回头验证一下
                                 ZookeeperRegistry.this.notify(url, listener, toUrlsWithEmpty(url, parentPath, currentChilds));
                             }
                         });
                         zkListener = listeners.get(listener);
                     }
+
                     // 创建 Type 节点，该节点为持久节点，如： /dubbo/com.alibaba.dubbo.demo.DemoService/configurators
                     zkClient.create(path, false);
+
                     /**
                      * 向Zookeeper path节点发起订阅，即使用AbstractZookeeperClient<TargetChildListener>的addChildListener(String path, final ChildListener listener)方法为path下的子节点
                      * 添加上边创建出来的内部类ChildListener实例，添加后返回子节点列表 【todo 重要，这里就是拉取类目下的全量数据】
                      */
                     List<String> children = zkClient.addChildListener(path, zkListener);
+
                     // 添加到urls 中
                     if (children != null) {
                         urls.addAll(toUrlsWithEmpty(url, path, children));
                     }
+
                 }
+
                 /**
                  * 首次全量数据获取完成时，调用NofityListener#notify(url,listener,currentChilds)方法，回调NotifyListener的逻辑
                  */
@@ -379,20 +391,30 @@ public class ZookeeperRegistry extends FailbackRegistry {
      */
     private String[] toCategoriesPath(URL url) {
         String[] categories;
+
         // 如果category的值为 * ，表示分别订阅：providers,consumers,routers,configurators
         if (Constants.ANY_VALUE.equals(url.getParameter(Constants.CATEGORY_KEY))) {
-            categories = new String[]{Constants.PROVIDERS_CATEGORY, Constants.CONSUMERS_CATEGORY,
-                    Constants.ROUTERS_CATEGORY, Constants.CONFIGURATORS_CATEGORY};
+            categories = new String[]{
+                    Constants.PROVIDERS_CATEGORY,
+                    Constants.CONSUMERS_CATEGORY,
+                    Constants.ROUTERS_CATEGORY,
+                    Constants.CONFIGURATORS_CATEGORY
+            };
+
         } else {
-            // 如果category的值不为 * ，就取出 category的值，如果没有值，就把providers作为默认值。注意，当category的值不为空时会使用 '逗号' 分割category的值，为数组
+            // 如果category的值不为 * ，就取出 category的值，如果没有值，就把providers作为默认值。注意，当category的值不为空时会使用 ',' 分割category的值，为数组
             categories = url.getParameter(Constants.CATEGORY_KEY, new String[]{Constants.DEFAULT_CATEGORY});
         }
+
+
         // 获得分类路径数组
         String[] paths = new String[categories.length];
+
         for (int i = 0; i < categories.length; i++) {
-            // 在构建节点路径时，可能会对服务接口名进行加密，具体看toServicePath方法
+            // 构建分类路径
             paths[i] = toServicePath(url) + Constants.PATH_SEPARATOR + categories[i];
         }
+
         return paths;
     }
 
@@ -423,20 +445,29 @@ public class ZookeeperRegistry extends FailbackRegistry {
     /**
      * 获得providers 中，和consumer 匹配的URL数组
      *
-     * @param consumer  用于匹配的URL
-     * @param providers 被匹配的URL的字符串
+     * @param consumer  订阅URL 如：provider://10.1.22.101:20880/com.alibaba.dubbo.demo.DemoService?key=value&...
+     * @param providers 订阅URL映射的路径的子路径集合
      * @return 匹配的URL数组
      */
     private List<URL> toUrlsWithoutEmpty(URL consumer, List<String> providers) {
         List<URL> urls = new ArrayList<URL>();
         if (providers != null && !providers.isEmpty()) {
+
+            // 遍历子路径
             for (String provider : providers) {
+                // 解码
                 provider = URL.decode(provider);
-                if (provider.contains("://")) { // 是URL
-                    URL url = URL.valueOf(provider); // 将字符串转为URL
-                    if (UrlUtils.isMatch(consumer, url)) { // 匹配
+
+                // 是URL的路径才会处理
+                if (provider.contains("://")) {
+                    // 将字符串转为URL
+                    URL url = URL.valueOf(provider);
+
+                    // 子路径URL是否匹配订阅URL，以关键属性进行匹配，如服务接口名、类目、服务group、服务version等
+                    if (UrlUtils.isMatch(consumer, url)) {
                         urls.add(url);
                     }
+
                 }
             }
         }
@@ -444,20 +475,22 @@ public class ZookeeperRegistry extends FailbackRegistry {
     }
 
     /**
-     * 1 获得providers 中，和consumer匹配的URL集合
+     * 1 从providers中筛选和consumer匹配的URL集合
      * 2 如果URL集合不为空，直接返回这个集合
      * 3 如果URL集合为空，首先从path中获取category的值，然后将consumer的协议换成empty并添加参数category=path中的category的值。
      * 形式：'empty://' 的URL返回，通过这样的方式，可以处理类似服务提供者为空的情况
      *
-     * @param consumer  用于匹配URL 如：provider://10.1.22.101:20880/com.alibaba.dubbo.demo.DemoService?key=value&...
-     * @param path      被匹配的URL的字符串 如：/dubbo/com.alibaba.dubbo.demo.DemoService/configurators
-     * @param providers 匹配的URL数组
+     * @param consumer  订阅URL 如：provider://10.1.22.101:20880/com.alibaba.dubbo.demo.DemoService?key=value&...
+     * @param path      订阅URL映射的路径 如：/dubbo/com.alibaba.dubbo.demo.DemoService/configurators
+     * @param providers 订阅URL映射的路径的子路径集合
      * @return
      */
     private List<URL> toUrlsWithEmpty(URL consumer, String path, List<String> providers) {
-        // 获得 providers中，和consumer 匹配的URL数组
+
+        // 从providers中筛选和consumer 匹配的URL数组
         List<URL> urls = toUrlsWithoutEmpty(consumer, providers);
-        // 如果不存在匹配，则创建 'empty://' 的URL返回
+
+        // 如果不存在匹配的，则创建 'empty://' 的URL返回
         if (urls == null || urls.isEmpty()) {
             int i = path.lastIndexOf('/');
             String category = i < 0 ? path : path.substring(i + 1);

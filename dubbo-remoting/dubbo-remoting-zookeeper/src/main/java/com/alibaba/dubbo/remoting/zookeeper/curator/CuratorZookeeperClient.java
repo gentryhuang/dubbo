@@ -52,7 +52,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
             CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder()
                     // 连接地址
                     .connectString(url.getBackupAddress())
-                    // 重试策略，1 次，间隔 1000 ms
+                    // 重试策略: 重试次数：1，每次重试间隔： 1000 ms
                     .retryPolicy(new RetryNTimes(1, 1000))
                     // 连接超时时间
                     .connectionTimeoutMs(5000);
@@ -80,7 +80,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorWatch
                     }
                 }
             });
-            // 启动客户端
+            // 启动客户端 【todo 当连接不上zk服务时，默认将一直重试】
             client.start();
         } catch (Exception e) {
             throw new IllegalStateException(e.getMessage(), e);

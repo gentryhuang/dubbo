@@ -68,7 +68,7 @@ public class WrappedChannelHandler implements ChannelHandlerDelegate {
             componentKey = Constants.CONSUMER_SIDE;
         }
 
-        // 基于SPI机制创建线程池
+        // 基于SPI机制创建线程池存储对象
         DataStore dataStore = ExtensionLoader.getExtensionLoader(DataStore.class).getDefaultExtension();
         // 添加线程池到 DataStore中  【注意： AbstractClient 或 AbstractServer 从 DataStore 获得线程池的方式】
         dataStore.put(componentKey, Integer.toString(url.getPort()), executor);

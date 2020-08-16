@@ -34,7 +34,7 @@ final class HeartBeatTask implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(HeartBeatTask.class);
 
     /**
-     * 用于查询需要心跳的通道数组
+     * 用于查询需要心跳的通道数组的对象
      */
     private ChannelProvider channelProvider;
 
@@ -61,16 +61,16 @@ final class HeartBeatTask implements Runnable {
     public void run() {
         try {
             long now = System.currentTimeMillis();
-            // 获取到需要心跳检测的channel，对每个channel进行判断
+            // 获取到需要心跳检测的channel，对每个channel进行判断，注意Netty的通道是双向的，即不仅仅支持客户端连接服务端，还支持服务端发送数据包给客户端
             for (Channel channel : channelProvider.getChannels()) {
                 if (channel.isClosed()) {
                     continue;
                 }
                 try {
 
-                    // 最后一次读操作的时间
+                    // 通道最后一次读操作的时间
                     Long lastRead = (Long) channel.getAttribute(HeaderExchangeHandler.KEY_READ_TIMESTAMP);
-                    // 最后一次写操作时间
+                    // 通道最后一次写操作时间
                     Long lastWrite = (Long) channel.getAttribute(HeaderExchangeHandler.KEY_WRITE_TIMESTAMP);
 
                     // 如果在heartbeat内没有进行读操作或者写操作，则发送心跳请求
@@ -95,7 +95,7 @@ final class HeartBeatTask implements Runnable {
                         logger.warn("Close channel " + channel
                                 + ", because heartbeat read idle time out: " + heartbeatTimeout + "ms");
 
-                        // 客户端就重新连接服务端
+                        // 客户端的通道，则重新连接服务端
                         if (channel instanceof Client) {
                             try {
                                 ((Client) channel).reconnect();
@@ -103,7 +103,7 @@ final class HeartBeatTask implements Runnable {
                                 //do nothing
                             }
 
-                            // 服务端就关闭客户端连接
+                            // 服务端通道，则关闭客户端连接
                         } else {
                             channel.close();
                         }

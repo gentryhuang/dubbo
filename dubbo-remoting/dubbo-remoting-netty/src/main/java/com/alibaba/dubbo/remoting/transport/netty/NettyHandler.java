@@ -39,9 +39,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NettyHandler extends SimpleChannelHandler {
 
     /**
-     * Dubbo Channel 集合
+     * Dubbo Channel 集合，使用ip:port维护端对端的长连接
      * key: ip:port
-     * value: Dubbo的Channel
+     * value: Dubbo的Channel，对连接的抽象
      */
     private final Map<String, Channel> channels = new ConcurrentHashMap<String, Channel>();
 

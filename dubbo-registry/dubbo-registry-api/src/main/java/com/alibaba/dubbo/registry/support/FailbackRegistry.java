@@ -84,6 +84,11 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     private final int retryPeriod;
 
     public FailbackRegistry(URL url) {
+        /**
+         *  加载本地磁盘缓存文件到内存缓存，即 properties.load(in)，到properties属性中。
+         * 说明：
+         * 这个很重要，注册中心宕机的情况下，依赖缓存文件中的信息可以构建Invoker，不影响服务的调用，只是不能调用新的服务了。
+         */
         super(url);
         // 重试频率，单位 毫秒
         this.retryPeriod = url.getParameter(Constants.REGISTRY_RETRY_PERIOD_KEY, Constants.DEFAULT_REGISTRY_RETRY_PERIOD);
@@ -222,13 +227,15 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     public void subscribe(URL url, NotifyListener listener) {
         /** 调用父类AbstractRegistry的方法，将listener实例加入到url所对应的监听器集合中 {@link #subscribed } 中 */
         super.subscribe(url, listener);
-        // 将failedSubscribed/failedUnsubscribed中 url所对应的监听器集合中删除listener，接着从failedNotified获取当前url的通知失败map，然后从中删除掉listener以及其需要通知的所有url
+        // 将listener从failedSubscribed/failedUnsubscribed中删除 ，接着从failedNotified获取当前url的通知失败Map<NotifyListener, List<URL>>，然后从中 删除掉listener 到 需要通知的所有url 的映射
         removeFailedSubscribed(url, listener);
         try {
-            // 向服务端发送订阅请求,具体请求处理由子类实现
+
+            // 向服务端发送订阅请求,具体请求处理由子类实现 【当注册中心宕机，会失败进入 catch 中，执行通知逻辑】
             doSubscribe(url, listener);
+
             /** 如果在订阅的过程抛出异常，那么尝试获取缓存url，如果有缓存url，则进行失败通知。之后“将失败的订阅请求记录到失败列表，定时重试”，如果没有缓存url，
-             * 如果开启了启动时检测或者直接抛出的异常是SkipFailbackWrapperException，则直接抛出异常，不会“将失败的订阅请求记录到失败列表，定时重试”
+             * 若开启了启动时检测或者直接抛出的异常是SkipFailbackWrapperException，则直接抛出异常，不会“将失败的订阅请求记录到失败列表，定时重试”
              */
         } catch (Exception e) {
             Throwable t = e;
@@ -236,17 +243,19 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             /**
              * todo 注册中心维护的通知URL集合用在了这里，即当订阅发生异常时，会取出缓存中的通知ULR列表，调用notify进行通知
              * 从Properties缓存文件中取出通知URL集合
-             * 【注意：这些URL是由注册中心维护的，每次由订阅URL请求订阅时，注册中心都会把它对应的要通知的URL列表记录到properties文件中，然后写入磁盘，注意 empty://的情况】
+             * 【注意：这些URL是由注册中心维护的，每次订阅方 请求订阅时，注册中心都会把它对应的要通知的URL列表记录到properties文件中，然后写入磁盘，注意 empty://的情况】
              */
             List<URL> urls = getCacheUrls(url);
             if (urls != null && !urls.isEmpty()) {
                 notify(url, listener, urls);
                 logger.error("Failed to subscribe " + url + ", Using cached list: " + urls + " from cache file: " + getUrl().getParameter(Constants.FILE_KEY, System.getProperty("user.home") + "/dubbo-registry-" + url.getHost() + ".cache") + ", cause: " + t.getMessage(), t);
             } else {
+
                 // 如果开启了启动时检测check=true,则直接抛出异常
-                boolean check = getUrl().getParameter(Constants.CHECK_KEY, true)
-                        && url.getParameter(Constants.CHECK_KEY, true);
+                boolean check = getUrl().getParameter(Constants.CHECK_KEY, true) && url.getParameter(Constants.CHECK_KEY, true);
+
                 boolean skipFailback = t instanceof SkipFailbackWrapperException;
+
                 if (check || skipFailback) {
                     if (skipFailback) {
                         t = t.getCause();
@@ -301,6 +310,11 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
     }
 
+    /**
+     * @param url      订阅URL
+     * @param listener 监听器
+     * @param urls     通知的URL变化结果（全量数据）【todo 注意：每次传入的 urls 的“全量”，指的是至少要是一个分类的全量[动态类型的]，而不一定是全部数据】
+     */
     @Override
     protected void notify(URL url, NotifyListener listener, List<URL> urls) {
         if (url == null) {
@@ -313,6 +327,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             // 进行通知
             doNotify(url, listener, urls);
         } catch (Exception t) {
+
             // 将失败的通知请求记录到失败列表中，定时重试
             Map<NotifyListener, List<URL>> listeners = failedNotified.get(url);
             if (listeners == null) {
@@ -327,16 +342,16 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     /**
      * 会调用父类的通知方法
      *
-     * @param url
-     * @param listener
-     * @param urls
+     * @param url      订阅URL
+     * @param listener 监听器
+     * @param urls     订阅URL映射路径 下的子路径集合
      */
     protected void doNotify(URL url, NotifyListener listener, List<URL> urls) {
         super.notify(url, listener, urls);
     }
 
     /**
-     * 完全覆盖父类方法(即不像前几个方法，会调用父类的方法)，将需要注册和订阅的URL添加到 {@link #failedRegistered} ,{@link #failedSubscribed} 属性中。
+     * 完全覆盖父类方法(即不像前几个方法，会调用父类的方法)，将已注册和订阅的URL添加到 {@link #failedRegistered} ,{@link #failedSubscribed} 属性中。
      * 这样在{@link #retry()}方法中会重试进行连接
      *
      * @throws Exception

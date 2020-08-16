@@ -55,7 +55,7 @@ public class UrlUtils {
 
     /**
      * 解析单个 URL，将defaults属性集合 里的参数合并到 注册中心地址address中，合并逻辑：
-     * 可以把address 认为是url,defaults认为是defaultURL。如果url有不存在的属性时，从defaultURL获得对应的属性，设置到url中
+     * 使用 defaults 集合对注册中心urL的属性 进行 '查漏补缺', 即 将defaults集合中不在 注册中心url上的属性 设置到url上，存在则忽略
      *
      * @param address  注册中心地址
      * @param defaults 参数集合
@@ -374,28 +374,46 @@ public class UrlUtils {
         }
     }
 
+    /**
+     * 匹配URL关键属性是否匹配
+     *
+     * @param consumerUrl
+     * @param providerUrl
+     * @return
+     */
     public static boolean isMatch(URL consumerUrl, URL providerUrl) {
+
+        // 获取服务接口名
         String consumerInterface = consumerUrl.getServiceInterface();
         String providerInterface = providerUrl.getServiceInterface();
-        if (!(Constants.ANY_VALUE.equals(consumerInterface) || StringUtils.isEquals(consumerInterface, providerInterface)))
+
+        // URL中服务接口名不同，则不匹配
+        if (!(Constants.ANY_VALUE.equals(consumerInterface) || StringUtils.isEquals(consumerInterface, providerInterface))) {
             return false;
+        }
+
         // 匹配类目是否相等
-        if (!isMatchCategory(providerUrl.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY),
+        if (!isMatchCategory(
+                providerUrl.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY),
                 consumerUrl.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY))) {
             return false;
         }
+
+        // 是否开启
         if (!providerUrl.getParameter(Constants.ENABLED_KEY, true)
                 && !Constants.ANY_VALUE.equals(consumerUrl.getParameter(Constants.ENABLED_KEY))) {
             return false;
         }
 
+        // 获取 group、version、classifier
         String consumerGroup = consumerUrl.getParameter(Constants.GROUP_KEY);
         String consumerVersion = consumerUrl.getParameter(Constants.VERSION_KEY);
         String consumerClassifier = consumerUrl.getParameter(Constants.CLASSIFIER_KEY, Constants.ANY_VALUE);
-
         String providerGroup = providerUrl.getParameter(Constants.GROUP_KEY);
         String providerVersion = providerUrl.getParameter(Constants.VERSION_KEY);
         String providerClassifier = providerUrl.getParameter(Constants.CLASSIFIER_KEY, Constants.ANY_VALUE);
+
+        // group、version、classifier 是否相同
         return (Constants.ANY_VALUE.equals(consumerGroup) || StringUtils.isEquals(consumerGroup, providerGroup) || StringUtils.isContains(consumerGroup, providerGroup))
                 && (Constants.ANY_VALUE.equals(consumerVersion) || StringUtils.isEquals(consumerVersion, providerVersion))
                 && (consumerClassifier == null || Constants.ANY_VALUE.equals(consumerClassifier) || StringUtils.isEquals(consumerClassifier, providerClassifier));

@@ -145,6 +145,11 @@ public class ConfigUtils {
         return sb.toString();
     }
 
+    /**
+     * 获取dubbo 配置的properties文件，支持 dubbo.properties.file 和 dubbo.properties两种文件
+     * <p>
+     * return
+     */
     public static Properties getProperties() {
         if (PROPERTIES == null) {
             synchronized (ConfigUtils.class) {
@@ -210,6 +215,8 @@ public class ConfigUtils {
     }
 
     /**
+     * 从类路径记载文件内容到Properties中
+     * <p>
      * Load properties file to {@link Properties} from class path.
      *
      * @param fileName       properties file name. for example: <code>dubbo.properties</code>, <code>METE-INF/conf/foo.properties</code>
@@ -265,6 +272,7 @@ public class ConfigUtils {
 
             // fall back to use method getResourceAsStream
             try {
+                // 加载类路径下的fileName文件内容到Properties
                 properties.load(ClassHelper.getClassLoader().getResourceAsStream(fileName));
             } catch (Throwable e) {
                 logger.warn("Failed to load " + fileName + " file from " + fileName + "(ignore this file): " + e.getMessage(), e);

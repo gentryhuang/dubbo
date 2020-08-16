@@ -30,5 +30,4 @@ public interface ExtensionFactory {
      * @return object instance. 扩展实现实例
      */
     <T> T getExtension(Class<T> type, String name);
-
 }

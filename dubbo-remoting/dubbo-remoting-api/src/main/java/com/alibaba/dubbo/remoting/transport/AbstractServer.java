@@ -66,7 +66,7 @@ public abstract class AbstractServer extends AbstractEndpoint implements Server 
     public AbstractServer(URL url, ChannelHandler handler) throws RemotingException {
         // 调用父类构造方法
         super(url, handler);
-        // 服务地址: 本机地址  如：-> /192.168.1.100
+        // 服务地址: 本机地址  如：-> /192.168.0.100:20880
         localAddress = getUrl().toInetSocketAddress();
         // 获取ip和端口
         String bindIp = getUrl().getParameter(Constants.BIND_IP_KEY, getUrl().getHost());

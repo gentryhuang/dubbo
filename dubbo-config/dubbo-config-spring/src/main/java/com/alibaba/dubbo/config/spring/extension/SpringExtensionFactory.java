@@ -21,6 +21,7 @@ import com.alibaba.dubbo.common.logger.Logger;
 import com.alibaba.dubbo.common.logger.LoggerFactory;
 import com.alibaba.dubbo.common.utils.ConcurrentHashSet;
 
+import com.alibaba.dubbo.config.spring.ServiceBean;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
@@ -38,6 +39,12 @@ public class SpringExtensionFactory implements ExtensionFactory {
      */
     private static final Set<ApplicationContext> contexts = new ConcurrentHashSet<ApplicationContext>();
 
+    /**
+     * 保存Spring上下文
+     *
+     * @param context
+     * @see ServiceBean#setApplicationContext(org.springframework.context.ApplicationContext)
+     */
     public static void addApplicationContext(ApplicationContext context) {
         contexts.add(context);
     }

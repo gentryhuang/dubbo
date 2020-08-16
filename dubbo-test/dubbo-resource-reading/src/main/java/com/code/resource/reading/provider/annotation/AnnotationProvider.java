@@ -32,6 +32,14 @@ public class AnnotationProvider {
     public static void main(String[] args) throws Exception {
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(ProviderConfiguration.class);
         context.start();
+
+        Object bean = context.getBean("com.alibaba.dubbo.config.ApplicationConfig#0");
+
+        System.out.println("-----------------------------------------------------------------");
+
+        System.out.println(bean);
+
+
         System.in.read();
     }
 
@@ -41,7 +49,7 @@ public class AnnotationProvider {
     @Configuration
     @EnableDubbo(scanBasePackages = "com.code.resource.reading.provider.annotation.impl")
     @PropertySource({"classpath:/com/code/resource/reading/provider/annotation/dubbo-provider.properties"})
-    @ImportResource({"classpath:annotation/xml-provider.xml"})
+    //@ImportResource({"classpath:annotation/xml-provider.xml"})
     static public class ProviderConfiguration {
     }
 }

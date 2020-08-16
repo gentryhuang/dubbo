@@ -85,7 +85,7 @@ public class DubboConfigBindingBeanPostProcessor implements BeanPostProcessor, A
     }
 
     /**
-     * Bean后处理器的 前置处理方法。这里设置配置属性到Dubbo Config中。注意： 该方法的执行说明Dubbo Config对象的创建和属性设置完毕。
+     * Bean后处理器的 前置处理方法。这里配置属性到Dubbo Config中。注意： 该方法的执行说明Dubbo Config对象的创建和属性设置完毕。
      * @param bean
      * @param beanName
      * @return

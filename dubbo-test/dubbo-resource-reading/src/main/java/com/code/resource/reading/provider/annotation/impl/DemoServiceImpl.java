@@ -1,6 +1,7 @@
 package com.code.resource.reading.provider.annotation.impl;
 
 
+import com.alibaba.dubbo.config.annotation.Service;
 import com.code.resource.reading.api.DemoService;
 
 /**
@@ -11,6 +12,7 @@ import com.code.resource.reading.api.DemoService;
  * <p>
  * desc：
  */
+@Service(version = "1.0.0")
 public class DemoServiceImpl implements DemoService {
 
     @Override

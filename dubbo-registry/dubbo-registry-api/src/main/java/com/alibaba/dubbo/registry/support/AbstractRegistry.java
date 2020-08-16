@@ -100,11 +100,10 @@ public abstract class AbstractRegistry implements Registry {
     private final Set<URL> registered = new ConcurrentHashSet<URL>();
     /**
      * 订阅 URL 的监听器集合
-     * key : `消费者的URL` [此消费者非消费者] ,例如： 消费者的URL
      */
     private final ConcurrentMap<URL, Set<NotifyListener>> subscribed = new ConcurrentHashMap<URL, Set<NotifyListener>>();
     /**
-     * 被通知的URL集合
+     * 通知的URL集合 【todo 与其叫通知的ULR，不如叫监听器监听到的变化后的结果URL】
      * key1: 订阅的URL,例如消费者的URL，和 {@link #subscribed} 的键一致
      * key2: 分类，例如： providers,consumers,routes,configurators。【实际上无consumers,因为消费者不会去订阅另外的消费者的列表】，在{@link Constants}中，以 "_CATEGORY"结尾
      * ---
@@ -146,9 +145,11 @@ public abstract class AbstractRegistry implements Registry {
             }
         }
         this.file = file;
+
         // 加载本地磁盘缓存文件到内存缓存，即 properties.load(in)，到properties属性中
         loadProperties();
-        // 通知监听器，URL 变化结果 todo 为什么构造方法要通知，连监听器都没有注册，即 subscribed 里面还没有值
+
+        // 通知监听器，URL 变化结果 todo 为什么构造方法要通知，zk连接都没有建立，监听器更没有注册，即 subscribed 里面还没有值
         notify(url.getBackupUrls());
     }
 
@@ -202,9 +203,14 @@ public abstract class AbstractRegistry implements Registry {
      */
     public void doSaveProperties(long version) {
         /**
-         * CAS判断：在saveProperties(URL url)方法中执行了long version = lastCacheChanged.incrementAndGet();
+         * 安全措施：
+         * 1 CAS判断：
+         *   在saveProperties(URL url)方法中执行了long version = lastCacheChanged.incrementAndGet();
          * 这里进行if (version < lastCacheChanged.get())判断，如果满足这个条件，说明当前线程在进行doSaveProperties(long version)时，
          * 已经有其他线程执行了saveProperties(URL url)，马上就要执行doSaveProperties(long version)，所以当前线程放弃操作，让后边的这个线程来做保存操作。
+         * 2 文件锁 FileLock：
+         *   FileLock 是进程文件锁，用于进程间并发，控制不同程序（JVM）对同一文件的并发访问，文件锁可以解决多个进程并发访问、可以通过对一个可写文件加锁，保证同时只有一个进程可以拿到文件锁，这个进程从而可以对文件进行操作，
+         *   而其它拿不到锁的进程要么被挂起等待，要么可以去做一些其它事情，这种机制保证了进程间文件的并发安全操作。修改同一个文件的问题，但不能解决多线程并发访问、修改同一文件的问题。FileLock 文件锁的效果是与操作系统相关的，是由操作系统底层来实现。
          */
         if (version < lastCacheChanged.get()) {
             return;
@@ -222,10 +228,13 @@ public abstract class AbstractRegistry implements Registry {
             try {
                 FileChannel channel = raf.getChannel();
                 try {
+
+                    // 对文件加锁，默认为排它锁，没有获取到锁的进程阻塞等待
                     FileLock lock = channel.tryLock();
                     if (lock == null) {
                         throw new IOException("Can not lock the registry cache file " + file.getAbsolutePath() + ", ignore and retry later, maybe multi java process use the file, please config: dubbo.registry.file=xxx.properties");
                     }
+
                     // Save
                     try {
                         if (!file.exists()) {
@@ -237,6 +246,8 @@ public abstract class AbstractRegistry implements Registry {
                         } finally {
                             outputFile.close();
                         }
+
+                        // 释放文件锁
                     } finally {
                         lock.release();
                     }
@@ -282,17 +293,27 @@ public abstract class AbstractRegistry implements Registry {
         }
     }
 
-
+    /**
+     * 从缓存中获取 订阅URL到通知URL列表 的映射
+     *
+     * @param url
+     * @return
+     */
     public List<URL> getCacheUrls(URL url) {
+
         for (Map.Entry<Object, Object> entry : properties.entrySet()) {
+            // 映射URL
             String key = (String) entry.getKey();
+            // 映射URL 对应的 通知URL串
             String value = (String) entry.getValue();
-            if (key != null && key.length() > 0 && key.equals(url.getServiceKey())
-                    && (Character.isLetter(key.charAt(0)) || key.charAt(0) == '_')
-                    && value != null && value.length() > 0) {
+
+            if (key != null && key.length() > 0 && key.equals(url.getServiceKey()) && (Character.isLetter(key.charAt(0)) || key.charAt(0) == '_') && value != null && value.length() > 0) {
+                // 对通知的URL串 以 '空格' 进行分割成字符串
                 String[] arr = value.trim().split(URL_SPLIT);
                 List<URL> urls = new ArrayList<URL>();
+
                 for (String u : arr) {
+                    // 解析URL串
                     urls.add(URL.valueOf(u));
                 }
                 return urls;
@@ -479,12 +500,12 @@ public abstract class AbstractRegistry implements Registry {
     /**
      * 通知监听器，URL变化结果，需要注意的是：
      * 1 向注册中心发起订阅后，会获取到全量数据，此时会被调用 #notify(...)方法，即Registry获取到了全量数据
-     * 2 每次注册中心发生变更时，会调用 #notify(...)方法，虽然变化是增量，调用这个方法的调用方，已经进行处理，传入的 urls 依然是全量的
+     * 2 每次注册中心发生变更时，会调用 #notify(...)方法，虽然变化是增量，但是调用这个方法的调用方，已经进行处理，传入的 urls 依然是全量的
      * 3 数据流向： urls => {@link #notified} => {@link #properties} => {@link #file}
      *
      * @param url      订阅URL
      * @param listener 监听器
-     * @param urls     通知的URL变化结果（全量数据）【todo 注意：每次传入的 urls 的“全量”，指的是至少要是一个分类的全量[动态类型的]，而不一定是全部数据】
+     * @param urls     订阅URL映射的路径下的子路径集合（全量数据）【todo 注意：每次传入的 urls 的'全量'，指的是至少要是一个分类的全量[动态类型的]，而不一定是全部数据】
      */
     protected void notify(URL url, NotifyListener listener, List<URL> urls) {
         if (url == null) {
@@ -493,8 +514,7 @@ public abstract class AbstractRegistry implements Registry {
         if (listener == null) {
             throw new IllegalArgumentException("notify listener == null");
         }
-        if ((urls == null || urls.isEmpty())
-                && !Constants.ANY_VALUE.equals(url.getServiceInterface())) {
+        if ((urls == null || urls.isEmpty()) && !Constants.ANY_VALUE.equals(url.getServiceInterface())) {
             logger.warn("Ignore empty notify urls for subscribe url " + url);
             return;
         }
@@ -502,11 +522,17 @@ public abstract class AbstractRegistry implements Registry {
             logger.info("Notify urls for subscribe url " + url + ", urls: " + urls);
         }
 
-        // 将 `urls` 按照 `url.parameter.category` 分类，添加到Map集合result中
+        // 1 将 `urls` 按照 `url.parameter.category` 分类，添加到Map集合result中
         Map<String, List<URL>> result = new HashMap<String, List<URL>>();
+
+        // 遍历
         for (URL u : urls) {
+            // 子路径URL是否匹配订阅URL
             if (UrlUtils.isMatch(url, u)) {
+                // 获取分类，默认为 providers
                 String category = u.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY);
+
+                // 加入到结果集
                 List<URL> categoryList = result.get(category);
                 if (categoryList == null) {
                     categoryList = new ArrayList<URL>();
@@ -515,11 +541,13 @@ public abstract class AbstractRegistry implements Registry {
                 categoryList.add(u);
             }
         }
+
+
         if (result.size() == 0) {
             return;
         }
 
-        // 获得订阅URL对应的在 `notified` 中,通知的 URL 变化结果（全量数据），会把result中的值放入到 categoryNotified中
+        // 获得订阅URL对应的缓存`notified`,即通知的 URL 变化结果（全量数据），会把result中的值放入到 categoryNotified中
         Map<String, List<URL>> categoryNotified = notified.get(url);
         if (categoryNotified == null) {
             notified.putIfAbsent(url, new ConcurrentHashMap<String, List<URL>>());
@@ -532,9 +560,9 @@ public abstract class AbstractRegistry implements Registry {
             String category = entry.getKey();
             // 获得分类名对应的通知ULR列表
             List<URL> categoryList = entry.getValue();
-            // 1 将result 覆盖到 `notified`【更新notified集合中的通知ULR列表】，需要注意：当某个分类的数据为空时，会依然有 urls 。其中 `urls[0].protocol = empty` ，通过这样的方式，处理所有订阅URL对应的数据为空的情况。
+            // 1 将result 覆盖到 `notified`缓存【更新notified集合中的通知ULR列表】，需要注意：当某个分类的数据为空时，会依然有URL，如 empty://...` ，通过这样的方式，处理所有订阅URL对应的数据为空的情况。
             categoryNotified.put(category, categoryList);
-            // 2 保存传入的url对应的被通知的URL到properties和文件保存 // todo 这个操作为什么要在循环体内，是要不断更新吗？
+            // 2 保存订阅url对应的被通知的URL到 properties和文件 中 // 在循环中的保存的原因是，订阅url对应的通知url可能是变动的，上一步的操作会更新notified集合，为了让 properties和文件中的 订阅-通知关系正确就需要不断更新。
             saveProperties(url);
             // 3 调用传入的listener的notify()方法
             listener.notify(categoryList);
@@ -543,7 +571,7 @@ public abstract class AbstractRegistry implements Registry {
 
 
     /**
-     * 1 按照url从ConcurrentMap<URL, Map<String, List<URL>>> notified中将Map<String, List<URL>>拿出来，之后将所有category的list组成一串buf（以空格分隔）
+     * 1 按照url从ConcurrentMap<URL, Map<String, List<URL>>> notified中将Map<String, List<URL>>拿出来，之后将所有category的list组成一字符串（以空格分隔）
      * 2 将 serviceKey - buf 写入本地磁盘缓存中：Properties properties
      * 3 将AtomicLong lastCacheChanged加1
      * 4 之后根据syncSaveFile判断时同步保存properties到文件，还是异步保存properties到文件
@@ -556,8 +584,12 @@ public abstract class AbstractRegistry implements Registry {
         }
 
         try {
+
             StringBuilder buf = new StringBuilder();
+
+            // 注意，notified 缓存的值： 订阅URL 对应的映射集合，只要订阅URL关联的路径下有节点变化，就会不断刷新，最新最全数据。
             Map<String, List<URL>> categoryNotified = notified.get(url);
+
             if (categoryNotified != null) {
                 for (List<URL> us : categoryNotified.values()) {
                     for (URL u : us) {
@@ -568,7 +600,9 @@ public abstract class AbstractRegistry implements Registry {
                     }
                 }
             }
+
             properties.setProperty(url.getServiceKey(), buf.toString());
+
             // 版本号，使用CAS
             long version = lastCacheChanged.incrementAndGet();
             if (syncSaveFile) {
@@ -612,7 +646,10 @@ public abstract class AbstractRegistry implements Registry {
         Map<URL, Set<NotifyListener>> destroySubscribed = new HashMap<URL, Set<NotifyListener>>(getSubscribed());
         if (!destroySubscribed.isEmpty()) {
             for (Map.Entry<URL, Set<NotifyListener>> entry : destroySubscribed.entrySet()) {
+                // 订阅URL
                 URL url = entry.getKey();
+
+                // 订阅URL对应的监听器列表
                 for (NotifyListener listener : entry.getValue()) {
                     try {
                         // 取消订阅

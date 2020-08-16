@@ -105,7 +105,7 @@ public abstract class AbstractConfig implements Serializable {
     }
 
     /**
-     * 读取启动参数变量和properties配置到配置对象
+     * 读取带有配置项前缀的启动参数变量和properties配置到 配置承载对象中。【说明：因为在此之前配置承载对象中只可能有xml配置的属性值，或者注解配置的属性值】
      *
      * @param config
      */
@@ -127,7 +127,7 @@ public abstract class AbstractConfig implements Serializable {
                     // 获得属性名 如： ApplicationConfig#setName(...) 方法，对应的属性名为 name
                     String property = StringUtils.camelToSplitName(name.substring(3, 4).toLowerCase() + name.substring(4), ".");
 
-                    //--- 读取的覆盖策略： JVM -D > XML > .properties      ----
+                    //--- 读取的覆盖策略： JVM -D > XML > .properties      ----/
                     String value = null;
 
                     //【启动参数变量】优先从带有 id属性的XxxConfig的配置中获取，例如 dubbo.application.demo-provider.name
@@ -296,7 +296,7 @@ public abstract class AbstractConfig implements Serializable {
                     } else if (parameter != null && parameter.required()) {
                         throw new IllegalStateException(config.getClass().getSimpleName() + "." + key + " == null");
                     }
-                    // 当方式为public Map getParameters(){...}时，就以此将Map中的key-value加入到参数集合
+                    // 当方法为public Map getParameters(){...}时，就以此将Map中的key-value加入到参数集合
                 } else if ("getParameters".equals(name)
                         && Modifier.isPublic(method.getModifiers())
                         && method.getParameterTypes().length == 0

@@ -196,7 +196,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                     // 创建参数集合map,用于Dubbo URL的构建
                     Map<String, String> map = new HashMap<String, String>();
 
-                    // 将各种配置对象的属性添加到参数集合map中
+                    // 将应用配置对象和注册中心配置对象的属性添加到参数集合map中
                     appendParameters(map, application);
                     /**
                      * 需要注意的是：RegistryConfig 的 getAddress方法上使用了 @Parameter(excluded = true)注解，因此它的address属性不会加入到参数集合map中
@@ -206,7 +206,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                     appendParameters(map, config);
 
                     // 添加 path,dubbo,timestamp,pid 到参数集合map中
-                    map.put("path", RegistryService.class.getName()); // 这里的path要和服务暴露逻辑中的path区分
+                    map.put("path", RegistryService.class.getName()); // 这里的path要和服务暴露逻辑中的path区分，注册中心的URL中的path为RegistryService的全路径名
                     map.put("dubbo", Version.getProtocolVersion());
                     map.put(Constants.TIMESTAMP_KEY, String.valueOf(System.currentTimeMillis()));
                     if (ConfigUtils.getPid() > 0) {
@@ -230,7 +230,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                     for (URL url : urls) {
                         // 设置 registry=${protocol}参数,设置到注册中心的 URL的参数部分的位置上，并且是追加式的添加
                         url = url.addParameter(Constants.REGISTRY_KEY, url.getProtocol());
-                        // 重置Dubbo URL中的 protocol属性为 'registry',即将URL的协议头设置为'registry'
+                        // 重置 URL中的 protocol属性为 'registry',即将URL的协议头设置为'registry'
                         url = url.setProtocol(Constants.REGISTRY_PROTOCOL);
                         /**
                          * 通过判断条件，决定是否添加url到registryList中，条件如下：

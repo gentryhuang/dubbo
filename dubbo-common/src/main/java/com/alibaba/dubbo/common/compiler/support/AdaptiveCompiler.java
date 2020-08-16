@@ -35,7 +35,7 @@ public class AdaptiveCompiler implements Compiler {
 
     /**
      * 静态方法，设置默认编辑器的拓展名。该方法被 {@link com.alibaba.dubbo.config.ApplicationConfig#setCompiler(java.lang.String)}方法调用.
-     * 在<dubbo:application compiler=""/> 配置下可触发该方法
+     * 在<dubbo:application compiler=""/> 配置 可触发该方法
      *
      * @param compiler
      */

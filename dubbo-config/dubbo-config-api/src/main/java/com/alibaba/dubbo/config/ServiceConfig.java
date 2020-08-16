@@ -36,6 +36,7 @@ import com.alibaba.dubbo.rpc.Protocol;
 import com.alibaba.dubbo.rpc.ProxyFactory;
 import com.alibaba.dubbo.rpc.ServiceClassHolder;
 import com.alibaba.dubbo.rpc.cluster.ConfiguratorFactory;
+import com.alibaba.dubbo.rpc.proxy.wrapper.StubProxyFactoryWrapper;
 import com.alibaba.dubbo.rpc.service.GenericService;
 import com.alibaba.dubbo.rpc.support.ProtocolUtils;
 
@@ -321,7 +322,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             // 标记为非泛化实现
             generic = Boolean.FALSE.toString();
         }
-        // 处理服务接口客户端本地代理,即本地存根（local 属性 -> AbstractInterfaceConfig#setLocal）。目前已经废弃，此处主要用于兼容，使用stub属性
+        /** 处理服务接口客户端本地代理,即本地存根（local 属性 -> AbstractInterfaceConfig#setLocal）。目前已经废弃，此处主要用于兼容，使用stub属性. todo 服务端没有意义 {@link StubProxyFactoryWrapper#getInvoker(java.lang.Object, java.lang.Class, com.alibaba.dubbo.common.URL)} */
         if (local != null) {
             // 如果local属性设置为ture，表示使用缺省代理类名，即：接口名 + Local 后缀
             if ("true".equals(local)) {
@@ -340,7 +341,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             }
         }
 
-        // 处理服务接口客户端本地代理(stub 属性)相关，即本地存根。目的：想在客户端【服务消费方】执行需要的逻辑，不局限服务提供的逻辑。本地存根类编写方式是固定。todo 服务端有意义吗？
+        /** 处理服务接口客户端本地代理(stub 属性)相关，即本地存根。目的：想在客户端【服务消费方】执行需要的逻辑，不局限服务提供的逻辑。本地存根类编写方式是固定。todo 服务端没有意义 {@link StubProxyFactoryWrapper#getInvoker(java.lang.Object, java.lang.Class, com.alibaba.dubbo.common.URL)}*/
         if (stub != null) {
             // 如果stub属性设置为ture，表示使用缺省代理类名，即：接口名 + Stub 后缀
             if ("true".equals(stub)) {
@@ -536,7 +537,6 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             } // end of methods for
         }
 
-
         //--- 检测 generic 是否 为 true ,并根据检测结果向map中添加不同的信息 ---/
         // 将 generic,methods,revision 加入到数组
         if (ProtocolUtils.isGeneric(generic)) {
@@ -562,7 +562,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             }
         }
 
-        // token 【是暴露出去的服务更安全，使用token做安全校验】
+        // token 【使暴露出去的服务更安全，使用token做安全校验】
         if (!ConfigUtils.isEmpty(token)) {
             if (ConfigUtils.isDefault(token)) {
                 map.put(Constants.TOKEN_KEY, UUID.randomUUID().toString());
@@ -580,6 +580,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         if ((contextPath == null || contextPath.length() == 0) && provider != null) {
             contextPath = provider.getContextpath();
         }
+        // -------- 主机绑定 --------/
         // 获得注册到注册中心的服务提供者host，并为map设置bind.ip , anyhost 两个key
         String host = this.findConfigedHosts(protocolConfig, registryURLs, map);
         // 获取端口，并为map设置bing.port key
@@ -642,7 +643,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                             registryURL = registryURL.addParameter(Constants.PROXY_KEY, proxy);
                         }
                         /**
-                         * 1 使用ProxyFactory 创建 Invoker 对象【执行Invoker#invoke方法时，内部会调用Service对象(ref)对应的调用方法】
+                         * 1 使用ProxyFactory 创建 AbstractProxyInvoker 对象
                          *
                          * 2 注意，这和本地暴露的参数不一样，本地暴露传入的直接是服务提供者的URL，而远程暴露需要传入注册中心URL及服务提供者URL的信息
                          * 3 在将服务实例ref转成Invoker后，如果有注册中心时，则会通过RegisterProtocol#export进行更细粒度的控制，如先进行服务暴露再注册服务元数据，这个过程注册中心依次进行：
@@ -651,7 +652,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                          * （3）注册服务元数据到注册中心
                          * （4）订阅configurators节点，监听服务动态属性变更事件
                          * （5）服务销毁收尾工作，如关闭端口，移除注册的元数据
-                         * 4 Invoker 对象实际和ref是无法直接调用，需要有中间的一层 Wrapper 来代理分发请求到 ref 对应的方法
+                         * 4 AbstractProxyInvoker 对象实际和ref是无法直接调用，需要有中间的一层 Wrapper 来代理分发请求到 ref 对应的方法
                          */
                         Invoker<?> invoker = proxyFactory.getInvoker(
                                 ref,
@@ -719,8 +720,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
              * 2 使用Protocol暴露 Invoker对象：
              *   （1）使用哪个Protocol,Dubbo SPI会自动根据URL参数获得对应的扩展实现
              *   （2）这里创建Invoker时，URL的protocol为injvm，此时Protocol的扩展实现就是InjvmProtocol
-             *    (3) 由Dubbo的特性AOP原理，Protocol有两个Wrapper拓展实现类：ProtocolFilterWrapper和ProtocolListenerWrapper，export方法调用顺序：
-             *       Protocol$Adaptive=>ProtocolListenerWrapper==>ProtocolFilterWrapper=>InjvmProtocol
+             *    (3) 由Dubbo的特性AOP原理，Protocol有两个Wrapper拓展实现类：ProtocolFilterWrapper和ProtocolListenerWrapperexport方法调用顺序：Protocol$Adaptive=>ProtocolListenerWrapper==>ProtocolFilterWrapper=>InjvmProtocol
              */
             Invoker invoker = proxyFactory.getInvoker(ref, (Class) interfaceClass, local);
             Exporter<?> exporter = protocol.export(invoker);
@@ -735,6 +735,8 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
 
     /**
+     * 主机绑定
+     * <p>
      * Register & bind IP address for service provider, can be configured separately.
      * Configuration priority: environment variables -> java system properties -> host property in config file ->
      * /etc/hosts -> default network address -> first available network address
@@ -746,25 +748,34 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
      */
     private String findConfigedHosts(ProtocolConfig protocolConfig, List<URL> registryURLs, Map<String, String> map) {
         boolean anyhost = false;
-
+        // 1 根据协议名，从系统环境中获取主机
         String hostToBind = getValueFromConfig(protocolConfig, Constants.DUBBO_IP_TO_BIND);
         if (hostToBind != null && hostToBind.length() > 0 && isInvalidLocalHost(hostToBind)) {
             throw new IllegalArgumentException("Specified invalid bind ip from property:" + Constants.DUBBO_IP_TO_BIND + ", value:" + hostToBind);
         }
 
+        // 系统环境中没有获取到主机，则继续
         // if bind ip is not found in environment, keep looking up
         if (hostToBind == null || hostToBind.length() == 0) {
+            // 2 从协议中直接获取配置的主机
             hostToBind = protocolConfig.getHost();
+
+            // 3 如果协议中没有配置主机，则尝试从provider中获取配置的主机
             if (provider != null && (hostToBind == null || hostToBind.length() == 0)) {
                 hostToBind = provider.getHost();
             }
+
+            // 4 主机不能是 localhost、127...、0.0.0.0 形式的，否则视为无效的主机
             if (isInvalidLocalHost(hostToBind)) {
                 anyhost = true;
                 try {
+                    //4.1 从网卡中获取主机地址
                     hostToBind = InetAddress.getLocalHost().getHostAddress();
                 } catch (UnknownHostException e) {
                     logger.warn(e.getMessage(), e);
                 }
+
+                // 无效主机
                 if (isInvalidLocalHost(hostToBind)) {
                     if (registryURLs != null && !registryURLs.isEmpty()) {
                         for (URL registryURL : registryURLs) {
@@ -775,6 +786,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                             try {
                                 Socket socket = new Socket();
                                 try {
+                                    // 使用socket 连接注册中心地址方式获取主机
                                     SocketAddress addr = new InetSocketAddress(registryURL.getHost(), registryURL.getPort());
                                     socket.connect(addr, 1000);
                                     hostToBind = socket.getLocalAddress().getHostAddress();

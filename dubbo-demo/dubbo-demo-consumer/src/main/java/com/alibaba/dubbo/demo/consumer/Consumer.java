@@ -31,22 +31,43 @@ public class Consumer {
         context.start();
         DemoService demoService = (DemoService) context.getBean("demoService"); // get remote service proxy
 
+
         while (true) {
             try {
 
 
                 System.out.println("10s后主机将爆炸 💥 💥 💥 ......");
+                System.out.println("10s后主机将爆炸 💥 💥 💥 ......");
+                System.out.println("10s后主机将爆炸 💥 💥 💥 ......");
+                System.out.println("10s后主机将爆炸 💥 💥 💥 ......");
+                System.out.println("10s后主机将爆炸 💥 💥 💥 ......");
+                System.out.println("10s后主机将爆炸 💥 💥 💥 ......");
+                System.out.println("10s后主机将爆炸 💥 💥 💥 ......");
+                System.out.println("10s后主机将爆炸 💥 💥 💥 ......");
+                System.out.println("10s后主机将爆炸 💥 💥 💥 ......");
+                System.out.println("10s后主机将爆炸 💥 💥 💥 ......");
+                System.out.println("10s后主机将爆炸 💥 💥 💥 ......");
 
-                Thread.sleep(10000);
 
                 String hello = demoService.sayHello("world"); // call remote method
 
                 System.out.println(hello); // get result
 
+                Thread.sleep(5000);
+
+
             } catch (Throwable throwable) {
                 throwable.printStackTrace();
             }
         }
+
+
+//
+//       String hello = demoService.sayHello("world"); // call remote method
+//
+//
+//        System.out.println(hello);
+//       System.in.read();
 
     }
 }
