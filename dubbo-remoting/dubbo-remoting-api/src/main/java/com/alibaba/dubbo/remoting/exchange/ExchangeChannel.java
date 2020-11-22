@@ -21,12 +21,12 @@ import com.alibaba.dubbo.remoting.RemotingException;
 
 /**
  * ExchangeChannel. (API/SPI, Prototype, ThreadSafe)
- * 继承 Channel接口，信息交换通道接口
+ * 继承 Channel接口，在 Channel 接口之上抽象了 Exchange 层的网络连接。
  */
 public interface ExchangeChannel extends Channel {
 
     /**
-     * 发送请求
+     * 发送请求，ResponseFuture 表示此次请求-响应是否完成，及返回 ResponseFuture 才算完成
      *
      * @param request
      * @return response future

@@ -86,12 +86,14 @@ public final class URL implements Serializable {
      */
     private final String password;
 
-    /** by default, host to registry
+    /**
+     * by default, host to registry
      * 地址
      */
     private final String host;
 
-    /** by default, port to registry
+    /**
+     * by default, port to registry
      * 端口
      */
     private final int port;
@@ -324,7 +326,7 @@ public final class URL implements Serializable {
 
     /**
      * Fetch IP address for this URL.
-     *
+     * <p>
      * Pls. note that IP should be used instead of Host when to compare with socket's address or to search in a map
      * which use address as its key.
      *
@@ -1226,18 +1228,26 @@ public final class URL implements Serializable {
     }
 
     public String getServiceKey() {
+        // 获取服务接口全路径名
         String inf = getServiceInterface();
-        if (inf == null) return null;
+        if (inf == null) {
+            return null;
+        }
         StringBuilder buf = new StringBuilder();
+        // 获取分组
         String group = getParameter(Constants.GROUP_KEY);
         if (group != null && group.length() > 0) {
             buf.append(group).append("/");
         }
         buf.append(inf);
+
+        // 获取版本
         String version = getParameter(Constants.VERSION_KEY);
         if (version != null && version.length() > 0) {
             buf.append(":").append(version);
         }
+
+        // group/interface:version
         return buf.toString();
     }
 

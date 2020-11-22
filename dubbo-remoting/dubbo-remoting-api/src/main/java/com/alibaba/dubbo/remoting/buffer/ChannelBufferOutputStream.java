@@ -26,7 +26,7 @@ import java.io.OutputStream;
 public class ChannelBufferOutputStream extends OutputStream {
 
     /**
-     * Buffer
+     * 被装饰的 ChannelBuffer
      */
     private final ChannelBuffer buffer;
     /**
@@ -38,20 +38,37 @@ public class ChannelBufferOutputStream extends OutputStream {
         if (buffer == null) {
             throw new NullPointerException("buffer");
         }
+        // 设置 ChannelBuffer
         this.buffer = buffer;
+        // 设置 开始位置 为 ChannelBuffer 的写入索引位置
         startIndex = buffer.writerIndex();
     }
 
+    /**
+     * 获取装饰的 ChannelBuffer
+     *
+     * @return
+     */
+    public ChannelBuffer buffer() {
+        return buffer;
+    }
+
+    /**
+     * 获取可以写入的量
+     *
+     * @return
+     */
     public int writtenBytes() {
         return buffer.writerIndex() - startIndex;
     }
+
+    //------------ 写入数据都是委托给被装饰的 ChannelBuffer -------------/
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
         if (len == 0) {
             return;
         }
-
         buffer.writeBytes(b, off, len);
     }
 
@@ -65,7 +82,5 @@ public class ChannelBufferOutputStream extends OutputStream {
         buffer.writeByte((byte) b);
     }
 
-    public ChannelBuffer buffer() {
-        return buffer;
-    }
+
 }

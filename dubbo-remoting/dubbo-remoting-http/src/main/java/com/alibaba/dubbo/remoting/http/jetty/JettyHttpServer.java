@@ -50,6 +50,7 @@ public class JettyHttpServer extends AbstractHttpServer {
     private URL url;
 
     public JettyHttpServer(URL url, final HttpHandler handler) {
+        // 初始化AbstractHttpServer中的url字段和handler字段
         super(url, handler);
         this.url = url;
 
@@ -59,7 +60,8 @@ public class JettyHttpServer extends AbstractHttpServer {
         Log.setLog(new StdErrLog());
         Log.getLog().setDebugEnabled(false);
 
-        // 注册 HttpHandler 到 DispatcherServlet 中
+        // 注册 HttpHandler 到 DispatcherServlet 中。注意，HttpHandler会设置到 DispatcherServlet中，通过其 service 方法可知
+        // DispatcherServlet收到请求会交给该HttpHandler来处理。即，DispatcherServlet只负责接收请求，具体处理交给 HttpHandler
         DispatcherServlet.addHttpHandler(url.getParameter(Constants.BIND_PORT_KEY, url.getPort()), handler);
 
         // 创建线程池
@@ -82,7 +84,7 @@ public class JettyHttpServer extends AbstractHttpServer {
         server.setThreadPool(threadPool);
         server.addConnector(connector);
 
-        // 添加DispatcherServlet 到 Jetty 中
+        // 创建ServletHandler并与Jetty Server关联，由DispatcherServlet处理全部的请求
         ServletHandler servletHandler = new ServletHandler();
         ServletHolder servletHolder = servletHandler.addServletWithMapping(DispatcherServlet.class, "/*");
         servletHolder.setInitOrder(2);

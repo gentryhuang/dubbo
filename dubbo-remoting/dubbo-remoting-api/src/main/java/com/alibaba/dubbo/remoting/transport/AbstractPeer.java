@@ -25,15 +25,16 @@ import com.alibaba.dubbo.remoting.RemotingException;
 
 /**
  * AbstractPeer // 实现 Endpoint、ChannelHandler 接口,Peer抽象类
+ * 通过继承关系可以知，AbstractChannel、AbstractServer、AbstractClient 都是要关联一个 ChannelHandler 对象
  */
 public abstract class AbstractPeer implements Endpoint, ChannelHandler {
 
     /**
-     * 通道处理器
+     * 通道处理器,AbstractPeer 对 ChannelHandler 接口的所有实现，都是委托给了这个 ChannelHandler 对象
      */
     private final ChannelHandler handler;
     /**
-     * URL ，传递Dubbo服务暴露和服务引用的配置项
+     * 端点自身的 URL 类型的字段
      */
     private volatile URL url;
 

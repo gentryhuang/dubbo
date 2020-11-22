@@ -47,6 +47,9 @@ import java.util.Map;
 
 /**
  * 实现 Server 接口，继承 AbstractServer 抽象类，Netty 服务器实现类
+ * 说明：
+ * NettyServer通过层层继承，拥有了很多类的职能，如 Endpoint、ChannelHandler、Server 多个接口的能力，其中关联了
+ * ChannelHandler对象和Codec2对象，并最将编解码任务交给Codec2对象处理，将数据处理交给ChannelHandler处理，
  */
 public class NettyServer extends AbstractServer implements Server {
 
@@ -72,6 +75,14 @@ public class NettyServer extends AbstractServer implements Server {
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
 
+    /**
+     * 创建 NettyServer 时，会对传入的 ChannelHandler 进行层层包装。
+     * 其中在包装过程中， Dispatcher创建的ChanglHandler的过程都要创建一个线程池，然后保存到Datasource 中。 todo 2.7.7 对次做了优化
+     *
+     * @param url
+     * @param handler
+     * @throws RemotingException
+     */
     public NettyServer(URL url, ChannelHandler handler) throws RemotingException {
         // ChannelHandlers.wrap方法，用来包装 ChannelHandler，实现Dubbo 线程模型的功能
         super(url, ChannelHandlers.wrap(handler, ExecutorUtil.setThreadName(url, SERVER_THREAD_POOL_NAME)));
@@ -93,7 +104,8 @@ public class NettyServer extends AbstractServer implements Server {
         workerGroup = new NioEventLoopGroup(getUrl().getPositiveParameter(Constants.IO_THREADS_KEY, Constants.DEFAULT_IO_THREADS),
                 new DefaultThreadFactory("NettyServerWorker", true));
 
-        // 创建NettyServerHandler对象
+        // 创建NettyServerHandler对象，注意传入的第二个参数是 NettyServer 对象本身，因为NettyServer是ChannelHander的子类
+        // NettyServerHandler 会将数据委托给这个 ChannelHandler
         final NettyServerHandler nettyServerHandler = new NettyServerHandler(getUrl(), this);
 
         // 设置 channels 属性 【从NettyServerHandler对象中取Channel通道集合】
@@ -104,7 +116,7 @@ public class NettyServer extends AbstractServer implements Server {
                 .group(bossGroup, workerGroup)
                 // 服务端使用NioServerSocketChannel 作为传输通道
                 .channel(NioServerSocketChannel.class)
-                // 配置可选项
+                // 配置可选项，Netty 优化相关
                 .childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE)
                 .childOption(ChannelOption.SO_REUSEADDR, Boolean.TRUE)
                 .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
@@ -125,6 +137,7 @@ public class NettyServer extends AbstractServer implements Server {
                                 .addLast("handler", nettyServerHandler);
                     }
                 });
+
         // 服务器绑定端口监听，启动 Netty
         ChannelFuture channelFuture = bootstrap.bind(getBindAddress());
         channelFuture.syncUninterruptibly();

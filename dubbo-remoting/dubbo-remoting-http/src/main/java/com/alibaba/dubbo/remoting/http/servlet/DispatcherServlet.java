@@ -82,13 +82,13 @@ public class DispatcherServlet extends HttpServlet {
      */
     @Override
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        // 获得处理器
+        // 从HANDLERS集合中查询端口对应的HttpHandler对象
         HttpHandler handler = handlers.get(request.getLocalPort());
         // 没有处理器就报错
         if (handler == null) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "Service not found.");
         } else {
-            // 处理请求
+            // 将请求委托给HttpHandler对象处理
             handler.handle(request, response);
         }
     }

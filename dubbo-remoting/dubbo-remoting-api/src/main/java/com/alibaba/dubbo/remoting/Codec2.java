@@ -67,6 +67,5 @@ public interface Codec2 {
          */
         SKIP_SOME_INPUT
     }
-
 }
 

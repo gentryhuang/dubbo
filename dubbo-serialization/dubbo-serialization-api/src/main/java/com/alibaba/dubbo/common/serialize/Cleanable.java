@@ -17,7 +17,7 @@
 package com.alibaba.dubbo.common.serialize;
 
 /**
- * 部分 Serialize 实现类，完成序列化或反序列化需要做清理。通过实现该接口，执行清理的逻辑
+ * 部分 Serialize 实现类，完成序列化或反序列化需要做清理，通过实现该接口，释放资源，目前 Kryo 实现
  */
 public interface Cleanable {
 

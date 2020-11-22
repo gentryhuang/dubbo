@@ -32,6 +32,10 @@ import java.util.concurrent.RejectedExecutionException;
 
 /**
  * 实现WrappedChannelHandler抽象类 【WrappedChannelHandler实现了ChannelHandlerDelegate抽象类】
+ * 1 将所有网络事件和消息交给线程池
+ * 2 覆写了 WrappedChannelHandler 中除了 sent() 方法之外的其它方法，执行底层的ChannelHander的逻辑都放在了线程池中
+ * 3 注意，AllChannelHandler 并没有覆写 sent 方法，发送消息是直接在当前线程调用 sent() 方法完成的。
+ *
  */
 public class AllChannelHandler extends WrappedChannelHandler {
 
@@ -50,7 +54,7 @@ public class AllChannelHandler extends WrappedChannelHandler {
         // 获取线程池
         ExecutorService cexecutor = getExecutorService();
         try {
-            // 创建ChannelEventRunnable对象，用于将连接事件任务派发到线程池执行
+            // 将CONNECTED 事件的处理封装成ChannelEventRunnable提交到线程池中执行
             cexecutor.execute(new ChannelEventRunnable(channel, handler, ChannelState.CONNECTED));
         } catch (Throwable t) {
             throw new ExecutionException("connect event", channel, getClass() + " error when process connected event .", t);
@@ -78,7 +82,8 @@ public class AllChannelHandler extends WrappedChannelHandler {
     /**
      * 派发策略 - all ： 所有消息都派发到线程池。
      * <p>
-     * 处理请求和响应消息，注意这里的message 可能是 Request也可能是 Response
+     * 接收请求和响应消息，注意这里的message 可能是 Request也可能是 Response。
+     * 具体流程是：消息先由 IO 线程（Netty 中的EventLoopGroup ）从二进制流中解码出来，然后才会执行到该方法，该方法会把请求提交给线程池处理，处理完后调用send 方法用于向对端写回结果。
      *
      * @param channel
      * @param message

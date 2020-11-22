@@ -57,7 +57,7 @@ public class DubboExporter<T> extends AbstractExporter<T> {
     public void unexport() {
         // 取消暴露
         super.unexport();
-        // 移除自己
+        // 移除自己，即清理该 DubboExporter 实例在 exporterMap 中相应的元素
         exporterMap.remove(key);
     }
 

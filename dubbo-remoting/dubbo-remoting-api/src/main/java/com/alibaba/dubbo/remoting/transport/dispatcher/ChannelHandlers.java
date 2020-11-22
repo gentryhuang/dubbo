@@ -38,7 +38,7 @@ public class ChannelHandlers {
     }
 
     /**
-     * 无论是Client还是Server，都是类似的，将传入的ChannelHandler使用ChannelHandlers进行一次包装
+     * 无论是Client还是Server，都是类似的，将传入的ChannelHandler使用ChannelHandlers进行一次包装。 其中实现了 Dubbo 线程模型
      *
      * @param handler
      * @param url
@@ -57,11 +57,14 @@ public class ChannelHandlers {
     }
 
     /**
-     * 说明：无论是请求还是响应都会按照这个顺序处理一遍
+     * 说明：无论是请求还是响应都会按照这个顺序处理一遍，多个 ChannelHandlerDelegate 的组合
      * <p>
      * 1  对DecodeHandler对象进行层层包装，最终得到MultiMessageHandler：
      * MultiMessageHandler->HeartbeatHandler->AllChangeHandler[url:providerUrl,executor:FixedExecutor,handler:DecodeHandler] -> DecodeHandler -> HeaderExchangeHandler->ExchangeHandlerAdapter
      * 2 MultiMessageHandler 创建后，NettyServer就开始调用各个父类进行属性初始化
+     * <p>
+     * 注意点：
+     * 1 无论是Server还是Client ，使用该方法包装传入的handler
      *
      * @param handler
      * @param url
@@ -70,8 +73,9 @@ public class ChannelHandlers {
     protected ChannelHandler wrapInternal(ChannelHandler handler, URL url) {
         return new MultiMessageHandler( // MultiMessageHandler
                 new HeartbeatHandler( // HeartbeatHandler
-                        ExtensionLoader.getExtensionLoader(Dispatcher.class).getAdaptiveExtension() // AllDispatcher ,Dispatcher决定了dubbo的线程模型，指定了哪些线程做什么
-                                .dispatch(handler, url) // AllChannelHandler
+                        ExtensionLoader.getExtensionLoader(Dispatcher.class)
+                                .getAdaptiveExtension() // AllDispatcher ,Dispatcher决定了dubbo的线程模型，指定了哪些线程做什么
+                                .dispatch(handler, url) // 返回的也是一个 ChannelHandlerDelegate 类型的对象，默认是 AllChannelHandler
                 )
         );
     }

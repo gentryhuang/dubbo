@@ -19,7 +19,7 @@ package com.alibaba.dubbo.rpc;
 import java.util.Map;
 
 /**
- * RPC invoke result. (API, Prototype, NonThreadSafe)
+ * RPC invoke result. (API, Prototype, NonThreadSafe) // Invoker.invoke 方法的返回值，抽象了一次调用的返回值
  *
  * @serial Don't change the class name and package name.
  * @see com.alibaba.dubbo.rpc.Invoker#invoke(Invocation)
@@ -49,7 +49,7 @@ public interface Result {
     boolean hasException();
 
     /**
-     * Recreate.
+     * Recreate. // recreate()方法是一个复合操作，如果此次调用发生异常，则直接抛出异常。如果没有异常，则返回结果
      * <p>
      * <code>
      * if (hasException()) {

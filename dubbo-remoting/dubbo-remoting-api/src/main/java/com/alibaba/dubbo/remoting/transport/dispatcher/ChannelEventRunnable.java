@@ -22,7 +22,7 @@ import com.alibaba.dubbo.remoting.Channel;
 import com.alibaba.dubbo.remoting.ChannelHandler;
 
 /**
- * 实现Runnable接口
+ * 实现Runnable接口，该任务体被线程派发机制复用，很重要。 todo
  */
 public class ChannelEventRunnable implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(ChannelEventRunnable.class);
@@ -73,7 +73,7 @@ public class ChannelEventRunnable implements Runnable {
             // 其他的消息处理
         } else {
             switch (state) {
-                case CONNECTED:
+                case CONNECTED: // 连接
                     try {
                         handler.connected(channel);
                     } catch (Exception e) {

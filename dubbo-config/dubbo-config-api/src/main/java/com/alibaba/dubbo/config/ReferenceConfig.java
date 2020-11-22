@@ -178,6 +178,11 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         return urls;
     }
 
+
+    /**
+     * 在服务消费方中，接口并不包含具体的实现逻辑，具体实现都放在服务提供方，但是当我们在调用接口的时候，却能做到与调用本地方法没有区别，原因在于调用方提供了一个代理类，在运行时与该接口绑定，
+     * 当接口中的方法被调用时，实际是作用于该代理类上，代理类封装了远程调用的逻辑，把请求参数发送给远程服务提供方，获取结果后再返回.
+     */
     public synchronized T get() {
         // 已销毁，不可获得
         if (destroyed) {
@@ -412,13 +417,6 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
 
         // 把attributes集合添加到StaticContext进行缓存，为了以后的事件通知
         StaticContext.getSystemContext().putAll(attributes);
-
-        try{
-            System.out.println(" ref = createProxy(map); is begin.....");
-            Thread.sleep(5000);
-        }catch (Exception ex){
-
-        }
 
         // 创建Service 代理对象
         ref = createProxy(map);

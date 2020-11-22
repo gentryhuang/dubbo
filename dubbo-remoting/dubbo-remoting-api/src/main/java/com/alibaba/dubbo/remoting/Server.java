@@ -33,21 +33,21 @@ import java.util.Collection;
 public interface Server extends Endpoint, Resetable {
 
     /**
-     * is bound. 是否绑定本地端口，即是否启动成功，可连接，接收消息
+     *  是否绑定本地端口，即是否启动成功，可连接、接收消息
      *
      * @return bound
      */
     boolean isBound();
 
     /**
-     * get channels. 获取连接上服务器的通道列表 【客户端列表】
+     * 获取连接上服务器的通道列表 【客户端列表】
      *
      * @return channels
      */
     Collection<Channel> getChannels();
 
     /**
-     * get channel. 根据地址获取连接上服务器的通道 【客户端】
+     * 根据地址获取连接上服务器的通道 【客户端】
      *
      * @param remoteAddress
      * @return channel

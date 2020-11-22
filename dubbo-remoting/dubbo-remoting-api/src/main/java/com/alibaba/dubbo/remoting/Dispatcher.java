@@ -24,11 +24,13 @@ import com.alibaba.dubbo.remoting.transport.dispatcher.all.AllDispatcher;
 
 /**
  * ChannelHandlerWrapper (SPI, Singleton, ThreadSafe)
- * <span>调度器接口，@SPI(AllDispatcher.NAME)注解，Dubbo SPI 拓展点，默认为 'all'</span>
- * 如果事件处理的逻辑能迅速完成，并且不会发起新的 IO 请求，比如只是在内存中记个标识，则直接在 IO 线程上处理更快，因为减少了线程池调度。
- * 但如果事件处理逻辑较慢，或者需要发起新的 IO 请求，比如需要查询数据库，则必须派发到线程池，否则 IO 线程阻塞，将导致不能接收其它请求。
- * 因此，需要通过不同的派发策略和不同的线程池配置的组合来应对不同的场景。注意，派发策略和线程池的联系
- * 在dubbo 中，有多种Dispatcher的实现：
+ * <span>说明：</span>
+ * 1 调度器接口，被 @SPI(AllDispatcher.NAME)注解标注，是Dubbo 的拓展点，默认扩展名为 'all'
+ * 2 如果事件处理的逻辑能迅速完成，并且不会发起新的 IO 请求，比如只是在内存中记个标识，则直接在 IO 线程上处理更快，因为减少了线程池调度。
+ *   如果事件处理逻辑较慢，或者需要发起新的 IO 请求，比如需要查询数据库，则必须派发到线程池，否则 IO 线程阻塞，将导致不能接收其它请求。
+ * 3 通过不同的派发策略和不同的线程池配置的组合来应对不同的场景。注意，派发策略和线程池的联系
+ *
+ * <span>在dubbo 中，有多种Dispatcher的实现</span>
  * <ul>
  *     <li>all: 所有消息都派发到线程池，包括请求，响应，连接事件，断开事件，心跳等</li>
  *     <li>direct: 所有消息都不派发到线程池，全部在IO线程上直接执行</li>
@@ -42,14 +44,13 @@ import com.alibaba.dubbo.remoting.transport.dispatcher.all.AllDispatcher;
 public interface Dispatcher {
 
     /**
-     * dispatch the message to threadpool.
+     * 派发消息到线程池处理还是IO线程直接处理
      *
-     * @param handler
-     * @param url
+     * @param handler 通道处理
+     * @param url     url
      * @return channel handler
      */
     @Adaptive({Constants.DISPATCHER_KEY, "dispather", "channel.handler"})
-    // The last two parameters are reserved for compatibility with the old configuration
     ChannelHandler dispatch(ChannelHandler handler, URL url);
 
 }

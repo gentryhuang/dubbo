@@ -20,10 +20,13 @@ package com.alibaba.dubbo.remoting.buffer;
 import java.nio.ByteBuffer;
 
 /**
- * 实现 ChannelBufferFactory 接口，创建 DirectChannelBuffer 的工厂
+ * 实现 ChannelBufferFactory 接口，创建 ByteBufferBackedChannelBuffer 的工厂
  */
 public class DirectChannelBufferFactory implements ChannelBufferFactory {
 
+    /**
+     * 单例
+     */
     private static final DirectChannelBufferFactory INSTANCE = new DirectChannelBufferFactory();
 
     public DirectChannelBufferFactory() {
@@ -42,6 +45,7 @@ public class DirectChannelBufferFactory implements ChannelBufferFactory {
         if (capacity == 0) {
             return ChannelBuffers.EMPTY_BUFFER;
         }
+        // 使用 ChannelBuffers 工具类创建 ByteBufferBackedChannelBuffer
         return ChannelBuffers.directBuffer(capacity);
     }
 
@@ -59,8 +63,9 @@ public class DirectChannelBufferFactory implements ChannelBufferFactory {
         if (offset + length > array.length) {
             throw new IndexOutOfBoundsException("length: " + length);
         }
-
+        // 调用 getBuffer 方法，使用 ChannelBuffers 工具类创建 ByteBufferBackedChannelBuffer
         ChannelBuffer buf = getBuffer(length);
+        // 向 buf 中写入数据
         buf.writeBytes(array, offset, length);
         return buf;
     }
@@ -71,8 +76,10 @@ public class DirectChannelBufferFactory implements ChannelBufferFactory {
             return ChannelBuffers.wrappedBuffer(nioBuffer);
         }
 
+        // 调用 getBuffer 方法，使用 ChannelBuffers 工具类创建 ByteBufferBackedChannelBuffer
         ChannelBuffer buf = getBuffer(nioBuffer.remaining());
         int pos = nioBuffer.position();
+        // 向buf中写入数据
         buf.writeBytes(nioBuffer);
         nioBuffer.position(pos);
         return buf;

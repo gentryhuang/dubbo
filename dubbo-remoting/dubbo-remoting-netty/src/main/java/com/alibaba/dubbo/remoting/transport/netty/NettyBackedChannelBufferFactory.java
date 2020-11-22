@@ -30,6 +30,9 @@ import java.nio.ByteBuffer;
  */
 public class NettyBackedChannelBufferFactory implements ChannelBufferFactory {
 
+    /**
+     * 单例
+     */
     private static final NettyBackedChannelBufferFactory INSTANCE = new NettyBackedChannelBufferFactory();
 
     public static ChannelBufferFactory getInstance() {
@@ -39,6 +42,7 @@ public class NettyBackedChannelBufferFactory implements ChannelBufferFactory {
 
     @Override
     public ChannelBuffer getBuffer(int capacity) {
+        // 使用 Netty 的 ChannelBuffers 方法创建 org.jboss.netty.buffer.ChannelBuffer
         return new NettyBackedChannelBuffer(ChannelBuffers.dynamicBuffer(capacity));
     }
 
@@ -56,6 +60,8 @@ public class NettyBackedChannelBufferFactory implements ChannelBufferFactory {
 
     @Override
     public ChannelBuffer getBuffer(ByteBuffer nioBuffer) {
+        // 1 使用 Netty 的 ChannelBuffers 方法创建 org.jboss.netty.buffer.ChannelBuffer
+        // 2 创建 NettyBackedChannelBuffer
         return new NettyBackedChannelBuffer(ChannelBuffers.wrappedBuffer(nioBuffer));
     }
 }

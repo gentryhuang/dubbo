@@ -32,7 +32,8 @@ import java.io.IOException;
 /**
  * 实现Codec2接口，支持多消息的编解码器
  * 注意：
- * 在DubboProtocol中 Client和Server 创建的过程，设置了编码器，默认拓展名为 'dubbo'，通过Dubbo SPI机制加载到的就是 DubboCountCodec
+ * 1  在DubboProtocol中 Client和Server 创建的过程，设置了编码器，默认拓展名为 'dubbo'，通过Dubbo SPI机制加载到的就是 DubboCountCodec
+ * 2 DubboCountCodec 只负责在解码过程中 ChannelBuffer 的 readerIndex 指针控制
  */
 public final class DubboCountCodec implements Codec2 {
 
@@ -42,7 +43,7 @@ public final class DubboCountCodec implements Codec2 {
     private DubboCodec codec = new DubboCodec();
 
     /**
-     * 编码
+     * 编码，直接委托给 DubboCodec 处理
      *
      * @param channel
      * @param buffer
@@ -55,7 +56,7 @@ public final class DubboCountCodec implements Codec2 {
     }
 
     /**
-     * 解码
+     * 解码，
      *
      * @param channel
      * @param buffer
@@ -66,18 +67,21 @@ public final class DubboCountCodec implements Codec2 {
     public Object decode(Channel channel, ChannelBuffer buffer) throws IOException {
         // 记录当前读位置，用于下面计算每条消息的长度
         int save = buffer.readerIndex();
+
         // 创建MultiMessage 对象【多消息的封装】。MultiMessageHandler支持对它的处理分发
         MultiMessage result = MultiMessage.create();
 
         // 循环解码消息
         do {
-            // 解码
+            // 通过DubboCodec提供的解码能力解码一条消息
             Object obj = codec.decode(channel, buffer);
+
             // 字节数组不够，重置读进度。结束解析
             if (Codec2.DecodeResult.NEED_MORE_INPUT == obj) {
                 buffer.readerIndex(save);
                 break;
-                // 解析到消息
+
+                // 将成功解码的消息添加到MultiMessage中暂存
             } else {
                 // 添加结果消息
                 result.addMessage(obj);
@@ -88,14 +92,17 @@ public final class DubboCountCodec implements Codec2 {
             }
         } while (true);
 
-        // 需要更多的输入
+        // 一条消息也未解码出来，则返回NEED_MORE_INPUT错误码
         if (result.isEmpty()) {
             return Codec2.DecodeResult.NEED_MORE_INPUT;
         }
-        // 返回解析到的消息
+
+        // 只解码出来一条消息，则直接返回该条消息
         if (result.size() == 1) {
             return result.get(0);
         }
+
+        // 解码出多条消息的话，会将MultiMessage返回
         return result;
     }
 

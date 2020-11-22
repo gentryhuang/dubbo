@@ -60,23 +60,36 @@ public class DynamicChannelBuffer extends AbstractChannelBuffer {
 
     @Override
     public void ensureWritableBytes(int minWritableBytes) {
+        // 剩余空间充足
         if (minWritableBytes <= writableBytes()) {
             return;
         }
 
         int newCapacity;
+
+        // 判断当前 ChannelBuffer 容量大小是否为 0
         if (capacity() == 0) {
             newCapacity = 1;
         } else {
+            // 获取 ChannelBuffer 容量大小
             newCapacity = capacity();
         }
+
+        // 计算预计容量大小
         int minNewCapacity = writerIndex() + minWritableBytes;
+
+        // 如果预计容量大于当前 ChannelBuffer 的容量大小，则进行 2 倍容量扩容
         while (newCapacity < minNewCapacity) {
             newCapacity <<= 1;
         }
 
+        // 通过工厂创建容量大小为 newCapacity 的 ChannelBuffer
         ChannelBuffer newBuffer = factory().getBuffer(newCapacity);
+
+        // 将原来ChannelBuffer 中的数据拷贝到新的 ChannelBuffer 中
         newBuffer.writeBytes(buffer, 0, writerIndex());
+
+        // 将 buffer 字段指向新 ChannelBuffer 对象
         buffer = newBuffer;
     }
 

@@ -110,10 +110,16 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
             boolean isAsync = RpcUtils.isAsync(getUrl(), invocation);
             // 获得是否单向调用
             boolean isOneway = RpcUtils.isOneway(getUrl(), invocation);
+
             // 获得调用超时时间 （毫秒）
             int timeout = getUrl().getMethodParameter(methodName, Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
 
-            // 单向调用 【可以理解为异步无返回值】
+            /**
+             * 1 发送 oneway 请求的方式是send() 方法，而后面发送 twoway 请求的方式是 request() 方法
+             * 2 request() 方法会相应地创建 DefaultFuture 对象以及检测超时的定时任务，而 send() 方法则不会创建这些东西，它是直接将 Invocation 包装成 oneway 类型的 Request 发送出去
+             */
+
+            // 单向调用，不需要关注返回值的请求
             if (isOneway) {
                 boolean isSent = getUrl().getMethodParameter(methodName, Constants.SENT_KEY, false);
                 // 注意，调用的是 ExchangeClient#send(invocation, sent) 方法，发送消息，而不是请求
@@ -124,7 +130,7 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
                 return new RpcResult();
 
 
-                // 异步调用【有返回值】
+                // 异步调用，需要关注返回值的请求
             } else if (isAsync) {
 
                 /**

@@ -54,7 +54,7 @@ public class HeaderExchangeClient implements ExchangeClient {
      */
     private final Client client;
     /**
-     * 信息交换通道 [类型：HeaderExchangeChannel]，被装饰对象
+     * 信息交换通道，Client 和服务端建立的连接
      */
     private final ExchangeChannel channel;
     /**
@@ -76,6 +76,7 @@ public class HeaderExchangeClient implements ExchangeClient {
         }
         // 客户端
         this.client = client;
+
         // 创建 HeaderExchangeChannel 对象
         this.channel = new HeaderExchangeChannel(client);
 

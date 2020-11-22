@@ -32,28 +32,28 @@ import java.net.InetSocketAddress;
 public interface Endpoint {
 
     /**
-     * get url. 获取Dubbo URL
+     * 关联的 URL 信息
      *
      * @return url
      */
     URL getUrl();
 
     /**
-     * get channel handler. 获取ChnnelHandler
+     * 底层 Channel 关联的 ChannelHandler
      *
      * @return channel handler
      */
     ChannelHandler getChannelHandler();
 
     /**
-     * get local address. 获取本地地址
+     * 获取本地地址
      *
      * @return local address.
      */
     InetSocketAddress getLocalAddress();
 
     /**
-     * send message. 发送消息
+     * 发送消息
      *
      * @param message
      * @throws RemotingException
@@ -69,12 +69,12 @@ public interface Endpoint {
     void send(Object message, boolean sent) throws RemotingException;
 
     /**
-     * 关闭Channel
+     * 关闭底层Channel
      */
     void close();
 
     /**
-     * Graceful close the channel.  优雅关闭Channel
+     * 优雅关闭底层Channel
      */
     void close(int timeout);
 
@@ -84,7 +84,7 @@ public interface Endpoint {
     void startClose();
 
     /**
-     * is closed. 是否已经关闭
+     * 检测底层Channel是否已经关闭
      *
      * @return closed
      */

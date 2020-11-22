@@ -31,6 +31,7 @@ import com.alibaba.dubbo.remoting.ChannelHandler;
 import com.alibaba.dubbo.remoting.Client;
 import com.alibaba.dubbo.remoting.RemotingException;
 import com.alibaba.dubbo.remoting.transport.dispatcher.ChannelHandlers;
+import com.alibaba.dubbo.remoting.transport.dispatcher.WrappedChannelHandler;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
@@ -49,8 +50,16 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public abstract class AbstractClient extends AbstractEndpoint implements Client {
 
-    protected static final String CLIENT_THREAD_POOL_NAME = "DubboClientHandler";
     private static final Logger logger = LoggerFactory.getLogger(AbstractClient.class);
+
+    /**
+     * 连接线程池名
+     */
+    protected static final String CLIENT_THREAD_POOL_NAME = "DubboClientHandler";
+
+    /**
+     * 连接线程池id
+     */
     private static final AtomicInteger CLIENT_THREAD_POOL_ID = new AtomicInteger();
     /**
      * 重连定时任务执行器，在客户端连接服务端时，会创建后台任务，定时检查连接，若断开会进行重新连
@@ -82,7 +91,7 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
      */
     private final long shutdown_timeout;
     /**
-     * 线程池
+     * 当前客户端对应的线程池
      * 在调用 {@link #wrapChannelHandler(URL, ChannelHandler)} 时，会调用 {@link com.alibaba.dubbo.remoting.transport.dispatcher.WrappedChannelHandler} 创建
      */
     protected volatile ExecutorService executor;
@@ -141,7 +150,12 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
                     "Failed to start " + getClass().getSimpleName() + " " + NetUtils.getLocalAddress()
                             + " connect to the server " + getRemoteAddress() + ", cause: " + t.getMessage(), t);
         }
+
+
         // 从DataStore中获得线程池，这里的线程池就是线程模型中的涉及的线程池
+        /**
+         * {@link WrappedChannelHandler#WrappedChannelHandler(com.alibaba.dubbo.remoting.ChannelHandler, com.alibaba.dubbo.common.URL)}
+         */
         executor = (ExecutorService) ExtensionLoader.getExtensionLoader(DataStore.class).getDefaultExtension().get(Constants.CONSUMER_SIDE, Integer.toString(url.getPort()));
         ExtensionLoader.getExtensionLoader(DataStore.class).getDefaultExtension().remove(Constants.CONSUMER_SIDE, Integer.toString(url.getPort()));
     }
@@ -192,6 +206,7 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
     private synchronized void initConnectStatusCheckCommand() {
         // 获得重连频率  【注意：默认是开启的，2000毫秒】
         int reconnect = getReconnectParam(getUrl());
+
         // 若开启重连功能，创建重连线程   todo  reconnectExecutorFuture.isCancelled() 这个条件貌似可能引起死循环
         if (reconnect > 0 && (reconnectExecutorFuture == null || reconnectExecutorFuture.isCancelled())) {
             // 创建重连任务体
@@ -199,9 +214,11 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
                 @Override
                 public void run() {
                     try {
+
                         // 判断是否连接，未连接就重连
                         if (!isConnected()) {
                             connect();
+
                             // 已连接记录最后连接时间
                         } else {
                             lastConnectedTime = System.currentTimeMillis();
@@ -352,8 +369,10 @@ public abstract class AbstractClient extends AbstractEndpoint implements Client 
             if (isConnected()) {
                 return;
             }
+
             // 初始化重连线程 【断线重连机制】
             initConnectStatusCheckCommand();
+
             // 执行连接
             doConnect();
             // 连接失败，抛出异常

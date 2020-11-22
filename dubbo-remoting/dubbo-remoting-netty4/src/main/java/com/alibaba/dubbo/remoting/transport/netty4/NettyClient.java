@@ -61,7 +61,7 @@ public class NettyClient extends AbstractClient {
     private volatile Channel channel;
 
     public NettyClient(final URL url, final ChannelHandler handler) throws RemotingException {
-        // wrapChannelHandler方法，包装ChannelHandler,实现Dubbo 线程模型的功能
+        // wrapChannelHandler方法，包装ChannelHandler，其中实现了 Dubbo 线程模型的功能。 todo
         super(url, wrapChannelHandler(url, handler));
     }
 
@@ -73,7 +73,8 @@ public class NettyClient extends AbstractClient {
     @Override
     protected void doOpen() throws Throwable {
 
-        // 创建Dubbo NettyClientHandler 对象
+        // 创建Dubbo NettyClientHandler 对象。注意传入的第二个参数是 NettyClient 对象本身，因为 NettyClient 是ChannelHander的子类
+        //  NettyClientHandler 会将数据委托给这个 NettyClient
         final NettyClientHandler nettyClientHandler = new NettyClientHandler(getUrl(), this);
         // 实例化 Netty 客户端引导类
         bootstrap = new Bootstrap();
@@ -85,6 +86,7 @@ public class NettyClient extends AbstractClient {
                 .option(ChannelOption.TCP_NODELAY, true)
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
                 //.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, getTimeout())
+
                 // 设置 客户端对应的Channel类型
                 .channel(NioSocketChannel.class);
 
@@ -116,7 +118,7 @@ public class NettyClient extends AbstractClient {
     }
 
     /**
-     * 连接服务器
+     * 连接服务器,建立Channel
      *
      * @throws Throwable
      */
@@ -127,13 +129,16 @@ public class NettyClient extends AbstractClient {
         // 连接服务器
         ChannelFuture future = bootstrap.connect(getConnectAddress());
         try {
+
             // 等待连接成功或者超时
             boolean ret = future.awaitUninterruptibly(getConnectTimeout(), TimeUnit.MILLISECONDS);
 
             // 连接成功
             if (ret && future.isSuccess()) {
+
                 // 取出连接的通道
                 Channel newChannel = future.channel();
+
                 try {
                     // 如果存在老的连接通道，就把老的关闭
                     Channel oldChannel = NettyClient.this.channel;
@@ -161,6 +166,7 @@ public class NettyClient extends AbstractClient {
                             NettyClient.this.channel = null;
                             NettyChannel.removeChannelIfDisconnected(newChannel);
                         }
+
                         // 更新连接通道，即设置新的连接通道到 channel 属性
                     } else {
                         NettyClient.this.channel = newChannel;

@@ -36,22 +36,22 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * AbstractServer
- * 服务器抽象类，重点实现了公用的逻辑，同时抽象了开启、关闭等模板方法，供子类实现
+ * 对服务器抽象类，重点实现了公用的逻辑，同时抽象了开启、关闭等模板方法，供子类实现
  */
 public abstract class AbstractServer extends AbstractEndpoint implements Server {
 
     protected static final String SERVER_THREAD_POOL_NAME = "DubboServerHandler";
     private static final Logger logger = LoggerFactory.getLogger(AbstractServer.class);
     /**
-     * 线程池
+     * 当前Server关联的线程池，是从 DataStore 中取的
      */
     ExecutorService executor;
     /**
-     * 服务地址
+     * 本地地址
      */
     private InetSocketAddress localAddress;
     /**
-     * 绑定地址
+     * 绑定地址  （默认值与 localAddress 一致）
      */
     private InetSocketAddress bindAddress;
     /**
@@ -81,18 +81,20 @@ public abstract class AbstractServer extends AbstractEndpoint implements Server 
         this.accepts = url.getParameter(Constants.ACCEPTS_KEY, Constants.DEFAULT_ACCEPTS);
         // 空闲超时时间
         this.idleTimeout = url.getParameter(Constants.IDLE_TIMEOUT_KEY, Constants.DEFAULT_IDLE_TIMEOUT);
+
         try {
             // 调用模版方法 doOpen 启动服务
             doOpen();
             if (logger.isInfoEnabled()) {
                 logger.info("Start " + getClass().getSimpleName() + " bind " + getBindAddress() + ", export " + getLocalAddress());
             }
+
         } catch (Throwable t) {
             throw new RemotingException(url.toInetSocketAddress(), null, "Failed to bind " + getClass().getSimpleName()
                     + " on " + getLocalAddress() + ", cause: " + t.getMessage(), t);
         }
 
-        // 从DataStore中获得线程池
+        /** 从DataStore中获得线程池??? 怎么来的  {@link com.alibaba.dubbo.remoting.transport.dispatcher.WrappedChannelHandler.WrappedChannelHandler}*/
         //fixme replace this with better method
         DataStore dataStore = ExtensionLoader.getExtensionLoader(DataStore.class).getDefaultExtension();
         executor = (ExecutorService) dataStore.get(Constants.EXECUTOR_SERVICE_COMPONENT_KEY, Integer.toString(url.getPort()));
@@ -106,6 +108,7 @@ public abstract class AbstractServer extends AbstractEndpoint implements Server 
      * 重置相关属性
      *
      * @param url
+     * @see com.alibaba.dubbo.rpc.protocol.dubbo.DubboProtocol#openServer(com.alibaba.dubbo.common.URL)
      */
     @Override
     public void reset(URL url) {

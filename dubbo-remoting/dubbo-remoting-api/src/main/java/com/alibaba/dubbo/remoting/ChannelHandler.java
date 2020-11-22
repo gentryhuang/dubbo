@@ -31,21 +31,21 @@ import com.alibaba.dubbo.common.extension.SPI;
 public interface ChannelHandler {
 
     /**
-     * on channel connected.
+     * 处理 Channel 的连接建立事件
      *
      * @param channel channel.
      */
     void connected(Channel channel) throws RemotingException;
 
     /**
-     * on channel disconnected.
+     * 处理 Channel 的连接断开事件
      *
      * @param channel channel.
      */
     void disconnected(Channel channel) throws RemotingException;
 
     /**
-     * on message sent.
+     * 处理发送的数据
      *
      * @param channel channel.
      * @param message message.
@@ -53,7 +53,7 @@ public interface ChannelHandler {
     void sent(Channel channel, Object message) throws RemotingException;
 
     /**
-     * on message received.
+     * 处理读取到的数据
      *
      * @param channel channel.
      * @param message message.
@@ -61,7 +61,7 @@ public interface ChannelHandler {
     void received(Channel channel, Object message) throws RemotingException;
 
     /**
-     * on exception caught.
+     * 处理捕获到的异常
      *
      * @param channel   channel.
      * @param exception exception.

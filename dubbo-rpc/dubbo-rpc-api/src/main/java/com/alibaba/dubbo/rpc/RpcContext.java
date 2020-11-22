@@ -44,7 +44,7 @@ import java.util.concurrent.TimeoutException;
  * @export
  * @see com.alibaba.dubbo.rpc.filter.ContextFilter
  * <p>
- * 上下文信息
+ * 线程级别上下文信息，每个线程绑定一个 RpcContext。底层依赖 ThradLocal 实现。
  * 说明：
  * 上下文中存放的是当前调用过程中所需的环境信息,每个调用都有可能产生很多中间临时信息，我们肯定不会要求每个接口都加一个上下参数一路往下传。
  * 通常做法是放在ThreadLocal中，作为一个全局参数，当前线程中的任何一个地方都可以访问。RpcContext就是一个ThreadLocal的临时状态记录器，
@@ -52,18 +52,18 @@ import java.util.concurrent.TimeoutException;
  * 1 在B调用C之前，RpcContext记录的是A调B的信息
  * 2 在B调用C之后，RpcContext记录的是B调用C的信息
  * 注意：
- *  每次收到或发起RPC调用的时候，上下文信息都会发生改变。
+ * 每次收到或发起RPC调用的时候，上下文信息都会发生改变。
  */
 public class RpcContext {
 
     /**
-     * RpcContext 线程变量，初始获得时，返回新的RpcContext对象
-     * <p>
-     * use internal thread local to improve performance
+     * 说明：
+     * 1  RpcContext 中是使用 Dubbo 框架实现的 InternalThreadLocal 的get/initialize 方法实现间接管理线程绑定的 RpcContext 。InternalThreadLocal 只是在 RpcContext 就是一个静态变量
+     * 2 InternalThreadLocal 是使用 InternalThreadLocalMap 来实现和线程绑定关系
      */
 
     /**
-     * 记录local的上下文
+     * 记录local的上下文，即 在发起请求时，会使用该RpcContext来存储上下文信息
      */
     private static final InternalThreadLocal<RpcContext> LOCAL = new InternalThreadLocal<RpcContext>() {
         @Override
@@ -73,7 +73,7 @@ public class RpcContext {
     };
 
     /**
-     * 记录server的上下文
+     * 记录server的上下文，即 在接收到响应的时候，会使用该RpcContext来存储上下文信息
      */
     private static final InternalThreadLocal<RpcContext> SERVER_LOCAL = new InternalThreadLocal<RpcContext>() {
         @Override
@@ -83,11 +83,12 @@ public class RpcContext {
     };
 
     /**
-     * 隐式参数集合
+     * 隐式参数集合，用于记录调用上下文的附加信息，这些信息会被添加到 Invocation 中，并进行传递
      * 说明：作用非常大，我们可以在RPC调用前，可在业务代码中添加一些自定义参数到该属性
      */
     private final Map<String, String> attachments = new HashMap<String, String>();
     /**
+     * 用来记录上下文的键值对信息，但是不会被传递
      * todo 好像没有使用。当该服务作为消费方时，每次调用后ConsumerContextFilter会清理隐士参数，但是不会清理这属性，可以考虑使用该属性保存共享参数
      */
     private final Map<String, Object> values = new HashMap<String, Object>();
@@ -104,7 +105,7 @@ public class RpcContext {
      */
     private URL url;
     /**
-     * 方法名
+     * 调用的方法名
      */
     private String methodName;
     /**
@@ -121,7 +122,7 @@ public class RpcContext {
      */
     private InetSocketAddress localAddress;
     /**
-     * 远程地址
+     * 远端地址
      */
     private InetSocketAddress remoteAddress;
 

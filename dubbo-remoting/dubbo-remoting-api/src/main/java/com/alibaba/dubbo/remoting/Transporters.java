@@ -38,7 +38,7 @@ public class Transporters {
     }
 
     /**
-     * 静态方法，绑定一个服务器，即创建一个服务器
+     * 静态方法，创建一个服务器
      *
      * @param url
      * @param handler
@@ -61,13 +61,11 @@ public class Transporters {
         if (handlers.length == 1) {
             handler = handlers[0];
         } else {
-            // 如果handlers 元素数量大于1，则创建 ChannelHandler分发器【分发器会循环调用handlers，对应的方法】
+            // 如果handlers 元素数量大于1，则创建 ChannelHandler分发器 ChannelHandlerDispatcher【分发器会循环调用handlers，对应的方法】
             handler = new ChannelHandlerDispatcher(handlers);
         }
-        /**
-         * 1 获取自适应 Transporter 实例，并调用实例方法
-         * 2 由具体的Transporter 来创建Server ,默认是NettyTransporter创建NettyServer
-         */
+
+        // 获取自适应 Transporter 实例，由具体的Transporter 来创建Server 。默认是NettyTransporter创建NettyServer
         return getTransporter().bind(url, handler);
     }
 
@@ -88,6 +86,7 @@ public class Transporters {
             throw new IllegalArgumentException("url == null");
         }
         ChannelHandler handler;
+        // 没有传入通道处理器 ChannelHandler，则会创建ChannelHandlerAdapter 作为通道处理器
         if (handlers == null || handlers.length == 0) {
             handler = new ChannelHandlerAdapter();
         } else if (handlers.length == 1) {
@@ -95,6 +94,8 @@ public class Transporters {
         } else {
             handler = new ChannelHandlerDispatcher(handlers);
         }
+
+        //获取自适应 Transporter 实例，由具体的Transporter 来创建 Client 。默认是NettyTransporter创建 NettyClient
         return getTransporter().connect(url, handler);
     }
 

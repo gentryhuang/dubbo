@@ -21,7 +21,8 @@ import com.alibaba.dubbo.remoting.RemotingException;
 import com.alibaba.dubbo.remoting.telnet.TelnetHandler;
 
 /**
- * 继承 ChannelHandler 和 TelnetHandler 接口，信息交换处理器接口
+ * 继承 ChannelHandler 和 TelnetHandler 接口，信息交换处理器接口。
+ * ExchangeHandler 接口是 Exchange 层 与上层交互的接口之一，上层调用方可以实现该接口完成自身的功能
  */
 public interface ExchangeHandler extends ChannelHandler, TelnetHandler {
 

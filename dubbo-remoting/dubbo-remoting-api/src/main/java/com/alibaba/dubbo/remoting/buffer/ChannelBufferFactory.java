@@ -23,10 +23,27 @@ import java.nio.ByteBuffer;
  */
 public interface ChannelBufferFactory {
 
+    /**
+     * 获取指定容量的 ChannelBuffer
+     * @param capacity
+     * @return
+     */
     ChannelBuffer getBuffer(int capacity);
 
+    /**
+     * 获取指定偏移量的数据的 ChannelBuffer
+     * @param array
+     * @param offset
+     * @param length
+     * @return
+     */
     ChannelBuffer getBuffer(byte[] array, int offset, int length);
 
+    /**
+     * 根据 ByteBuffer 获取 ChannelBuffer
+     * @param nioBuffer
+     * @return
+     */
     ChannelBuffer getBuffer(ByteBuffer nioBuffer);
 
 }

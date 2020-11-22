@@ -44,14 +44,15 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
     /**
-     * 接口类型
+     * 该 Invoker 对象封装的业务接口
      */
     private final Class<T> type;
     /**
-     * 服务URL
+     * 与当前 Invoker 关联的 URL 对象，其中包含了全部的配置信息
      */
     private final URL url;
     /**
+     * 当前 Invoker 关联的一些附加信息，这些附加信息可以来自关联的 URL.
      * 共用的隐式传参，在{@link #invoke(Invocation)}方法中使用
      */
     private final Map<String, String> attachment;
@@ -161,16 +162,17 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
 
         // 为调用信息设置Invoker属性
         RpcInvocation invocation = (RpcInvocation) inv;
+
         // 注意： 执行到这里是真正的Invoker，之前的Invoker都是层层嵌套
         invocation.setInvoker(this);
 
-        // 为调用信息添加公用的隐式传参，如： path,interface等 todo 用处在哪里？
+        //将attachment集合添加为Invocation的附加信息，如： path,interface等 todo 用处在哪里？
         if (attachment != null && attachment.size() > 0) {
             invocation.addAttachmentsIfAbsent(attachment);
         }
 
         /**
-         * 为调用信息添加自定义的隐式传参，使用RpcContext隐式传参需注意：
+         * 将RpcContext的附加信息添加为Invocation的附加信息，使用RpcContext隐式传参需注意：
          * RpcContext 是一个临时状态记录器，当接收到 RPC 请求，或发起 RPC 请求时，RpcContext 的状态都会变化。
          * 如：A 调 B，B 再调 C，则 B 机器上，在 B 调 C 之前，RpcContext 记录的是 A 调 B 的信息，在 B 调 C 之后，RpcContext 记录的是 B 调 C 的信息。
          */
@@ -190,7 +192,9 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
             // 设置异步信息到 RpcInvocation#attachment 中
             invocation.setAttachment(Constants.ASYNC_KEY, Boolean.TRUE.toString());
         }
-        RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);  // 如果是异步操作，则添加Id 调用编号 到 invocation的attachment 中
+
+        //  如果是异步调用，给invocation的attachment 添加一个唯一ID
+        RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation); 
 
 
         try {

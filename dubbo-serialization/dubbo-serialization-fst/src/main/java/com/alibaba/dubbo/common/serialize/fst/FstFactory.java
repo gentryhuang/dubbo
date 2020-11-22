@@ -58,7 +58,7 @@ public class FstFactory {
     }
 
     /**
-     * 获得 FSTObjectOutput 对象，被 FstObjectOutput 调用
+     * 获得 FSTObjectOutput 对象
      *
      * @param outputStream
      * @return
@@ -68,7 +68,7 @@ public class FstFactory {
     }
 
     /**
-     * 获得 FSTObjectInput 对象，被 FstObjectInput
+     * 获得 FSTObjectInput 对象
      *
      * @param inputStream
      * @return

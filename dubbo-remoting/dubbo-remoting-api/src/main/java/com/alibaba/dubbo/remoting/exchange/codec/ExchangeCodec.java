@@ -42,7 +42,9 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * ExchangeCodec 继承 TelnetCodec类，信息交换编解码器
+ * ExchangeCodec 继承 TelnetCodec类，信息交换编解码器。
+ * 说明：
+ * ExchangeCodec 只处理了 Dubbo 协议头，而 DubboCodec 则是通过继承的方式在 ExchangeCodec 基础上，添加了解析 Dubbo 消息体的功能。
  */
 public class ExchangeCodec extends TelnetCodec {
 
@@ -98,19 +100,25 @@ public class ExchangeCodec extends TelnetCodec {
     protected static final int HEADER_LENGTH = 16;
 
     /**
-     * 魔数，是个固定值，可以标识是Dubbo 协议数据。 占2个字节
+     * 协议头前16位，分为 MAGIC_HIGH 和 MAGIC_LOW 2个字节。是个固定值，标志着一个数据包是否是 Dubbo 协议
      */
     protected static final short MAGIC = (short) 0xdabb; // -9541
+    /**
+     * 魔数高位
+     */
     protected static final byte MAGIC_HIGH = Bytes.short2bytes(MAGIC)[0]; // -38
+    /**
+     * 魔数低位
+     */
     protected static final byte MAGIC_LOW = Bytes.short2bytes(MAGIC)[1]; // -69
 
     // ----------- flag标志位，1个字节，共8位 三位分别如下，其他五位表示消息体数据用的序列化工具的类型（默认是hessian2） ---------------------------
     /**
-     * 标识是请求还是响应 1 标示为request请求  0 标示响应
+     * 标识是请求还是响应 1 为request请求  0 为响应
      */
     protected static final byte FLAG_REQUEST = (byte) 0x80; // -128
     /**
-     * 标识是双向传输还是单向传输 1 标示双向传输 0 标示是单向传输
+     * 标识是双向传输还是单向传输 1 为双向传输 0 为是单向传输
      */
     protected static final byte FLAG_TWOWAY = (byte) 0x40; // 64
     /**
@@ -367,11 +375,11 @@ public class ExchangeCodec extends TelnetCodec {
         ChannelBufferOutputStream bos = new ChannelBufferOutputStream(buffer);
         ObjectOutput out = serialization.serialize(channel.getUrl(), bos);
 
-        // 对事件数据进行序列化操作
+        // 对事件数据进行序列化操作 todo 什么事件？
         if (req.isEvent()) {
             encodeEventData(channel, out, req.getData());
         } else {
-            // 对普通请求的数据进行序列化操作，即将req.data 写入到输出流 out中，ChannelBufferOutputStream进行接收，然后存储到ChannelBuffer
+            // 对普通请求的数据进行序列化操作，即将req.data（一般是RpcInvocation） 写入到输出流 out中，ChannelBufferOutputStream进行接收，然后存储到ChannelBuffer
             encodeRequestData(channel, out, req.getData(), req.getVersion());
         }
 

@@ -35,7 +35,7 @@ public class FstObjectInput implements ObjectInput {
         input = FstFactory.getDefaultFactory().getObjectInput(inputStream);
     }
 
-    // -----------  几乎所有的实现方法，直接调用 FSTObjectInput 对应的方法 ---------------/
+    // -----------  所有的实现方法委托给 FSTObjectInput 对应的方法 ---------------/
 
     @Override
     public boolean readBool() throws IOException {

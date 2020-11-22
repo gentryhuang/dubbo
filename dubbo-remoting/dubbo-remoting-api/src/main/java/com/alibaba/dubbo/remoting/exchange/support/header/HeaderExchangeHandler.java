@@ -64,7 +64,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
      * @throws RemotingException
      */
     static void handleResponse(Channel channel, Response response) throws RemotingException {
-        // 非心跳事件响应，就使用DefaultFuture#received(channel, response) 方法，唤醒等待请求结果的线程。
+        // 非心跳事件响应，就使用DefaultFuture#received(channel, response) 方法，设置完成状态（或是异常完成状态），以及唤醒等待请求结果的线程。
         if (response != null && !response.isHeartbeat()) {
             DefaultFuture.received(channel, response);
         }
@@ -88,7 +88,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
     void handlerEvent(Channel channel, Request req) throws RemotingException {
         // 如果是只读请求
         if (req.getData() != null && req.getData().equals(Request.READONLY_EVENT)) {
-            // 服务端收到 READONLY_EVENT 事件请求，记录到通道，后续不再向该服务器发送新的请求
+            // 客户端收到 READONLY_EVENT 事件请求，记录到通道，后续不再向该服务器发送新的请求
             channel.setAttribute(Constants.CHANNEL_ATTRIBUTE_READONLY_KEY, Boolean.TRUE);
         }
     }
@@ -104,7 +104,8 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
     Response handleRequest(ExchangeChannel channel, Request req) throws RemotingException {
         // 创建响应对象
         Response res = new Response(req.getId(), req.getVersion());
-        // 如果是异常请求，则返回  Response.BAD_REQUEST 响应
+
+        // 解码失败的请求，则返回  Response.BAD_REQUEST 异常响应。
         if (req.isBroken()) {
             Object data = req.getData();
             // 请求数据，转成 msg
@@ -129,6 +130,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         // 获取 data 字段值，也就是 RpcInvocation 对象
         Object msg = req.getData();
         try {
+
             /** 处理请求
              * @see ExchangeHandlerAdapter#reply(com.alibaba.dubbo.remoting.exchange.ExchangeChannel, java.lang.Object)
              * 在DubboProtocol中基于 ExchangeHandlerAdapter实现自己的处理器，处理请求，返回结果，{@link com.alibaba.dubbo.rpc.protocol.dubbo.DubboProtocol#requestHandler}
@@ -162,6 +164,8 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
     public void connected(Channel channel) throws RemotingException {
         channel.setAttribute(KEY_READ_TIMESTAMP, System.currentTimeMillis());
         channel.setAttribute(KEY_WRITE_TIMESTAMP, System.currentTimeMillis());
+
+        // 创建 Dubbo Channel 相应的 HeaderExchangeChannel ，并将两者绑定，然后通知上层 ExchangeHandler 处理 connect 事件
         ExchangeChannel exchangeChannel = HeaderExchangeChannel.getOrAddChannel(channel);
         try {
             handler.connected(exchangeChannel);
@@ -182,9 +186,14 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         channel.setAttribute(KEY_WRITE_TIMESTAMP, System.currentTimeMillis());
         ExchangeChannel exchangeChannel = HeaderExchangeChannel.getOrAddChannel(channel);
         try {
+
+            // 通知上层 ExchangeHandler 处理断开连接
             handler.disconnected(exchangeChannel);
         } finally {
+
+            // 调用 DefaultFuture.closeChannel 方法返回通道无效异常结果，结束阻塞等待的业务线程，
             DefaultFuture.closeChannel(channel);
+            // 将 Dubbo Channel 与 HeaderExchangeChannel 解绑，即从DubboChannel 属性中移除 HeaderExchangeChannel
             HeaderExchangeChannel.removeChannelIfDisconnected(channel);
         }
     }
@@ -203,6 +212,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
             channel.setAttribute(KEY_WRITE_TIMESTAMP, System.currentTimeMillis());
             ExchangeChannel exchangeChannel = HeaderExchangeChannel.getOrAddChannel(channel);
             try {
+                // 发送
                 handler.sent(exchangeChannel, message);
             } finally {
                 HeaderExchangeChannel.removeChannelIfDisconnected(channel);
@@ -210,10 +220,13 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         } catch (Throwable t) {
             exception = t;
         }
+
+        // 如果是请求，则调用 DefaultFuture.sent() 方法记录请求的具体发送时间
         if (message instanceof Request) {
             Request request = (Request) message;
             DefaultFuture.sent(channel, request);
         }
+
         if (exception != null) {
             if (exception instanceof RuntimeException) {
                 throw (RuntimeException) exception;
@@ -261,10 +274,10 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
 
                         Response response = handleRequest(exchangeChannel, request);
 
-                        // 将调用结果返回给服务消费端  todo 问题： 1 channel 类型 ？
+                        // 将调用结果返回给服务消费端  todo 问题： channel 类型 ？ Dubbo 的 Channel
                         channel.send(response);
 
-                        // 不需要返回调用结果， 提交给 handler 处理
+                        // 不需要返回调用结果， 直接提交给 handler 处理
                     } else {
                         handler.received(exchangeChannel, request.getData());
                     }
@@ -272,6 +285,8 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
 
                 // 处理响应 【客户端收到服务端的响应】
             } else if (message instanceof Response) {
+
+                // 将关联的 DefaultFuture 设置为完成状态（或是异常完成状态）
                 handleResponse(channel, (Response) message);
 
                 // 处理String

@@ -35,7 +35,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * dubbo protocol support class. 实现 ExchangeClient 接口，支持懒连接服务器的信息交换客户端实现类。
+ * LazyConnectExchangeClient 也是 ExchangeClient 的装饰器，它会在原有 ExchangeClient 对象的基础上添加懒加载的功能。
+ * LazyConnectExchangeClient 在构造方法中不会创建底层持有连接的 Client，而是在需要发送请求的时候，才会调用 initClient() 方法进行 Client 的创建。
+ * LazyConnectExchangeClient 主要用于异常情况的兜底。
  */
 @SuppressWarnings("deprecation")
 final class LazyConnectExchangeClient implements ExchangeClient {
@@ -76,6 +78,11 @@ final class LazyConnectExchangeClient implements ExchangeClient {
      */
     private AtomicLong warningcount = new AtomicLong(0);
 
+    /**
+     * 构造方法中并没有立即创建连接，而是在发送请求的时候
+     * @param url
+     * @param requestHandler
+     */
     public LazyConnectExchangeClient(URL url, ExchangeHandler requestHandler) {
         // lazy connect, need set send.reconnect = true, to avoid channel bad status.
         this.url = url.addParameter(Constants.SEND_RECONNECT_KEY, Boolean.TRUE.toString());
@@ -87,6 +94,7 @@ final class LazyConnectExchangeClient implements ExchangeClient {
 
     /**
      * 初始化客户端
+     *
      * @throws RemotingException
      */
     private void initClient() throws RemotingException {
@@ -186,6 +194,7 @@ final class LazyConnectExchangeClient implements ExchangeClient {
 
     /**
      * 发送消息/请求前，都会调用该方法，确保客户端已经初始化
+     *
      * @param message
      * @throws RemotingException
      */

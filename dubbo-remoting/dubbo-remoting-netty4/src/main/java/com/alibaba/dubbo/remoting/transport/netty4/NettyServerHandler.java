@@ -41,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NettyServerHandler extends ChannelDuplexHandler {
 
     /**
-     * Dubbo Channel 集合,即连接到服务器的Dubbo Channel集合
+     * Dubbo Channel 集合,即连接到当前服务器的Dubbo Channel集合
      * key: ip:port
      * value: Dubbo 的 Channel
      */
@@ -52,10 +52,15 @@ public class NettyServerHandler extends ChannelDuplexHandler {
     private final URL url;
 
     /**
-     * Dubbo ChannelHandler。NettyServerHandler对每个事件的处理，会调用 handler的方法
+     * Dubbo ChannelHandler。NettyServerHandler对每个事件的处理，会调用 handler的方法.
      */
     private final ChannelHandler handler;
 
+    /**
+     * todo
+     * @param url
+     * @param handler NettyServer 对象 ，NettyServerHandler对每个事件的处理，都会调用NettyServer 对应的方法？？？ todo 验证下
+     */
     public NettyServerHandler(URL url, ChannelHandler handler) {
         if (url == null) {
             throw new IllegalArgumentException("url == null");
@@ -71,10 +76,10 @@ public class NettyServerHandler extends ChannelDuplexHandler {
         return channels;
     }
 
-    //------------------------------- NettyServerHandler的每个实现的方法，处理都比较类似，一般是交给handler做相应处理 ---------------------/
+    //------------------------------- NettyServerHandler的每个实现的方法，处理都比较类似，数据交给handler做相应处理 ---------------------/
 
     /**
-     * 连接处理
+     * 连接创建触发该方法
      *
      * @param ctx
      * @throws Exception
@@ -92,6 +97,7 @@ public class NettyServerHandler extends ChannelDuplexHandler {
 
             // 加入到 连接到服务器的Dubbo Channel集合 中
             if (channel != null) {
+                // 通道相关的ip:port 作为key，这里时客户端的？？？ todo
                 channels.put(NetUtils.toAddressString((InetSocketAddress) ctx.channel().remoteAddress()), channel);
             }
 
@@ -103,11 +109,18 @@ public class NettyServerHandler extends ChannelDuplexHandler {
         }
     }
 
+    /**
+     * 连接断开触发该方法
+     * @param ctx
+     * @throws Exception
+     */
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
         try {
+            // 从缓存中移除 Netty Channel 对应的 Dubbo Channel
             channels.remove(NetUtils.toAddressString((InetSocketAddress) ctx.channel().remoteAddress()));
+            // 将断开连接事件交给 handler处理
             handler.disconnected(channel);
         } finally {
             NettyChannel.removeChannelIfDisconnected(ctx.channel());
@@ -121,6 +134,12 @@ public class NettyServerHandler extends ChannelDuplexHandler {
 
     }
 
+    /**
+     * 读取数据
+     * @param ctx
+     * @param msg
+     * @throws Exception
+     */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
@@ -131,9 +150,17 @@ public class NettyServerHandler extends ChannelDuplexHandler {
         }
     }
 
+    /**
+     *
+     * @param ctx
+     * @param msg
+     * @param promise
+     * @throws Exception
+     */
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        // 将发送的数据继续向下传递
         super.write(ctx, msg, promise);
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
         try {

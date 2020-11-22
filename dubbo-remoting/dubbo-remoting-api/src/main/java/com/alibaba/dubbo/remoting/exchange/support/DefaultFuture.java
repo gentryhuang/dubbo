@@ -46,7 +46,7 @@ public class DefaultFuture implements ResponseFuture {
     /**
      * 通道集合
      * key: 请求编号
-     * value: 通道
+     * value: Dubbo 抽象的通道，用来发送请求的
      */
     private static final Map<Long, Channel> CHANNELS = new ConcurrentHashMap<Long, Channel>();
 
@@ -58,7 +58,7 @@ public class DefaultFuture implements ResponseFuture {
     private static final Map<Long, DefaultFuture> FUTURES = new ConcurrentHashMap<Long, DefaultFuture>();
 
     /**
-     * 启动调用超时任务
+     * 启动请求超时任务，用于处理响应超时的情况
      */
     static {
         Thread th = new Thread(new RemotingInvocationTimeoutScan(), "DubboResponseTimeoutScanTimer");
@@ -79,7 +79,7 @@ public class DefaultFuture implements ResponseFuture {
      */
     private final Request request;
     /**
-     * 超时时间
+     * 超时时间 （整个请求-响应交互完成的超时时间）
      */
     private final int timeout;
     /**
@@ -91,11 +91,11 @@ public class DefaultFuture implements ResponseFuture {
      */
     private final Condition done = lock.newCondition();
     /**
-     * 创建开始时间
+     * 当前 DefaultFuture 创建的开始时间
      */
     private final long start = System.currentTimeMillis();
     /**
-     * 发送请求时间
+     * 请求发送的时间
      */
     private volatile long sent;
     /**
@@ -129,6 +129,12 @@ public class DefaultFuture implements ResponseFuture {
         return FUTURES.get(id);
     }
 
+    /**
+     * 判断通道是否有未结束的请求
+     *
+     * @param channel
+     * @return
+     */
     public static boolean hasFuture(Channel channel) {
         return CHANNELS.containsValue(channel);
     }
@@ -180,7 +186,7 @@ public class DefaultFuture implements ResponseFuture {
             // 移除元素并返回key=response.getId()的DefaultFuture，即 请求 对应 响应 ，解决了Request和Response的对应
             DefaultFuture future = FUTURES.remove(response.getId());
 
-            // 接收结果
+            // 接收结果,更新相关字段标识
             if (future != null) {
                 future.doReceived(response);
             } else {
@@ -190,7 +196,7 @@ public class DefaultFuture implements ResponseFuture {
                         + (channel == null ? "" : ", channel: " + channel.getLocalAddress()
                         + " -> " + channel.getRemoteAddress()));
             }
-            // 移除请求对应的通道
+            // 有响应了，则移除请求对应的通道
         } finally {
             CHANNELS.remove(response.getId());
         }
@@ -253,6 +259,7 @@ public class DefaultFuture implements ResponseFuture {
 
     /**
      * 判断调用结果是否返回，是判断 response 字段是否为空
+     *
      * @return
      */
     @Override
@@ -264,7 +271,6 @@ public class DefaultFuture implements ResponseFuture {
      * 设置回调用 {@link com.alibaba.dubbo.rpc.protocol.dubbo.filter.FutureFilter#asyncCallback(com.alibaba.dubbo.rpc.Invoker, com.alibaba.dubbo.rpc.Invocation)}
      *
      * @param callback
-     *
      */
     @Override
     public void setCallback(ResponseCallback callback) {

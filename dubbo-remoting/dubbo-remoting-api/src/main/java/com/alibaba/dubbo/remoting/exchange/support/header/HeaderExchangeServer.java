@@ -146,7 +146,7 @@ public class HeaderExchangeServer implements ExchangeServer {
                 sendChannelReadOnlyEvent();
             }
 
-            // 等待请求完成
+            // 等待 Client 与 当前Server 维持长连接全部断开，或超时
             while (HeaderExchangeServer.this.isRunning() && System.currentTimeMillis() - start < max) {
                 try {
                     Thread.sleep(10);
@@ -158,6 +158,7 @@ public class HeaderExchangeServer implements ExchangeServer {
 
         // 关闭心跳定时器
         doClose();
+
         // 关闭服务器
         server.close(timeout);
     }

@@ -31,7 +31,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * TransportCodec 传输编解码器，使用 Serialization 进行序列化/反序列化，直接编解码。
+ * TransportCodec 传输编解码器，使用 Serialization 进行序列化/反序列化，直接编解码，不区分使用哪个编解码逻辑
  */
 public class TransportCodec extends AbstractCodec {
 

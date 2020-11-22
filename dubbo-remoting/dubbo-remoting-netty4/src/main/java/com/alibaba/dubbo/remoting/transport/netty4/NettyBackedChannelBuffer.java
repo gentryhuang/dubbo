@@ -42,6 +42,11 @@ public class NettyBackedChannelBuffer implements ChannelBuffer {
         this.buffer = buffer;
     }
 
+    @Override
+    public ChannelBufferFactory factory() {
+        return null;
+    }
+
     // ---------------------------- 该类的实现方法，基本都是直接调用 Netty 的 ByteBuf 对应的方法 -----------------------/
 
     @Override
@@ -56,10 +61,7 @@ public class NettyBackedChannelBuffer implements ChannelBuffer {
     }
 
     //has nothing use
-    @Override
-    public ChannelBufferFactory factory() {
-        return null;
-    }
+
 
 
     @Override

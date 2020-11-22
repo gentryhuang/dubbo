@@ -173,7 +173,7 @@ public class RedisRegistry extends FailbackRegistry {
             addresses.addAll(Arrays.asList(backups));
         }
 
-        // 创建JedisPool对象
+        // 创建JedisPool对象 (单机版)
         for (String address : addresses) {
             int i = address.indexOf(':');
             String host;

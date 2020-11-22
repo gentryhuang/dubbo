@@ -85,11 +85,11 @@ public class Response {
      */
     private long mId = 0;
     /**
-     * Dubbo版本
+     * 当前协议的版本号，与请求消息的版本号一致
      */
     private String mVersion;
     /**
-     * 状态
+     * 响应状态码，默认是OK
      */
     private byte mStatus = OK;
     /**

@@ -19,7 +19,7 @@ package com.alibaba.dubbo.rpc;
 import java.util.Map;
 
 /**
- * Invocation. (API, Prototype, NonThreadSafe)
+ * Invocation. (API, Prototype, NonThreadSafe)  // 抽象了一次RPC调用所需的目标服务和方法信息
  *
  * @serial Don't change the class name and package name.
  * @see com.alibaba.dubbo.rpc.Invoker#invoke(Invocation)
@@ -28,7 +28,7 @@ import java.util.Map;
 public interface Invocation {
 
     /**
-     * get method name.
+     * get method name. // 调用的方法名称
      *
      * @return method name.
      * @serial
@@ -36,7 +36,7 @@ public interface Invocation {
     String getMethodName();
 
     /**
-     * get parameter types.
+     * get parameter types.  // 参数类型集合
      *
      * @return parameter types.
      * @serial
@@ -44,7 +44,7 @@ public interface Invocation {
     Class<?>[] getParameterTypes();
 
     /**
-     * get arguments.
+     * get arguments. // 此次调用具体的参数值
      *
      * @return arguments.
      * @serial
@@ -52,7 +52,7 @@ public interface Invocation {
     Object[] getArguments();
 
     /**
-     * get attachments.
+     * get attachments.   // Invocation可以携带一个KV信息作为附加信息，一并传递给Provider，
      *
      * @return attachments.
      * @serial
@@ -76,7 +76,7 @@ public interface Invocation {
     String getAttachment(String key, String defaultValue);
 
     /**
-     * get the invoker in current context.
+     * get the invoker in current context. // 此次调用关联的Invoker 对象
      *
      * @return invoker.
      * @transient

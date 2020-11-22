@@ -33,26 +33,28 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * 实现 AbstractChannel 抽象类，封装 Netty Channel 的通道实现类。
+ * 实现 AbstractChannel 抽象类。对Netty的Channel的装饰
  */
 final class NettyChannel extends AbstractChannel {
 
     private static final Logger logger = LoggerFactory.getLogger(NettyChannel.class);
 
     /**
-     * 通道集合
+     * 通道映射集合，Netty的Channel 到 Dubbo的Channel 的映射集合
      * key: Netty 的 Channel
      * value: NettyChannel
      */
     private static final ConcurrentMap<Channel, NettyChannel> channelMap = new ConcurrentHashMap<Channel, NettyChannel>();
 
     /**
-     * Netty的Channel 【NettyChannel是传入的Netty Channel的装饰器，它里面每个实现方法都会调用Netty Channel】
+     * Netty的Channel 【NettyChannel是传入的Netty的Channel的装饰器，它里面每个实现方法都会调用Netty的Channel】
+     * 和当前的 Dubbo Channel对象一一对应
      */
     private final Channel channel;
 
     /**
      * 属性集合
+     * 当前Channel 中附加属性，都会记录到该Map中
      */
     private final Map<String, Object> attributes = new ConcurrentHashMap<String, Object>();
 
@@ -74,7 +76,7 @@ final class NettyChannel extends AbstractChannel {
     /**
      * 创建NettyChannel 对象
      *
-     * @param ch      Netty Channel
+     * @param ch      Netty的Channel
      * @param url     URL
      * @param handler 通道处理器
      * @return Dubbo 的 NettyChannel
@@ -131,7 +133,7 @@ final class NettyChannel extends AbstractChannel {
     }
 
     /**
-     * 是否处于连接
+     * Channel 是否可用
      *
      * @return
      */
@@ -142,6 +144,7 @@ final class NettyChannel extends AbstractChannel {
 
     /**
      * 发送消息
+     * 会通过底层关联的Netty框架Channel将数据发送到对端，可以通过第二个参数指定是否等待发送操作结束
      *
      * @param message
      * @param sent    true: 会等待消息发出，消息发送失败会抛出异常；  false: 不等待消息发出，将消息放入IO队列，即可返回
@@ -149,7 +152,7 @@ final class NettyChannel extends AbstractChannel {
      */
     @Override
     public void send(Object message, boolean sent) throws RemotingException {
-        // 检查连接状态
+        // 检查连接是否可用
         super.send(message, sent);
 
         // 是否执行成功。 如果不需要等待发送成功（sent = false），默认就是成功状态
@@ -209,7 +212,8 @@ final class NettyChannel extends AbstractChannel {
             if (logger.isInfoEnabled()) {
                 logger.info("Close netty channel " + channel);
             }
-            // 关闭真正的通道 Netty 的 Channel
+
+            // 关闭Netty 的 Channel，注意在关闭前对一些其它资源进行清理工作。
             channel.close();
         } catch (Exception e) {
             logger.warn(e.getMessage(), e);

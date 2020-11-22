@@ -36,6 +36,10 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 会将收到的消息交给线程池进行处理，对于连接建立以及断开事件，会提交到一个独立的线程池并排队进行处理。
+ * 在 ConnectionOrderedChannelHandler 的构造方法中，会初始化一个线程池，该线程池的队列长度是固定的
+ */
 public class ConnectionOrderedChannelHandler extends WrappedChannelHandler {
 
     protected final ThreadPoolExecutor connectionExecutor;
@@ -44,6 +48,7 @@ public class ConnectionOrderedChannelHandler extends WrappedChannelHandler {
     public ConnectionOrderedChannelHandler(ChannelHandler handler, URL url) {
         super(handler, url);
         String threadName = url.getParameter(Constants.THREAD_NAME_KEY, Constants.DEFAULT_THREAD_NAME);
+        // 注意，该线程池只有一个线程，并且阻塞队列的长度也是固定的，由配置参数决定
         connectionExecutor = new ThreadPoolExecutor(1, 1,
                 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<Runnable>(url.getPositiveParameter(Constants.CONNECT_QUEUE_CAPACITY, Integer.MAX_VALUE)),

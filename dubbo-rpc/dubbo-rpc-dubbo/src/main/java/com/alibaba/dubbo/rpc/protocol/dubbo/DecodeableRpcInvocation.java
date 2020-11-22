@@ -40,8 +40,7 @@ import java.util.Map;
 import static com.alibaba.dubbo.rpc.protocol.dubbo.CallbackServiceCodec.decodeInvocationArgument;
 
 /**
- * 可解码的 RpcInvocation 实现类：
- * 当服务消费者调用服务提供者，前者编码成RpcInvocation对象，后者解码成DecodeableRpcInvocation
+ * 可解码的 RpcInvocation 实现类，它是用来支持解码的
  */
 public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Decodeable {
 
@@ -93,6 +92,9 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
                 if (log.isWarnEnabled()) {
                     log.warn("Decode rpc invocation failed: " + e.getMessage(), e);
                 }
+
+
+                // 解码失败，设置失败标志
                 request.setBroken(true);
                 request.setData(e);
             } finally {

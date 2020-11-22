@@ -38,6 +38,7 @@ public class ChannelBufferInputStream extends InputStream {
      */
     private final int endIndex;
 
+
     public ChannelBufferInputStream(ChannelBuffer buffer) {
         this(buffer, buffer.readableBytes());
     }
@@ -52,10 +53,13 @@ public class ChannelBufferInputStream extends InputStream {
         if (length > buffer.readableBytes()) {
             throw new IndexOutOfBoundsException();
         }
-
+        // 设置 ChannelBuffer
         this.buffer = buffer;
+        // 设置 开始位置 为 ChannelBuffer 的读取索引位置
         startIndex = buffer.readerIndex();
+        // 设置 结束位置
         endIndex = startIndex + length;
+        // 标记 读取索引位置
         buffer.markReaderIndex();
     }
 

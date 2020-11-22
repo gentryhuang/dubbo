@@ -54,11 +54,13 @@ public class Request {
      */
     private boolean mEvent = false;
     /**
-     * 是否异常的请求。【在消息解析的时候可能出现】
+     * 是否异常的请求。
+     * 请求发送到Server之后，由Decoder将二进制数据解码成Request对象，如果解码环节出现异常，就会设置该标志，然后
+     * 交给其它 ChannelHandler 根据该标志做进一步处理。
      */
     private boolean mBroken = false;
     /**
-     * 请求具体数据
+     * 请求体，可以是任何类型的数据，也可以是null
      */
     private Object mData;
 

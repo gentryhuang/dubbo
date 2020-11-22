@@ -28,7 +28,7 @@ import com.alibaba.dubbo.remoting.exchange.Response;
 import com.alibaba.dubbo.remoting.transport.AbstractChannelHandlerDelegate;
 
 /**
- * 心跳处理器，处理心跳事件
+ * 心跳处理器，专门处理心跳消息的ChannelHandler实现
  */
 public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
 
@@ -82,7 +82,8 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
     }
 
     /**
-     * 接收消息时，设置最后读时间
+     * 接收消息时，设置最后读时间。
+     * 接收心跳请求的时候，会生成相应的心跳响应并返回；在收到心跳响应的时候，会打印相应的日志；在收到其他类型的消息时，会传递给底层的 ChannelHandler 对象进行处理
      *
      * @param channel
      * @param message
@@ -90,13 +91,21 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
      */
     @Override
     public void received(Channel channel, Object message) throws RemotingException {
+        // 1 设置最后读时间
         setReadTimestamp(channel);
+
+        // 2 收到心跳请求，则生成相应的心跳相应并返回
         if (isHeartbeatRequest(message)) {
             Request req = (Request) message;
             if (req.isTwoWay()) {
+                // 设置请求id，为了和请求一一对应
                 Response res = new Response(req.getId(), req.getVersion());
+                // 心跳事件
                 res.setEvent(Response.HEARTBEAT_EVENT);
+
+                // 心跳响应
                 channel.send(res);
+
                 if (logger.isInfoEnabled()) {
                     int heartbeat = channel.getUrl().getParameter(Constants.HEARTBEAT_KEY, 0);
                     if (logger.isDebugEnabled()) {
@@ -108,6 +117,8 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
             }
             return;
         }
+
+        // 3 收到心跳响应，则打印日志
         if (isHeartbeatResponse(message)) {
             if (logger.isDebugEnabled()) {
                 logger.debug("Receive heartbeat response in thread " + Thread.currentThread().getName());
@@ -115,6 +126,8 @@ public class HeartbeatHandler extends AbstractChannelHandlerDelegate {
             return;
         }
 
+
+        // 4 其它类型消息，则传递给底层的 ChannelHandler 对象进行处理
         handler.received(channel, message);
     }
 

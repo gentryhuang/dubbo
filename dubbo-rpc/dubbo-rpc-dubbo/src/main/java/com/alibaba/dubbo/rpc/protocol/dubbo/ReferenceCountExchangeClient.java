@@ -30,7 +30,9 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * dubbo protocol support class. 实现 ExchangeClient 接口，主要实现了引用计数功能。使用装饰器模式。
+ * dubbo protocol support class.
+ * 1 实现 ExchangeClient 接口，是 ExchangeClient 的装饰器，在原始的 ExchangeClient 对象基础上添加了引用计数功能，用于共享连接模式。
+ * 2 其目的是在断开连接时使用，每断开一个连接该值就会减少1，为0时说明无连接，这时client就能够被安全销毁。
  */
 @SuppressWarnings("deprecation")
 final class ReferenceCountExchangeClient implements ExchangeClient {
@@ -40,12 +42,12 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
      */
     private final URL url;
     /**
-     * 引用计数变量： 每当该对象被引用一次refenceCount 都会进行自增。 每当close方法被调用时，referenceCount 就会进行自减
+     * 引用计数变量，用于记录 Client 被应用的次数。 每当该对象被引用一次refenceCount 都会进行自增。 每当close方法被调用时，referenceCount 就会进行自减
      */
     private final AtomicInteger refenceCount = new AtomicInteger(0);
 
     /**
-     * private final ExchangeHandler handler
+     * 维护以及close掉的client，用于兜底
      * {@link Protocol#ghostClentMap} 一致
      */
     private final ConcurrentMap<String, LazyConnectExchangeClient> ghostClientMap;
@@ -167,7 +169,7 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
     }
 
     /**
-     * 关闭
+     * 引用次数减少到0时 ，ExchangeClient 连接关闭
      *
      * @param timeout
      */
@@ -180,7 +182,8 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
             } else {
                 client.close(timeout);
             }
-            // 替换 client 为 LazyConnectExchangeClient 对象
+
+            // 关闭ExchangeClient对象之后，会替换 client 为 LazyConnectExchangeClient 对象，即将关闭之后的连接变成一个懒加载的client
             client = replaceWithLazyClient();
         }
     }
@@ -192,19 +195,25 @@ final class ReferenceCountExchangeClient implements ExchangeClient {
 
     // ghost client
     private LazyConnectExchangeClient replaceWithLazyClient() {
-        // 基于ur，创建LazyConnectExchangeClient的URL链接
-        // this is a defensive operation to avoid client is closed by accident, the initial state of the client is false
+
+        // 在原有的URL之上，添加一些LazyConnectExchangeClient特有的参数
         URL lazyUrl = url.addParameter(Constants.LAZY_CONNECT_INITIAL_STATE_KEY, Boolean.FALSE)
+                // 关闭重连
                 .addParameter(Constants.RECONNECT_KEY, Boolean.FALSE)
                 .addParameter(Constants.SEND_RECONNECT_KEY, Boolean.TRUE.toString())
                 .addParameter("warning", Boolean.TRUE.toString())
                 .addParameter(LazyConnectExchangeClient.REQUEST_WITH_WARNING_KEY, true)
                 .addParameter("_client_memo", "referencecounthandler.replacewithlazyclient");
 
+        // 从 ghostClientMap 缓存中查找
         String key = url.getAddress();
         // in worst case there's only one ghost connection.
         LazyConnectExchangeClient gclient = ghostClientMap.get(key);
+
+        // 如果gclient 可用，则直接返回，否则重新创建一个
         if (gclient == null || gclient.isClosed()) {
+
+            // ChannelHandler依旧使用原始ExchangeClient使用的Handler，即DubboProtocol中的requestHandler字段
             gclient = new LazyConnectExchangeClient(lazyUrl, client.getExchangeHandler());
             ghostClientMap.put(key, gclient);
         }

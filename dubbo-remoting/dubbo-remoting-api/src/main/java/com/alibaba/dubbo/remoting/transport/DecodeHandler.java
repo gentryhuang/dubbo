@@ -28,11 +28,12 @@ import com.alibaba.dubbo.remoting.exchange.Response;
 import com.alibaba.dubbo.remoting.transport.dispatcher.ChannelEventRunnable;
 
 /**
- * 实现 AbstractChannelHandlerDelegate 抽象类，解码处理器。主要包含了一些解码逻辑。
+ * 实现 AbstractChannelHandlerDelegate 抽象类，解码处理器，专门处理 Decodeable 的 ChannelHandler实现，主要包含了一些解码逻辑。
+ * 在Codec解码器实现中，如果请求体和响应结果需要在线程池中进行解码，那么就不进行直接解码，而是把解码任务交给线程池来做，就是这里 {@link com.alibaba.dubbo.rpc.protocol.dubbo.DubboCodec#decodeBody(com.alibaba.dubbo.remoting.Channel, java.io.InputStream, byte[])}
  * 说明：
  * 1 请求解码可在IO线程上执行，也可在线程池中执行，取决于配置
  * 2 DecodeHandler 存在的意义就是保证请求或响应对象可在线程池中被解码[该对象在线程池中工作{@link ChannelEventRunnable#handler}]
- * 3 解码完毕后，完全解码后的 Request 对象会继续传给下一个Handler
+ * 3 解码完毕后，完全解码后的消息传递给底层的ChannelHandler对象继续处理
  */
 public class DecodeHandler extends AbstractChannelHandlerDelegate {
 
@@ -48,6 +49,7 @@ public class DecodeHandler extends AbstractChannelHandlerDelegate {
      * @param channel
      * @param message RpcInvocation 或 RpcResult
      * @throws RemotingException
+     * @see com.alibaba.dubbo.rpc.protocol.dubbo.DubboCodec#decodeBody(com.alibaba.dubbo.remoting.Channel, java.io.InputStream, byte[])
      */
     @Override
     public void received(Channel channel, Object message) throws RemotingException {

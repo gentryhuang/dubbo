@@ -33,7 +33,7 @@ public abstract class AbstractChannel extends AbstractPeer implements Channel {
     }
 
     /**
-     * 发送消息，具体的发送逻辑由子类实现，在这里只做状态检查
+     * 发送消息，在这里只做底层连接状态检查，没有实现具体的发送消息的逻辑，具体的发送逻辑由子类实现
      * @param message
      * @param sent    true: 会等待消息发出，消息发送失败会抛出异常；  false: 不等待消息发出，将消息放入IO队列，即可返回
      * @throws RemotingException

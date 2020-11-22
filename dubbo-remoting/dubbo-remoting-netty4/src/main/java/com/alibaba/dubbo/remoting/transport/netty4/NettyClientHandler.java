@@ -39,6 +39,10 @@ public class NettyClientHandler extends ChannelDuplexHandler {
      */
     private final ChannelHandler handler;
 
+    /**
+     * @param url
+     * @param handler NettyClient
+     */
     public NettyClientHandler(URL url, ChannelHandler handler) {
         if (url == null) {
             throw new IllegalArgumentException("url == null");
@@ -49,7 +53,6 @@ public class NettyClientHandler extends ChannelDuplexHandler {
         this.url = url;
         this.handler = handler;
     }
-
 
 
     @Override

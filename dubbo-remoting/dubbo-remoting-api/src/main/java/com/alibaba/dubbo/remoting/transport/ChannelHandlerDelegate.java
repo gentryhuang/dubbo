@@ -19,7 +19,7 @@ package com.alibaba.dubbo.remoting.transport;
 import com.alibaba.dubbo.remoting.ChannelHandler;
 
 /**
- * 实现 ChannelHandler 接口，通道处理器装饰者接口
+ * 实现 ChannelHandler 接口，通道处理器装饰者接口，是对其它ChannelHandler对象的封装
  */
 public interface ChannelHandlerDelegate extends ChannelHandler {
     ChannelHandler getHandler();

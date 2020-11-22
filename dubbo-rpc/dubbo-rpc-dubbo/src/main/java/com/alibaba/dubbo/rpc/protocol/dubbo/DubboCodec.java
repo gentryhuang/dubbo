@@ -44,7 +44,7 @@ import static com.alibaba.dubbo.rpc.protocol.dubbo.CallbackServiceCodec.encodeIn
 /**
  * DubboCodec,实现Codec2接口，继承ExchangeCodec类，Dubbo编解码器实现类
  * 注意：
- * 在ExchangeCodec 中对 Request 和 Response 的通用解析。但是它是不满足在 dubbo:// 协议中对 RpcInvocation 和 RpcResult 作为 内容体( Body ) 的编解码的需要的。
+ * 在ExchangeCodec 中对 Request 和 Response 的通用解析，即只处理了 Dubbo 协议的请求头。但是它是不满足在 dubbo:// 协议中对 RpcInvocation 和 RpcResult 作为 内容体( Body ) 的编解码的需要的。
  * 并且在 dubbo:// 协议中，支持 参数回调 的特性，也是需要在编解码做一些特殊逻辑。这个由DubboCodec来解决
  */
 public class DubboCodec extends ExchangeCodec implements Codec2 {
@@ -120,7 +120,7 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
         if ((flag & FLAG_REQUEST) == 0) {
 
             // 创建 Response 对象
-            Response res = new Response(id);
+            Response res = new Response(id);   // 响应标志位被设置，创建 Response 对象
 
             /**
              * 如果是心跳事件，进行设置
@@ -247,23 +247,27 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
 
                         inv = new DecodeableRpcInvocation(channel, req, is, proto);
 
-                        // 在当前线程，即IO线程上进行后续的解码工作.该工作用于将 调用方法名，attachment，以及调用参数解析出来
+                        // 直接调用decode()方法在当前线程，即IO线程上进行解码工作
                         inv.decode();
 
                         // 在 Dubbo ThreadPool 线程上解码，使用 DecodeHandler
                     } else {
                         inv = new DecodeableRpcInvocation(channel, req, new UnsafeByteArrayInputStream(readMessageData(is)), proto);
                     }
+
+                    // 并没有解码，延迟到业务线程池中解码
                     data = inv;
                 }
 
-                // 设置data 到 Request 对象中
+                // 设置data 到 Request 对象中,
                 req.setData(data);
 
             } catch (Throwable t) {
                 if (log.isWarnEnabled()) {
                     log.warn("Decode request failed: " + t.getMessage(), t);
                 }
+
+
                 // 在解码的过程中出现异常，则设置 broken 字段标识请求异常，并将异常对象设置到Request对象中
                 req.setBroken(true);
 
@@ -295,7 +299,7 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
     /**
      * 编码内容体 - 请求
      * <p>
-     * 即编码RpcInvocation对象，写入需要编码的字段。对应的解码在{@link DecodeableRpcInvocation}
+     * 按照Dubbo 协议的格式编码Request请求体，即编码RpcInvocation对象，写入需要编码的字段。对应的解码在{@link DecodeableRpcInvocation}
      *
      * @param channel
      * @param out     因配置的序列化的方式不同而不同，如，在xml配置文件中配置 <dubbo:protocol serialization="fastjson"/>,out就是FastJsonObjectOutput。一般使用默认的序列化方式 hessian2 方式 【1 体积小 2 容错性更高】
@@ -349,6 +353,7 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
 
         // 响应结果没有异常信息
         if (th == null) {
+            // 提取正常返回结果
             Object ret = result.getValue();
             // 调用结果为空
             if (ret == null) {

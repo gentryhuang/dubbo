@@ -33,7 +33,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * 实现了ChannelHandlerDelegate 接口，包装的 WrappedChannelHandler 实现类
+ * 实现了ChannelHandlerDelegate 接口
+ * 1 其子类是实现消息派发功能，即 决定了 Dubbo 以哪种线程模型处理收到的事件和消息。
+ * 2 每个子类都由对应的Dispatcher 实现类创建
  */
 public class WrappedChannelHandler implements ChannelHandlerDelegate {
 
@@ -56,6 +58,13 @@ public class WrappedChannelHandler implements ChannelHandlerDelegate {
      */
     protected final URL url;
 
+    /**
+     * 添加线程池到 DataStore 中，AbstractClient 或 AbstractServer 就是从 DataStore 获得线程池的
+     * todo 对别 2.7.7 优化部分
+     *
+     * @param handler
+     * @param url
+     */
     public WrappedChannelHandler(ChannelHandler handler, URL url) {
         this.handler = handler;
         this.url = url;
@@ -64,13 +73,15 @@ public class WrappedChannelHandler implements ChannelHandlerDelegate {
         executor = (ExecutorService) ExtensionLoader.getExtensionLoader(ThreadPool.class).getAdaptiveExtension().getExecutor(url);
 
         String componentKey = Constants.EXECUTOR_SERVICE_COMPONENT_KEY;
+        // 如果时消费端
         if (Constants.CONSUMER_SIDE.equalsIgnoreCase(url.getParameter(Constants.SIDE_KEY))) {
             componentKey = Constants.CONSUMER_SIDE;
         }
 
         // 基于SPI机制创建线程池存储对象
         DataStore dataStore = ExtensionLoader.getExtensionLoader(DataStore.class).getDefaultExtension();
-        // 添加线程池到 DataStore中  【注意： AbstractClient 或 AbstractServer 从 DataStore 获得线程池的方式】
+
+        // 添加线程池到 DataStore中  【注意： AbstractClient 或 AbstractServer 从 DataStore 获得线程池的方式】 ，重要 todo
         dataStore.put(componentKey, Integer.toString(url.getPort()), executor);
     }
 
@@ -126,6 +137,11 @@ public class WrappedChannelHandler implements ChannelHandlerDelegate {
         return url;
     }
 
+    /**
+     * 获取当前端点关联的公共线程池，部分子类会使用
+     *
+     * @return
+     */
     public ExecutorService getExecutorService() {
         ExecutorService cexecutor = executor;
         if (cexecutor == null || cexecutor.isShutdown()) {

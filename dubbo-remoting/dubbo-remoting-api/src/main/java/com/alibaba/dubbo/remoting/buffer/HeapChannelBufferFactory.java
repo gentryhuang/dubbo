@@ -24,6 +24,9 @@ import java.nio.ByteBuffer;
  */
 public class HeapChannelBufferFactory implements ChannelBufferFactory {
 
+    /**
+     * 单例
+     */
     private static final HeapChannelBufferFactory INSTANCE = new HeapChannelBufferFactory();
 
     public HeapChannelBufferFactory() {
@@ -33,6 +36,8 @@ public class HeapChannelBufferFactory implements ChannelBufferFactory {
     public static ChannelBufferFactory getInstance() {
         return INSTANCE;
     }
+
+    //----------- 通过 ChannelBuffers 工具类创建一个指定大小 HeapChannelBuffer 对象 ------/
 
     @Override
     public ChannelBuffer getBuffer(int capacity) {

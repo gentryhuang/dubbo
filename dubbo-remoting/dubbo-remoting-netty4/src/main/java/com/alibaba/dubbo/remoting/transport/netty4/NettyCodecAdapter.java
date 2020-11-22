@@ -31,17 +31,17 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * NettyCodecAdapter ： 用来将 Dubbo 的编解码器 适配成 Netty4 的编码器和解码器
+ * NettyCodecAdapter ： 用来将 Dubbo 的编解码器 适配成 Netty4 的编码器和解码器，本质上是对Dubbo 编码器的装饰，Netty4把编解码工作委托给Dubbo的编解码来处理
  */
 final class NettyCodecAdapter {
 
     /**
-     * Netty 的 编码器
+     * Netty 的 编码器。内部封装的Codec2 ，是在 {@link com.alibaba.dubbo.remoting.transport.AbstractEndpoint} 中创建的
      */
     private final ChannelHandler encoder = new InternalEncoder();
 
     /**
-     * Netty 的 解码器
+     * Netty 的 解码器。内部封装的Codec2 ，是在 {@link com.alibaba.dubbo.remoting.transport.AbstractEndpoint} 中创建的
      */
     private final ChannelHandler decoder = new InternalDecoder();
 
@@ -66,10 +66,20 @@ final class NettyCodecAdapter {
         this.handler = handler;
     }
 
+    /**
+     * 获取编码器
+     *
+     * @return
+     */
     public ChannelHandler getEncoder() {
         return encoder;
     }
 
+    /**
+     * 获取解码器
+     *
+     * @return
+     */
     public ChannelHandler getDecoder() {
         return decoder;
     }
@@ -79,11 +89,17 @@ final class NettyCodecAdapter {
      */
     private class InternalEncoder extends MessageToByteEncoder {
 
+        /**
+         * @param ctx
+         * @param msg
+         * @param out
+         * @throws Exception
+         */
         @Override
         protected void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
             // 创建 NettyBackedChannelBuffer
             com.alibaba.dubbo.remoting.buffer.ChannelBuffer buffer = new NettyBackedChannelBuffer(out);
-            // 获取 Netty的Channel 对象
+            // 从Netty上下文中获取其中的Channel 对象
             Channel ch = ctx.channel();
             NettyChannel channel = NettyChannel.getOrAddChannel(ch, url, handler);
             try {
@@ -104,7 +120,7 @@ final class NettyCodecAdapter {
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf input, List<Object> out) throws Exception {
 
-            // 创建 NettyBackedChannelBuffer 对象
+            // 创建Dubbo 对 Netty 的缓存区封装的 NettyBackedChannelBuffer 对象
             ChannelBuffer message = new NettyBackedChannelBuffer(input);
             // 获得Dubbo 的 NettyChannel 对象
             NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
@@ -119,7 +135,7 @@ final class NettyCodecAdapter {
                     // 记录当前读进度
                     saveReaderIndex = message.readerIndex();
                     try {
-                        // 解码
+                        // 将解码任务委托给 Codec2 完成
                         msg = codec.decode(channel, message);
                     } catch (IOException e) {
                         throw e;
@@ -130,7 +146,7 @@ final class NettyCodecAdapter {
                         message.readerIndex(saveReaderIndex);
                         break;
 
-                        // 解码到消息，添加到 out集合中
+                        // 解码到消息，添加到 out集合中，即 将读取到的消息传递给后面的Handler处理
                     } else {
                         //is it possible to go here ? todo 会到这吗？应该不会把？
                         if (saveReaderIndex == message.readerIndex()) {

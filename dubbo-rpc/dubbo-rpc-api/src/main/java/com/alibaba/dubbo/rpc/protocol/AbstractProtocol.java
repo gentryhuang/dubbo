@@ -34,14 +34,18 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * abstract ProtocolSupport.
  * <p>
- * 协议抽象类
+ * 提供了一些 Protocol 实现需要的公共能力以及公共字段
+ * 1 存储服务暴露的 Map
+ * 2 存储服务引用的 Set
+ * 3 销毁
+ * 4 服务键方法（Injvm 所需服务键非这里的方法）
  */
 public abstract class AbstractProtocol implements Protocol {
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     /**
-     * Exporter集合
+     * Exporter集合，用于存储暴露出去的服务集合。注意，包括 injvm 协议暴露出去的
      * 1 key: 服务键，{@link #serviceKey(URL)} 或者 {@link URL#getServiceKey()},不同协议会有所差别：
      * （1）InjvmProtocol使用URL#getServicekey()方法
      * （2）DubboProtocol使用#serviceKey(URL)方法
@@ -50,14 +54,20 @@ public abstract class AbstractProtocol implements Protocol {
     protected final Map<String, Exporter<?>> exporterMap = new ConcurrentHashMap<String, Exporter<?>>();
 
     /**
-     * Invoker 集合
+     * 服务引用集合
      */
     protected final Set<Invoker<?>> invokers = new ConcurrentHashSet<Invoker<?>>();
 
     protected static String serviceKey(URL url) {
+        // 绑定端口
         int port = url.getParameter(Constants.BIND_PORT_KEY, url.getPort());
-        return serviceKey(port, url.getPath(), url.getParameter(Constants.VERSION_KEY),
-                url.getParameter(Constants.GROUP_KEY));
+
+
+        return serviceKey(
+                port, // 端口
+                url.getPath(),// 服务接口全路径名
+                url.getParameter(Constants.VERSION_KEY), // 版本
+                url.getParameter(Constants.GROUP_KEY)); // 组名
     }
 
     /**
@@ -75,7 +85,8 @@ public abstract class AbstractProtocol implements Protocol {
 
 
     /**
-     * 取消服务的暴露
+     * 1 销毁全部的服务引用
+     * 2 销毁发布出去的服务
      */
     @Override
     public void destroy() {

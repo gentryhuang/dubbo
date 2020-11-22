@@ -18,7 +18,7 @@
 package com.alibaba.dubbo.common.threadlocal;
 
 /**
- * InternalThread
+ * InternalThread，继承 Thread 类。Dubbo 的线程工厂 NamedInternalThreadFactory 创建的线程类其实都是 InternalThread 实例对象
  */
 public class InternalThread extends Thread {
 
@@ -56,6 +56,8 @@ public class InternalThread extends Thread {
     }
 
     /**
+     * 获取 InternalThreadLocalMap
+     * <p>
      * Returns the internal data structure that keeps the threadLocal variables bound to this thread.
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */
@@ -64,6 +66,7 @@ public class InternalThread extends Thread {
     }
 
     /**
+     * 设置 InternalThreadLocalMap 和当前线程绑定
      * Sets the internal data structure that keeps the threadLocal variables bound to this thread.
      * Note that this method is for internal use only, and thus is subject to change at any time.
      */

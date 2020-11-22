@@ -23,6 +23,7 @@ import com.alibaba.dubbo.remoting.exchange.support.MultiMessage;
 
 /**
  * 实现 AbstractChannelHandlerDelegate 抽象类，多消息处理器，处理一次性接收到多条消息的情况。
+ * 消息的处理交给包装的handler对象进行处理
  */
 public class MultiMessageHandler extends AbstractChannelHandlerDelegate {
 

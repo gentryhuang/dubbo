@@ -31,10 +31,11 @@ public class FstObjectOutput implements ObjectOutput {
     private FSTObjectOutput output;
 
     public FstObjectOutput(OutputStream outputStream) {
+        // 通过工厂创建 FSTObjectOutput 对象
         output = FstFactory.getDefaultFactory().getObjectOutput(outputStream);
     }
 
-    //--------------------- 几乎每个实现方法，直接调用 FSTObjectInput 对应的方法 ---------- /
+    //--------------------- 序列化方法直接委托给 FSTObjectOutput 对应的方法 ---------- /
 
     @Override
     public void writeBool(boolean v) throws IOException {

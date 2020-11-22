@@ -155,7 +155,7 @@ public class ExecutorUtil {
     }
 
     /**
-     * 追加线程名到URL中 【注意：线程名中包含URL的地址信息】
+     * 追加线程名到UR参数中中 【注意：线程名中包含URL的地址信息】
      *
      * @return new url with updated thread name
      */

@@ -143,8 +143,6 @@
         <module>bom</module>
         <module>all</module>
         <module>distribution</module>
-        <module>resource-reading</module>
-        <module>service-reading</module>
     </modules>
 
     <dependencyManagement>

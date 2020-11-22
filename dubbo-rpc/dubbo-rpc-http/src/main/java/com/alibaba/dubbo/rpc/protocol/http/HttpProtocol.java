@@ -97,7 +97,7 @@ public class HttpProtocol extends AbstractProxyProtocol {
         if (server == null) {
             /**
              * 1 通过SPI机制获取具体的 HttpBinder的拓展实现
-             * 2 具体的HttpBinder实现调用bind方法： 1） 启动服务 2）为服务设置具体的请求处理器
+             * 2 具体的HttpBinder实现调用bind方法： 1） 启动服务 2）为服务设置具体的请求处理器(InternalHandler对象)
              */
             server = httpBinder.bind(url, new InternalHandler());
             // 将创建好的服务加入缓存
