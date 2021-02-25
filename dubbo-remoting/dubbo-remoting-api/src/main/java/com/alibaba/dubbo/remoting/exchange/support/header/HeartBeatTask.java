@@ -34,7 +34,7 @@ final class HeartBeatTask implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(HeartBeatTask.class);
 
     /**
-     * 用于查询需要心跳的通道数组的对象
+     * 用于获取需要心跳检测的通道数组的对象
      */
     private ChannelProvider channelProvider;
 
@@ -48,49 +48,72 @@ final class HeartBeatTask implements Runnable {
      */
     private int heartbeatTimeout;
 
+    /**
+     * 获取通道助手内部接口
+     */
+    interface ChannelProvider {
+        /**
+         * 获取需要心跳检测的 Channel，Channel 是双向通信的即不仅仅支持客户端连接服务端，还支持服务端发送数据包给客户端
+         *
+         * @return
+         */
+        Collection<Channel> getChannels();
+    }
+
+    /**
+     * 构造方法
+     *
+     * @param provider         通道助手对象
+     * @param heartbeat        心跳间隔
+     * @param heartbeatTimeout 心跳超时时间
+     */
     HeartBeatTask(ChannelProvider provider, int heartbeat, int heartbeatTimeout) {
         this.channelProvider = provider;
         this.heartbeat = heartbeat;
         this.heartbeatTimeout = heartbeatTimeout;
     }
 
+
     /**
-     * 执行任务
+     * 任务逻辑
      */
     @Override
     public void run() {
         try {
+            // 当前时间
             long now = System.currentTimeMillis();
-            // 获取到需要心跳检测的channel，对每个channel进行判断，注意Netty的通道是双向的，即不仅仅支持客户端连接服务端，还支持服务端发送数据包给客户端
+            //从ChannelProvider中获取到需要心跳检测的channel
             for (Channel channel : channelProvider.getChannels()) {
+                // 通道关闭则不需要检测
                 if (channel.isClosed()) {
                     continue;
                 }
                 try {
 
-                    // 通道最后一次读操作的时间
+                    // 从待处理检测的Channel的附加属性中获取最后一次读、写时间
                     Long lastRead = (Long) channel.getAttribute(HeaderExchangeHandler.KEY_READ_TIMESTAMP);
-                    // 通道最后一次写操作时间
                     Long lastWrite = (Long) channel.getAttribute(HeaderExchangeHandler.KEY_WRITE_TIMESTAMP);
 
-                    // 如果在heartbeat内没有进行读操作或者写操作，则发送心跳请求
+                    // 最后一次读/写时间超过心跳时间，就会发送心跳请求
                     if ((lastRead != null && now - lastRead > heartbeat) || (lastWrite != null && now - lastWrite > heartbeat)) {
 
+                        // 创建心跳请求对象
                         Request req = new Request();
                         req.setVersion(Version.getProtocolVersion());
                         // 需要响应
                         req.setTwoWay(true);
-                        // 设置心跳事件
+                        // 是心跳事件
                         req.setEvent(Request.HEARTBEAT_EVENT);
                         // 发送心跳请求
                         channel.send(req);
+
                         if (logger.isDebugEnabled()) {
                             logger.debug("Send heartbeat to remote channel " + channel.getRemoteAddress()
                                     + ", cause: The channel has no data-transmission exceeds a heartbeat period: " + heartbeat + "ms");
                         }
                     }
 
-                    // 正常消息和心跳在heartbeatTimeout都没接收到，即在3次heartbeat中没有收到消息
+                    // 最后一次读时间超过心跳超时时间（3 * 心跳时间），则客户端重新连接服务端；服务端直接关闭客户端连接。
                     if (lastRead != null && now - lastRead > heartbeatTimeout) {
                         logger.warn("Close channel " + channel
                                 + ", because heartbeat read idle time out: " + heartbeatTimeout + "ms");
@@ -115,11 +138,6 @@ final class HeartBeatTask implements Runnable {
         } catch (Throwable t) {
             logger.warn("Unhandled exception when heartbeat, cause: " + t.getMessage(), t);
         }
-    }
-
-
-    interface ChannelProvider {
-        Collection<Channel> getChannels();
     }
 
 }

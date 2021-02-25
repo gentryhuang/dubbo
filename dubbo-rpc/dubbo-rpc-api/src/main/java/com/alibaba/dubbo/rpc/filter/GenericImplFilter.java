@@ -56,75 +56,64 @@ public class GenericImplFilter implements Filter {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
-
-        // 获得 generic 配置项  ，todo 这里是 invoker-服务提供者的配置信息
+        // 1. 获得 generic 配置项
         String generic = invoker.getUrl().getParameter(Constants.GENERIC_KEY);
 
-        //-----------------------  泛化实现的调用  ------------------------------/
+        //  泛化实现的调用 - 客户端调用的服务是 GenericService
+        if (ProtocolUtils.isGeneric(generic) // 判断是否开启了泛化引用
+                && !Constants.$INVOKE.equals(invocation.getMethodName()) // 方法名非 $invoke
+                // 调用信息是 RpcInvocation 类型
+                && invocation instanceof RpcInvocation) {
 
-        if (    // 判断是否开启了泛化引用
-                ProtocolUtils.isGeneric(generic)
-                        // 方法名是否为 $invoke
-                        && !Constants.$INVOKE.equals(invocation.getMethodName())
-                        // 调用信息是 RpcInvocation 类型
-                        && invocation instanceof RpcInvocation
-        ) {
-
-            // 1、 序列化参数
+            // 2. 序列化参数
             RpcInvocation invocation2 = (RpcInvocation) invocation;
-
-            // 获取方法名
+            // 调用的方法名
             String methodName = invocation2.getMethodName();
-            // 获取参数类型列表
+            // 参数类型列表
             Class<?>[] parameterTypes = invocation2.getParameterTypes();
-            // 获取参数值列表
+            // 参数值列表
             Object[] arguments = invocation2.getArguments();
-
             // 参数类型名列表
             String[] types = new String[parameterTypes.length];
             for (int i = 0; i < parameterTypes.length; i++) {
                 types[i] = ReflectUtils.getName(parameterTypes[i]);
             }
+
+            // 3. 根据 generic 的值选择对应序列化参数的方式
             Object[] args;
-            // 判断 generic == bean
+            // 3.1 generic == bean
             if (ProtocolUtils.isBeanGenericSerialization(generic)) {
                 args = new Object[arguments.length];
                 for (int i = 0; i < arguments.length; i++) {
                     // 将参数进行转换： POJO -> JavaBeanDescriptor
                     args[i] = JavaBeanSerializeUtil.serialize(arguments[i], JavaBeanAccessor.METHOD);
                 }
+
+                // 3.2 generic != bean
             } else {
                 // 将参数进行转换：POJO -> Map
                 args = PojoUtils.generalize(arguments);
             }
 
-            // 2、PRC调用
-
-            // 重新设置 关键的 RPC调用信息，通过新的PpcInvocation就能RPC调用到泛化实现的服务 【todo 关键】
-
-            // 设置调用方法的名字为 $invoke
+            // 4、重新设置RPC调用信息，通过新的PpcInvocation就能调用到泛化实现的服务
+            // 4.1 设置调用方法的名字为 $invoke
             invocation2.setMethodName(Constants.$INVOKE);
-            // 设置调用方法的参数类型为 GENERIC_PARAMETER_TYPES
+            // 4.2 设置调用方法的参数类型为 GENERIC_PARAMETER_TYPES
             invocation2.setParameterTypes(GENERIC_PARAMETER_TYPES);
-            // 设置调用方法的参数数据，分别为方法名，参数类型数组，参数数组
+            // 4.3 设置调用方法的参数数据，分别为方法名，参数类型数组，参数数组
             invocation2.setArguments(new Object[]{methodName, types, args});
 
-            // 方法参数转换完毕，进行调用服务
+            // 5 远程调用
             Result result = invoker.invoke(invocation2);
 
 
-            // 3、反序列化结果及异常结果处理
-
-            // 调用结果正常，无异常
+            // 6、反序列化结果及异常结果处理
             if (!result.hasException()) {
-
                 // 获取调用结果
                 Object value = result.getValue();
                 try {
-
-                    // 根据方法名和参数类型，获取方法对象
+                    // 反射方法对象
                     Method method = invoker.getInterface().getMethod(methodName, parameterTypes);
-
                     // generic=bean 的情况，反序列化： JavaBeanDescriptor -> 结果
                     if (ProtocolUtils.isBeanGenericSerialization(generic)) {
                         if (value == null) {
@@ -149,7 +138,7 @@ public class GenericImplFilter implements Filter {
                     throw new RpcException(e.getMessage(), e);
                 }
 
-                // 调用结果有异常
+                // 异常结果处理
             } else if (result.getException() instanceof GenericException) {
                 GenericException exception = (GenericException) result.getException();
                 try {
@@ -193,27 +182,26 @@ public class GenericImplFilter implements Filter {
             return result;
         }
 
-        //---------------------- 泛化引用的调用 ------------------------------/
-
-        // 是否符合泛化引用的规则
-        if (invocation.getMethodName().equals(Constants.$INVOKE)
+        // 泛化引用的调用 - GenericService 调用服务接口
+        if (invocation.getMethodName().equals(Constants.$INVOKE) // 调用方法是 $invoke
                 && invocation.getArguments() != null
-                && invocation.getArguments().length == 3
+                && invocation.getArguments().length == 3 // 方法参数是 3 个
+                // 判断是否开启了泛化引用
                 && ProtocolUtils.isGeneric(generic)) {
 
-            // 获取方法参数列表
+            // 2 方法参数列表
             Object[] args = (Object[]) invocation.getArguments()[2];
 
-            // genecric = nativejava的情况，校验方法参数是否都为 byte[]
+            // 3. 根据 generic 的值校验参数值
+            // 3.1 genecric = nativejava的情况，校验方法参数是否都为 byte[]
             if (ProtocolUtils.isJavaGenericSerialization(generic)) {
-
                 for (Object arg : args) {
                     if (!(byte[].class == arg.getClass())) {
                         error(generic, byte[].class.getName(), arg.getClass().getName());
                     }
                 }
 
-                // generic = bean 的情况，校验方法参数 为 JavaBeanDescriptor
+                // 3.2 generic = bean 的情况，校验方法参数 为 JavaBeanDescriptor
             } else if (ProtocolUtils.isBeanGenericSerialization(generic)) {
                 for (Object arg : args) {
                     if (!(arg instanceof JavaBeanDescriptor)) {
@@ -222,13 +210,11 @@ public class GenericImplFilter implements Filter {
                 }
             }
 
-            // 通过隐式参数，传递 generic 配置项
+            // 4 通过隐式参数，传递 generic 配置项
             ((RpcInvocation) invocation).setAttachment(Constants.GENERIC_KEY, invoker.getUrl().getParameter(Constants.GENERIC_KEY));
         }
 
-        /**
-         * @see GenericFilter#invoke(Invoker, Invocation)
-         */
+        // 5 远程调用
         return invoker.invoke(invocation);
     }
 

@@ -235,7 +235,8 @@ public class ReferenceConfig<T> extends AbstractReferenceConfig {
         if (getGeneric() == null && getConsumer() != null) {
             setGeneric(getConsumer().getGeneric());
         }
-        // 是否是泛化接口的实现，如果是泛化接口实现的话，就直接设置当前接口为 GenericService.class
+
+        // 是否是泛化引用，就直接设置当前接口为 GenericService
         if (ProtocolUtils.isGeneric(getGeneric())) {
             interfaceClass = GenericService.class;
 

@@ -81,7 +81,7 @@ public class NettyClient extends AbstractClient {
         bootstrap
                 // 设置它的线程组
                 .group(nioEventLoopGroup)
-                // 设置可选项
+                // 设置可选项 (开启 KeepAlive)
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 .option(ChannelOption.TCP_NODELAY, true)
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)

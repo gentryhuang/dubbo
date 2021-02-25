@@ -33,17 +33,17 @@ class StatItem {
      */
     private long lastResetTime;
     /**
-     * 令牌刷新时间间隔
+     * 令牌刷新时间间隔，即重置 token 值的时间周期，这样就实现了在 interval 时间段内能够通过 rate 个请求的效果。
      */
     private long interval;
 
     /**
-     * 令牌数
+     * 令牌数,初始值为 rate 值，每通过一个请求 token 递减一，当减为 0 时，不再通过任何请求，实现限流的作用。
      */
     private AtomicInteger token;
 
     /**
-     * 限制大小
+     * 一段时间内能通过的 TPS 上限
      */
     private int rate;
 
@@ -58,6 +58,7 @@ class StatItem {
         this.name = name;
         this.rate = rate;
         this.interval = interval;
+        // 记录时间戳
         this.lastResetTime = System.currentTimeMillis();
         this.token = new AtomicInteger(rate);
     }
@@ -68,13 +69,11 @@ class StatItem {
      * @return
      */
     public boolean isAllowable() {
-
-        /**
-         * 判断上次发放令牌的时间点到现在是否超过时间间隔，如果超过了就重新发放令牌。
-         */
+        // 周期性重置token
         long now = System.currentTimeMillis();
         if (now > lastResetTime + interval) {
             token.set(rate);
+            // 记录最近一次重置token的时间戳
             lastResetTime = now;
         }
 

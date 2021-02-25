@@ -33,12 +33,12 @@ public class EchoFilter implements Filter {
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation inv) throws RpcException {
-        // 如果是回声探测方法 $echo(message) ,直接返回方法参数
+        // 如果是回声探测方法 $echo(message) ,直接返回方法参数。
+        // 方名为 $echo,方法参数仅有一个  -->  回声探测方法
         if (inv.getMethodName().equals(Constants.$ECHO) && inv.getArguments() != null && inv.getArguments().length == 1) {
             return new RpcResult(inv.getArguments()[0]);
         }
         // 非回声探测调用，继续走后面的流程
         return invoker.invoke(inv);
     }
-
 }

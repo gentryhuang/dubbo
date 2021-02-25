@@ -29,7 +29,7 @@ import java.util.Collection;
 public interface ExchangeServer extends Server {
 
     /**
-     * 获得信息交换通道数组
+     * 获得信息交换通道集合
      *
      * @return channels
      */

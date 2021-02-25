@@ -59,10 +59,11 @@ public class ContextFilter implements Filter {
             // 清理 timeout
             attachments.remove(Constants.TIMEOUT_KEY);
             // 清除异步属性，防止异步属性传到过滤器下一个环节
-            attachments.remove(Constants.ASYNC_KEY);// Remove async property to avoid being passed to the following invoke chain.
+            attachments.remove(Constants.ASYNC_KEY);
         }
 
-        // 设置dubbo 上下文信息
+        // 这里和 ConsumerContextFilter 不同，没有设置 remoteAddress 的值，做为服务端的过滤器，在收到请求的时候就已经设置了 remoteAddress 的值
+        // @see com.alibaba.dubbo.remoting.exchange.support.ExchangeHandlerAdapter.reply
         RpcContext.getContext()
                 .setInvoker(invoker)
                 .setInvocation(invocation)
@@ -85,14 +86,14 @@ public class ContextFilter implements Filter {
         }
 
         try {
-            // 放行
+            // 调用过滤器链的下一个节点
             RpcResult result = (RpcResult) invoker.invoke(invocation);
-            // pass attachments to result
+            // 将 SERVER_LOCAL 这个 RpcContext 中的附加信息添加到 RpcResult 的 attachments 字段中，返回给 Consumer。
             result.addAttachments(RpcContext.getServerContext().getAttachments());
             return result;
         } finally {
 
-            // 清除上下文信息。对于异步调用的场景，即使是同一个线程，处理不同的请求也会创建一个新的RpcContext对象，因此调用完成后，需要清理对应的上下文信息。
+            // 清除上下文信息，当前线程处理下一个调用的时候，会创建新的 RpcContext
             RpcContext.removeContext();
             RpcContext.getServerContext().clearAttachments();
         }

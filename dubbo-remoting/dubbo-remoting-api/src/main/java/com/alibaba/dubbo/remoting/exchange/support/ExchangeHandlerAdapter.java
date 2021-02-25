@@ -27,9 +27,16 @@ import com.alibaba.dubbo.remoting.telnet.support.TelnetHandlerAdapter;
  */
 public abstract class ExchangeHandlerAdapter extends TelnetHandlerAdapter implements ExchangeHandler {
 
+    /**
+     * 处理请求
+     *
+     * @param channel 通道
+     * @param msg
+     * @return
+     * @throws RemotingException
+     */
     @Override
     public Object reply(ExchangeChannel channel, Object msg) throws RemotingException {
         return null;
     }
-
 }

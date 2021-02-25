@@ -53,16 +53,17 @@ public class ProtocolFilterWrapper implements Protocol {
      * @return 在执行的时候执行Filter 
      */
     private static <T> Invoker<T> buildInvokerChain(final Invoker<T> invoker, String key, String group) {
+        // 保存引用，后续用于将真正的Invoker 挂到过滤器链的最后
         Invoker<T> last = invoker;
-        // 获取类上带有@Active注解的过滤器数组
+        // 获取所有的过滤器，包括类上带有@Active注解的和用户在XML中配置的
         List<Filter> filters = ExtensionLoader.getExtensionLoader(Filter.class).getActivateExtension(invoker.getUrl(), key, group);
         // 倒序循环 Filter，递归包装Invoker，就是一个链表结构： Xx1Filter->Xx2Filter->Xx3Filter->...->Invoker
         if (!filters.isEmpty()) {
             for (int i = filters.size() - 1; i >= 0; i--) {
                 final Filter filter = filters.get(i);
                 final Invoker<T> next = last;
+                //匿名 Invoker 对象
                 last = new Invoker<T>() {
-
                     @Override
                     public Class<T> getInterface() {
                         return invoker.getInterface();
@@ -118,7 +119,8 @@ public class ProtocolFilterWrapper implements Protocol {
         if (Constants.REGISTRY_PROTOCOL.equals(invoker.getUrl().getProtocol())) {
             return protocol.export(invoker);
         }
-        // 建立带有Filter 过滤链的 Invoker，再暴露服务
+        // 建立带有Filter 过滤链的 Invoker，再暴露服务。
+        // Constants.PROVIDER 标识自己是服务提供者类型的调用链
         return protocol.export(buildInvokerChain(invoker, Constants.SERVICE_FILTER_KEY, Constants.PROVIDER));
     }
 
@@ -130,9 +132,9 @@ public class ProtocolFilterWrapper implements Protocol {
         }
         /**
          * 1 引用服务，返回 Invoker 对象
-         * 2 引用服务完成后，调用 buildInvokerChain(invoker,key,group)方法，创建带有Filter过滤器的Invoker对象。和服务暴露区别在group的值上
+         * 2 引用服务完成后，调用 buildInvokerChain(invoker,key,group)方法，创建带有Filter过滤器的Invoker对象。和服务暴露区别在group的值上，
+         *   Constants.CONSUMER 标识自己是消费类型的调用链
          */
-
         return buildInvokerChain(protocol.refer(type, url), Constants.REFERENCE_FILTER_KEY, Constants.CONSUMER);
     }
 

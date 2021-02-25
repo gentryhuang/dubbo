@@ -65,7 +65,7 @@ import java.util.concurrent.TimeUnit;
  * 1 设置为 true ： 将向日志组件Logger 中输出访问日志
  * 2 设置一个路径 ： 直接把访问日志输出到指定文件
  * 注意：
- *  如果把日志输入到文件的情况，会有两个问题：1 由于Set集合是无序的，因此日志输出到文件也是无序的 2 由于是异步刷盘，如果服务突然宕机会导致一部分日志丢失
+ * 如果把日志输入到文件的情况，会有两个问题：1 由于Set集合是无序的，因此日志输出到文件也是无序的 2 由于是异步刷盘，如果服务突然宕机会导致一部分日志丢失
  */
 @Activate(group = Constants.PROVIDER, value = Constants.ACCESS_LOG_KEY)
 public class AccessLogFilter implements Filter {
@@ -76,17 +76,20 @@ public class AccessLogFilter implements Filter {
     //--------------- 使用日志组件输出相关属性 -------------------------/
 
     /**
-     * 日志名前缀
+     * 日志名前缀，用于获取日志组件。用于 accesslog = true，或 accesslog = default 的情况
      */
     private static final String ACCESS_LOG_KEY = "dubbo.accesslog";
 
 
     //--------------- 配置输出到指定文件的相关属性 ---------------------/
-
+    /**
+     * 日志的文件后缀
+     */
     private static final String FILE_DATE_FORMAT = "yyyyMMdd";
-
+    /**
+     * 时间格式化
+     */
     private static final String MESSAGE_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
-
     /**
      * 队列大小
      */
@@ -98,16 +101,14 @@ public class AccessLogFilter implements Filter {
 
     /**
      * 日志队列
-     * key: 自定的accesslog的值，如： accesslog="accesslog.log"
+     * key: 自定的 accesslog 的值，如： accesslog="accesslog.log"
      * value: 日志集合
      */
     private final ConcurrentMap<String, Set<String>> logQueue = new ConcurrentHashMap<String, Set<String>>();
-
     /**
      * 定时任务线程池
      */
     private final ScheduledExecutorService logScheduled = Executors.newScheduledThreadPool(2, new NamedThreadFactory("Dubbo-Access-Log", true));
-
     /**
      * 记录日志任务
      */
@@ -156,17 +157,14 @@ public class AccessLogFilter implements Filter {
             // 记录访问日志的文件名
             String accesslog = invoker.getUrl().getParameter(Constants.ACCESS_LOG_KEY);
             if (ConfigUtils.isNotEmpty(accesslog)) {
-
                 // dubbo 上下文
                 RpcContext context = RpcContext.getContext();
-
                 // 服务名
                 String serviceName = invoker.getInterface().getName();
                 // 版本号
                 String version = invoker.getUrl().getParameter(Constants.VERSION_KEY);
                 // 分组
                 String group = invoker.getUrl().getParameter(Constants.GROUP_KEY);
-
                 // 拼接日志内容
                 StringBuilder sn = new StringBuilder();
                 sn.append("[")
@@ -182,20 +180,16 @@ public class AccessLogFilter implements Filter {
                 if (null != group && group.length() > 0) {
                     sn.append(group).append("/");
                 }
-
                 // 服务名
                 sn.append(serviceName);
-
                 // 版本
                 if (null != version && version.length() > 0) {
                     sn.append(":").append(version);
                 }
                 sn.append(" ");
-
                 // 方法名
                 sn.append(inv.getMethodName());
                 sn.append("(");
-
                 // 参数类型
                 Class<?>[] types = inv.getParameterTypes();
                 if (types != null && types.length > 0) {
@@ -210,17 +204,14 @@ public class AccessLogFilter implements Filter {
                     }
                 }
                 sn.append(") ");
-
                 // 参数值
                 Object[] args = inv.getArguments();
                 if (args != null && args.length > 0) {
                     sn.append(JSON.toJSONString(args));
                 }
-
                 // 日志信息字符串
                 String msg = sn.toString();
-
-                // 设置 accesslog = true，将日志输出到日志组件Logger，如 logback中
+                // 设置 accesslog = true 或 accesslog=default，将日志输出到日志组件Logger，如 logback中
                 if (ConfigUtils.isDefault(accesslog)) {
                     // 写日志
                     LoggerFactory.getLogger(ACCESS_LOG_KEY + "." + invoker.getInterface().getName()).info(msg);
@@ -246,25 +237,19 @@ public class AccessLogFilter implements Filter {
                     // 遍历日志队列
                     for (Map.Entry<String, Set<String>> entry : logQueue.entrySet()) {
                         try {
-
                             // 获得日志文件路径
                             String accesslog = entry.getKey();
                             // 获得日志集合
                             Set<String> logSet = entry.getValue();
-
                             // 创建日志文件
                             File file = new File(accesslog);
                             File dir = file.getParentFile();
-
                             if (null != dir && !dir.exists()) {
                                 dir.mkdirs();
                             }
-
-
                             if (logger.isDebugEnabled()) {
                                 logger.debug("Append log to " + accesslog);
                             }
-
                             // 归档历史日志文件，例如：  xxx.20191217
                             if (file.exists()) {
                                 String now = new SimpleDateFormat(FILE_DATE_FORMAT).format(new Date());
@@ -287,7 +272,6 @@ public class AccessLogFilter implements Filter {
                                     // 换行
                                     writer.write("\r\n");
                                 }
-
                                 // 刷盘
                                 writer.flush();
                             } finally {

@@ -28,14 +28,14 @@ import java.util.Map;
 public interface Result {
 
     /**
-     * Get invoke result.
+     * 获取调用的返回值
      *
      * @return result. if no result return null.
      */
     Object getValue();
 
     /**
-     * Get exception.
+     * 如果此次调用发生异常，用于获取异常信息
      *
      * @return exception. if no exception return null.
      */
@@ -49,7 +49,7 @@ public interface Result {
     boolean hasException();
 
     /**
-     * Recreate. // recreate()方法是一个复合操作，如果此次调用发生异常，则直接抛出异常。如果没有异常，则返回结果
+     * recreate()方法是一个复合操作，如果此次调用发生异常，则直接抛出异常。如果没有异常，则返回结果
      * <p>
      * <code>
      * if (hasException()) {
@@ -71,9 +71,8 @@ public interface Result {
     @Deprecated
     Object getResult();
 
-
     /**
-     * get attachments.
+     * Result中同样可以携带附加信息
      *
      * @return attachments.
      */

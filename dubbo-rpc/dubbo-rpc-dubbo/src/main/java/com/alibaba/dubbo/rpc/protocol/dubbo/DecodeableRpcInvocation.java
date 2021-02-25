@@ -55,19 +55,26 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
      */
     private byte serializationType;
     /**
-     * 输入流
+     * 字节流
      */
     private InputStream inputStream;
     /**
      * 请求
      */
     private Request request;
-
     /**
      * 是否已经解码完成
      */
     private volatile boolean hasDecoded;
 
+    /**
+     * 可解码 Invocation
+     *
+     * @param channel Dubbo 底层通道
+     * @param request 请求
+     * @param is      字节流消息
+     * @param id      序列化编号
+     */
     public DecodeableRpcInvocation(Channel channel, Request request, InputStream is, byte id) {
         Assert.notNull(channel, "channel == null");
         Assert.notNull(request, "request == null");
@@ -92,7 +99,6 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
                 if (log.isWarnEnabled()) {
                     log.warn("Decode rpc invocation failed: " + e.getMessage(), e);
                 }
-
 
                 // 解码失败，设置失败标志
                 request.setBroken(true);
@@ -124,14 +130,14 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
 
         /** 和编码设置的参数对应，写什么读什么 */
 
-        // 通过反序列化得到 dubbo version
+        // 通过反序列化得到框架版本
         String dubboVersion = in.readUTF();
         request.setVersion(dubboVersion);
 
-        // 通过反序列化的到 `dubbo` `path` `version`，并保存到 attachments 变量中
+        // 通过反序列化得到 `dubbo` `path` `version`，并保存到 attachments 变量中
         setAttachment(Constants.DUBBO_VERSION_KEY, dubboVersion);
-        setAttachment(Constants.PATH_KEY, in.readUTF());
-        setAttachment(Constants.VERSION_KEY, in.readUTF());
+        setAttachment(Constants.PATH_KEY, in.readUTF()); // 读取调用接口
+        setAttachment(Constants.VERSION_KEY, in.readUTF()); // 读取接口指定的版本，默认为 0.0.0
 
         // 通过反序列化得到调用方法名
         setMethodName(in.readUTF());
@@ -152,6 +158,8 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
                 // 将 desc 解析为参数类型数组
                 pts = ReflectUtils.desc2classArray(desc);
                 args = new Object[pts.length];
+
+                // 一次读取方法参数值
                 for (int i = 0; i < args.length; i++) {
                     try {
                         // 解析运行时参数
@@ -167,7 +175,7 @@ public class DecodeableRpcInvocation extends RpcInvocation implements Codec, Dec
             // 设置参数类型数组
             setParameterTypes(pts);
 
-            // 通过反序列化得到原 attachments 的内容
+            // 通过反序列化得到原 attachments 的内容，即隐式参数
             Map<String, String> map = (Map<String, String>) in.readObject(Map.class);
             if (map != null && map.size() > 0) {
                 Map<String, String> attachment = getAttachments();

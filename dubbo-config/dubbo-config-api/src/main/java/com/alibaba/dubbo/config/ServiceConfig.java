@@ -564,6 +564,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
         // token 【使暴露出去的服务更安全，使用token做安全校验】
         if (!ConfigUtils.isEmpty(token)) {
+            // true || default 时，UUID 随机生成
             if (ConfigUtils.isDefault(token)) {
                 map.put(Constants.TOKEN_KEY, UUID.randomUUID().toString());
             } else {
@@ -735,7 +736,15 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
 
     /**
-     * 主机绑定
+     * 主机绑定：
+     * 特殊说明：hostToBind 和 hostToRegistry 从名称看这是绑定地址和注册地址，对于Dubbo使用默认的协议的情况，绑定地址用于本机Netty监听，而注册地址是注册到zk上
+     * 提供给消费者调用的。一般来说，如果没有特殊要求，绑定地址和注册地址都是一样的，如dubbo使用本地服务器网卡0的网络ip作为地址。
+     * 场景：
+     * 消费端不能直接访问服务地址，需要通过代理转发才能访问，此时就可以在注册地址上做文章，因为注册地址是提供给消费者调用的，因为可以将注册地址设置成类似跳板机地址，
+     * 这样消费方就可以访问跳板机，然后跳板机再做一层转发就可以访问到服务了。
+     * 说明：
+     * 端口也有类似的使用方式
+     *
      * <p>
      * Register & bind IP address for service provider, can be configured separately.
      * Configuration priority: environment variables -> java system properties -> host property in config file ->
@@ -748,7 +757,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
      */
     private String findConfigedHosts(ProtocolConfig protocolConfig, List<URL> registryURLs, Map<String, String> map) {
         boolean anyhost = false;
-        // 1 根据协议名，从系统环境中获取主机
+        // 1 根据协议名，从系统环境中获取主机 (通过参命令参数 -DDUBBO_IP_TO_BIND=xxxx  指定 )
         String hostToBind = getValueFromConfig(protocolConfig, Constants.DUBBO_IP_TO_BIND);
         if (hostToBind != null && hostToBind.length() > 0 && isInvalidLocalHost(hostToBind)) {
             throw new IllegalArgumentException("Specified invalid bind ip from property:" + Constants.DUBBO_IP_TO_BIND + ", value:" + hostToBind);
@@ -812,6 +821,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         map.put(Constants.BIND_IP_KEY, hostToBind);
 
         // registry ip is not used for bind ip by default
+        // 使用启动参数去显示指定注册的 IP -DDUBBO_IP_TO_REGISTRY=xxxx，但默认情况下不用作绑定ip
         String hostToRegistry = getValueFromConfig(protocolConfig, Constants.DUBBO_IP_TO_REGISTRY);
         if (hostToRegistry != null && hostToRegistry.length() > 0 && isInvalidLocalHost(hostToRegistry)) {
             throw new IllegalArgumentException("Specified invalid registry ip from property:" + Constants.DUBBO_IP_TO_REGISTRY + ", value:" + hostToRegistry);
@@ -837,20 +847,25 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     private Integer findConfigedPorts(ProtocolConfig protocolConfig, String name, Map<String, String> map) {
         Integer portToBind = null;
 
-        // parse bind port from environment
+        // 1 从启动参数中获取端口： -DDUBBO_PORT_TO_BIND=xxx
         String port = getValueFromConfig(protocolConfig, Constants.DUBBO_PORT_TO_BIND);
         portToBind = parsePort(port);
 
-        // if there's no bind port found from environment, keep looking up.
+        // 2 没有配置系统参数，则继续寻找
         if (portToBind == null) {
+            // 2.1 获取协议中配置的端口
             portToBind = protocolConfig.getPort();
+            // 2.2 协议中没有配置端口，则尝试从全局配置中获取
             if (provider != null && (portToBind == null || portToBind == 0)) {
                 portToBind = provider.getPort();
             }
+            // 2.3 从协议中获取默认的端口，如果之前都没有获取到，则使用协议默认端口
             final int defaultPort = ExtensionLoader.getExtensionLoader(Protocol.class).getExtension(name).getDefaultPort();
             if (portToBind == null || portToBind == 0) {
                 portToBind = defaultPort;
             }
+
+            // 2.4 如果还是没有找到端口，或者端口 <= 0 ，则使用随机端口
             if (portToBind == null || portToBind <= 0) {
                 portToBind = getRandomPort(name);
                 if (portToBind == null || portToBind < 0) {
@@ -864,7 +879,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         // save bind port, used as url's key later
         map.put(Constants.BIND_PORT_KEY, String.valueOf(portToBind));
 
-        // registry port, not used as bind port by default
+        // 注册端口，默认情况下不用作绑定端口
         String portToRegistryStr = getValueFromConfig(protocolConfig, Constants.DUBBO_PORT_TO_REGISTRY);
         Integer portToRegistry = parsePort(portToRegistryStr);
         if (portToRegistry == null) {

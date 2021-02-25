@@ -42,7 +42,6 @@ import java.util.Map;
  */
 @Activate(group = Constants.PROVIDER, value = Constants.TOKEN_KEY)
 public class TokenFilter implements Filter {
-
     /**
      * 对请求的令牌做校验
      *
@@ -53,15 +52,11 @@ public class TokenFilter implements Filter {
      */
     @Override
     public Result invoke(Invoker<?> invoker, Invocation inv) throws RpcException {
-
         // 获得服务提供者配置的Token 值
         String token = invoker.getUrl().getParameter(Constants.TOKEN_KEY);
-
         if (ConfigUtils.isNotEmpty(token)) {
-
             Class<?> serviceType = invoker.getInterface();
-
-            // 从RpcInvocation 的 隐式参数中，获得 Token 值
+            // 从 RpcInvocation 的 隐式参数中，获得 Token 值
             Map<String, String> attachments = inv.getAttachments();
             String remoteToken = attachments == null ? null : attachments.get(Constants.TOKEN_KEY);
 
@@ -72,5 +67,4 @@ public class TokenFilter implements Filter {
         }
         return invoker.invoke(inv);
     }
-
 }

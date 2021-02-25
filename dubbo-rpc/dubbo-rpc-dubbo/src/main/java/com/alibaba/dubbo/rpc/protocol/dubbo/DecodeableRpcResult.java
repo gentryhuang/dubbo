@@ -46,7 +46,7 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
 
     private static final Logger log = LoggerFactory.getLogger(DecodeableRpcResult.class);
     /**
-     * Dubbo 通道
+     * Dubbo 底层通道
      */
     private Channel channel;
     /**
@@ -58,19 +58,27 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
      */
     private InputStream inputStream;
     /**
-     * 请求
+     * 响应
      */
     private Response response;
     /**
      * Invocation 对象
      */
     private Invocation invocation;
-
     /**
      * 是否已经解码完成
      */
     private volatile boolean hasDecoded;
 
+    /**
+     * 可解码 Result
+     *
+     * @param channel    Dubbo 底层通道
+     * @param response   响应
+     * @param is         字节流响应
+     * @param invocation 调用信息
+     * @param id         序列化编号
+     */
     public DecodeableRpcResult(Channel channel, Response response, InputStream is, Invocation invocation, byte id) {
         Assert.notNull(channel, "channel == null");
         Assert.notNull(response, "response == null");
@@ -90,6 +98,32 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
     /**
      * 解码
      *
+     * @throws Exception
+     */
+    @Override
+    public void decode() throws Exception {
+        if (!hasDecoded && channel != null && inputStream != null) {
+            try {
+                // 执行反序列化操作
+                decode(channel, inputStream);
+            } catch (Throwable e) {
+                if (log.isWarnEnabled()) {
+                    log.warn("Decode rpc result failed: " + e.getMessage(), e);
+                }
+
+                // 反序列化失败，设置 CLIENT_ERROR 状态到 Response 对象中
+                response.setStatus(Response.CLIENT_ERROR);
+                // 设置异常信息
+                response.setErrorMessage(StringUtils.toString(e));
+            } finally {
+                hasDecoded = true;
+            }
+        }
+    }
+
+    /**
+     * 解码
+     *
      * @param channel channel.
      * @param input   input stream.
      * @return
@@ -98,12 +132,12 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
     @Override
     public Object decode(Channel channel, InputStream input) throws IOException {
 
-        // 通过序列化器获取 输入流
+        // 通过序列化器获取输入流
         ObjectInput in = CodecSupport.getSerialization(channel.getUrl(), serializationType).deserialize(channel.getUrl(), input);
 
-        // 反序列化响应类型
+        // 反序列化响应类型(编码序列化时设置的)
         byte flag = in.readByte();
-
+        // 匹配响应类型
         switch (flag) {
             // 无返回值
             case DubboCodec.RESPONSE_NULL_VALUE:
@@ -112,13 +146,11 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
             case DubboCodec.RESPONSE_VALUE:
                 try {
                     Type[] returnType = RpcUtils.getReturnTypes(invocation);
-
                     // 设置结果
                     setValue(returnType == null || returnType.length == 0 ?
                             in.readObject() :
                             // 返回结果:Type[]{method.getReturnType(), method.getGenericReturnType()}
                             (returnType.length == 1 ? in.readObject((Class<?>) returnType[0]) : in.readObject((Class<?>) returnType[0], returnType[1])));
-
                 } catch (ClassNotFoundException e) {
                     throw new IOException(StringUtils.toString("Read response data failed.", e));
                 }
@@ -140,7 +172,6 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
             // 返回值为空，且携带了 attachments 集合
             case DubboCodec.RESPONSE_NULL_VALUE_WITH_ATTACHMENTS:
                 try {
-
                     // 反序列化 attachments 集合，并存储起来
                     setAttachments((Map<String, String>) in.readObject(Map.class));
                 } catch (ClassNotFoundException e) {
@@ -151,16 +182,12 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
             // 返回值不为空，且携带了 attachments 集合
             case DubboCodec.RESPONSE_VALUE_WITH_ATTACHMENTS:
                 try {
-
                     // 获取返回值类型
                     Type[] returnType = RpcUtils.getReturnTypes(invocation);
-
                     // 反序列化调用结果，并保存起来
                     setValue(returnType == null || returnType.length == 0 ? in.readObject() : (returnType.length == 1 ? in.readObject((Class<?>) returnType[0]) : in.readObject((Class<?>) returnType[0], returnType[1])));
-
                     // 反序列化 attachments 集合，并存储起来
                     setAttachments((Map<String, String>) in.readObject(Map.class));
-
                 } catch (ClassNotFoundException e) {
                     throw new IOException(StringUtils.toString("Read response data failed.", e));
                 }
@@ -174,10 +201,8 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
                     if (obj instanceof Throwable == false) {
                         throw new IOException("Response data error, expect Throwable, but get " + obj);
                     }
-
                     // 设置异常对象
                     setException((Throwable) obj);
-
                     // 反序列化 attachments 集合，并存储起来
                     setAttachments((Map<String, String>) in.readObject(Map.class));
 
@@ -194,32 +219,5 @@ public class DecodeableRpcResult extends RpcResult implements Codec, Decodeable 
         return this;
     }
 
-    /**
-     * 解码
-     *
-     * @throws Exception
-     */
-    @Override
-    public void decode() throws Exception {
-        if (!hasDecoded && channel != null && inputStream != null) {
-            try {
-
-                // 执行反序列化操作
-                decode(channel, inputStream);
-            } catch (Throwable e) {
-                if (log.isWarnEnabled()) {
-                    log.warn("Decode rpc result failed: " + e.getMessage(), e);
-                }
-
-                // 反序列化失败，设置 CLIENT_ERROR 状态到 Response 对象中
-                response.setStatus(Response.CLIENT_ERROR);
-
-                // 设置异常信息
-                response.setErrorMessage(StringUtils.toString(e));
-            } finally {
-                hasDecoded = true;
-            }
-        }
-    }
 
 }

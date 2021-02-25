@@ -44,36 +44,25 @@ public class ActiveLimitFilter implements Filter {
         URL url = invoker.getUrl();
         // 获取方法名
         String methodName = invocation.getMethodName();
-
-        // 获取服务提供者当前方法的最大并发数 todo 这里取的应该是消费方的，只是在合并url的时候把消费方法的合并到提供者的url中了？？？？
+        // 获取当前方法在当前客户端的最大调用量
         int max = invoker.getUrl().getMethodParameter(methodName, Constants.ACTIVES_KEY, 0);
-
         // 基于服务URL + 方法纬度， 获得 RpcStatus 对象
         RpcStatus count = RpcStatus.getStatus(invoker.getUrl(), invocation.getMethodName());
-
-
         if (max > 0) {
-
             /**
-             *  获得服务提供者的超时时间 [注意：这里的超时值不占用调用服务的超时时间] ，是用来控制等待请求释放资源的时间，防止等待时间太久。
+             *  获得超时时间 [注意：这里的超时值不占用调用服务的超时时间] ，是用来控制等待请求释放资源的时间，防止等待时间太久。
              *  在极端情况下，调用服务的时间几乎是 2 * timeout
              */
-
             long timeout = invoker.getUrl().getMethodParameter(invocation.getMethodName(), Constants.TIMEOUT_KEY, 0);
-
-
             long start = System.currentTimeMillis();
             long remain = timeout;
 
-            // 获取当前并发数
+            // 获取当前并发度
             int active = count.getActive();
 
-            /**
-             * 如果达到限流阈值，和服务提供者不一样，并不是直接抛出异常，而是先等待直到超时，因为请求是允许有超时时间的。
-             */
+            // 如果达到限流阈值，和服务提供者不一样，并不是直接抛出异常，而是先等待直到超时以等待并发度降低，因为请求是允许有超时时间的。
             if (active >= max) {
-
-                // 使用锁，只允许仅有一个进入等待，其他的都在代码块外阻塞
+                // 并发控制
                 synchronized (count) {
                     /**
                      *
@@ -109,15 +98,13 @@ public class ActiveLimitFilter implements Filter {
             // 开始计数，并发原子数 + 1
             RpcStatus.beginCount(url, methodName);
             try {
-                // 放行
+                // 调用服务
                 Result result = invoker.invoke(invocation);
-
                 // 结束计数（调用成功），并发原子数 - 1
                 RpcStatus.endCount(url, methodName, System.currentTimeMillis() - begin, true);
-
                 return result;
             } catch (RuntimeException t) {
-                // 结束计数（调用失败）
+                // 结束计数（调用失败），并发原子数 -1
                 RpcStatus.endCount(url, methodName, System.currentTimeMillis() - begin, false);
                 throw t;
             }

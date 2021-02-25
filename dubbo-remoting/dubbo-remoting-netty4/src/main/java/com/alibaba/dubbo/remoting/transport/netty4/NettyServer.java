@@ -161,7 +161,6 @@ public class NettyServer extends AbstractServer implements Server {
         } catch (Throwable e) {
             logger.warn(e.getMessage(), e);
         }
-
         // 关闭连接到服务器的客户端通道
         try {
             Collection<com.alibaba.dubbo.remoting.Channel> channels = getChannels();

@@ -48,6 +48,8 @@ import java.io.InputStream;
  */
 public class ExchangeCodec extends TelnetCodec {
 
+    private static final Logger logger = LoggerFactory.getLogger(ExchangeCodec.class);
+
 
     /*********************** Dubbo Protocol ******************
      *
@@ -101,35 +103,56 @@ public class ExchangeCodec extends TelnetCodec {
 
     /**
      * 协议头前16位，分为 MAGIC_HIGH 和 MAGIC_LOW 2个字节。是个固定值，标志着一个数据包是否是 Dubbo 协议
+     * <p>
+     * 11111111 11111111  11011010 10111011
      */
     protected static final short MAGIC = (short) 0xdabb; // -9541
     /**
      * 魔数高位
+     * <p>
+     * 111111111111111111111111 1101 1010
      */
     protected static final byte MAGIC_HIGH = Bytes.short2bytes(MAGIC)[0]; // -38
     /**
      * 魔数低位
+     * <p>
+     * 111111111111111111111111 1011 1011
      */
     protected static final byte MAGIC_LOW = Bytes.short2bytes(MAGIC)[1]; // -69
 
     // ----------- flag标志位，1个字节，共8位 三位分别如下，其他五位表示消息体数据用的序列化工具的类型（默认是hessian2） ---------------------------
     /**
      * 标识是请求还是响应 1 为request请求  0 为响应
+     * <p>
+     * 111111111111111111111111 1000 0000
      */
     protected static final byte FLAG_REQUEST = (byte) 0x80; // -128
     /**
      * 标识是双向传输还是单向传输 1 为双向传输 0 为是单向传输
+     * <p>
+     * 0100 0000
      */
     protected static final byte FLAG_TWOWAY = (byte) 0x40; // 64
     /**
      * 标示是否为事件： 0 - 当前数据包是请求或响应包，1 - 当前数据包是心跳包
+     * <p>
+     * 0010 0000
      */
     protected static final byte FLAG_EVENT = (byte) 0x20; // 32
 
 
+    /**
+     * 用于获取序列化类型的标志位的掩码。
+     * <p>
+     * 0001 1111
+     */
     protected static final int SERIALIZATION_MASK = 0x1f; // 31
-    private static final Logger logger = LoggerFactory.getLogger(ExchangeCodec.class);
 
+    /**
+     * 获取魔数
+     *
+     * @return
+     */
     public Short getMagicCode() {
         return MAGIC;
     }
@@ -137,9 +160,9 @@ public class ExchangeCodec extends TelnetCodec {
     /**
      * 编码 - 请求头
      *
-     * @param channel
-     * @param buffer
-     * @param msg
+     * @param channel Dubbo 底层 Channel
+     * @param buffer  Dubbo 底层 Buffer
+     * @param msg     出站消息
      * @throws IOException
      */
     @Override
@@ -170,7 +193,7 @@ public class ExchangeCodec extends TelnetCodec {
     public Object decode(Channel channel, ChannelBuffer buffer) throws IOException {
         // 从Buffer 中读取字节数
         int readable = buffer.readableBytes();
-        // 创建消息头字节数组
+        // 创建协议头字节数组，优先解析 Dubbo 协议，而不是 Telnet 命令
         byte[] header = new byte[Math.min(readable, HEADER_LENGTH)];
         // 从管道中取出header.length个字节，一般是16个，注意这是先处理消息头的，消息体内容会根据消息头进一步处理 ，需要注意的是，可能目前管道中数据不足16个字节
         buffer.readBytes(header);
@@ -183,9 +206,8 @@ public class ExchangeCodec extends TelnetCodec {
 
         // 通过魔数判断是否Dubbo 消息,不是的情况下目前是Telnet 命令行发出的数据包
         if (readable > 0 && header[0] != MAGIC_HIGH || readable > 1 && header[1] != MAGIC_LOW) {
-
-            // 将 buffer 完全复制到 `header` 数组中。因为，上面的 `#decode(channel, buffer)` 方法，可能未读全 todo 待验证
             int length = header.length;
+            // 如果 header.length < readable 成立，说明 buffer 中数据没有读完，因此需要将数据全部读取出来。因为这不是 Dubbo 协议。
             if (header.length < readable) {
                 header = Bytes.copyOf(header, readable);
                 buffer.readBytes(header, length, readable - length);
@@ -203,14 +225,12 @@ public class ExchangeCodec extends TelnetCodec {
             return super.decode(channel, buffer, readable, header);
         }
 
-        // ----- 基于消息长度的方式进行拆包 -------------------/
-
-        // 检查可读数据量是否少于 消息头Header长度 ，若小于则返回需要更多的输入。因为Dubbo协议采用 协议头 + payload的方式
+        // 检查可读数据字节数是否少于固定长度 ，若小于则返回需要更多的输入。因为Dubbo协议采用 协议头 + payload  的方式
         if (readable < HEADER_LENGTH) {
             return DecodeResult.NEED_MORE_INPUT;
         }
 
-        // 从消息头中获取消息体的长度。[96 - 127]：Body 的长度，通过该长度，读取 Body 。
+        // 从消息头中获取消息体的长度 - [96 - 127]，通过该长度读取消息体。
         int len = Bytes.bytes2int(header, 12);
 
         // 检测消息体长度是否超出限制，超出则抛出异常
@@ -228,7 +248,7 @@ public class ExchangeCodec extends TelnetCodec {
         ChannelBufferInputStream is = new ChannelBufferInputStream(buffer, len);
 
         try {
-            // 解析 Header + Body,根据情况，返回 Request 或 Reponse
+            // 解析 Header + Body,根据情况，根据具体数据包类型返回 Request 或 Reponse
             return decodeBody(channel, is, header);
         } finally {
 
@@ -431,14 +451,10 @@ public class ExchangeCodec extends TelnetCodec {
             // 设置魔数，占2个字节 [0-15]
             Bytes.short2bytes(MAGIC, header);
 
-            // 设置序列化器编号,占header第3个字节的后5位 [19 -23] , 即 xxxy yyyy，
+            // 设置序列化器编号,占header第3个字节的后5位 [19 -23]
             header[2] = serialization.getContentTypeId();
 
-            /**
-             * 如果心跳数据包 【0 - 当前数据包是请求或响应包，1 - 当前数据包是心跳包】，就设置header第3个字节的第3位 [18]
-             *
-             * FLAG_EVENT 的值是32，对应的补码是 0010 0000，0010 0000 | header[2]的结果取决与 0010 0000
-             */
+            // 如果心跳数据包，就设置header第3个字节的第3位 [18]
             if (res.isHeartbeat()) {
                 header[2] |= FLAG_EVENT;
             }
@@ -497,11 +513,12 @@ public class ExchangeCodec extends TelnetCodec {
         } catch (Throwable t) {
             // clear buffer
             buffer.writerIndex(savedWriteIndex);
-            // send error message to Consumer, otherwise, Consumer will wait till timeout.
+            // send error message to Consumer, otherwise, Consumer will wait till timeout. // 注意和编码请求的不同
             if (!res.isEvent() && res.getStatus() != Response.BAD_RESPONSE) {
                 Response r = new Response(res.getId(), res.getVersion());
                 r.setStatus(Response.BAD_RESPONSE);
 
+                // 消息内容过大
                 if (t instanceof ExceedPayloadLimitException) {
                     logger.warn(t.getMessage(), t);
                     try {
@@ -653,5 +670,86 @@ public class ExchangeCodec extends TelnetCodec {
         encodeResponseData(out, data);
     }
 
+    /**
+     * 特殊说明：
+     * 1 计算机中对数据的表示是使用二机制
+     * 2 原码、反码、补码是为了让计算机计算方便而产生的一种表示方法，由于计算机只认识二进制数，所以我们说的原码、补码都只针对二进制数，和其它进制数没有关系。
+     * 3 计算机所有的运算都是通过补码运算的。
+     * 4 我们通常人为模拟计算运算，对于负数都会先将其转为补码再运算，而这里的负数是针对10进制的数，并非其它进制。计算机取出 -5（10进制数）就是 1 011 ，0xfa（16进制数）就是 1111 1010 ，也就是已经是补码了，如果没有结合具体数据类型是没有符号位概念。
+     *
+     * @param args
+     */
+    public static void main(String[] args) {
+        /**
+         * 协议头的字节数： 16Bytes = 128 Bits
+         */
+        final int HEADER_LENGTH = 16;
+
+        /**
+         * 协议头前16位，分为 MAGIC_HIGH 和 MAGIC_LOW 2个字节。是个固定值，标志着一个数据包是否是 Dubbo 协议。
+         *
+         * 11111111 11111111  11011010 10111011
+         *                     1011010 10111011
+         *无符号位情况下，0xdabb 的对应的二进制数为 1101101010111011 ，供16位，但是使用 short 强转的话只会取低15位，虽然 short 两个字节共16位，但需要保留最高位位符号位，此时符号位取数值最高位，一般数据溢出都为负数吧。。
+         */
+        final short MAGIC = (short) 0xdabb; // -9541
+        /**
+         * 魔数高位 101 1010
+         *
+         * 111111111111111111111111 1101 1010
+         */
+        final byte MAGIC_HIGH = Bytes.short2bytes(MAGIC)[0]; // -38
+        /**
+         * 魔数低位
+         *
+         * 111111111111111111111111 1011 1011
+         */
+        final byte MAGIC_LOW = Bytes.short2bytes(MAGIC)[1]; // -69
+
+        // ----------- flag标志位，1个字节，共8位 三位分别如下，其他五位表示消息体数据用的序列化工具的类型（默认是hessian2） ---------------------------
+        /**
+         * 标识是请求还是响应 1 为request请求  0 为响应
+         *
+         * 111111111111111111111111 1000 0000
+         */
+        final byte FLAG_REQUEST = (byte) 0x80; // -128
+        /**
+         * 标识是双向传输还是单向传输 1 为双向传输 0 为是单向传输
+         *
+         *  0100 0000
+         */
+        final byte FLAG_TWOWAY = (byte) 0x40; // 64
+        /**
+         * 标示是否为事件： 0 - 当前数据包是请求或响应包，1 - 当前数据包是心跳包
+         *
+         * 0010 0000
+         */
+        final byte FLAG_EVENT = (byte) 0x20; // 32
+
+        /**
+         * 用于获取序列化类型的标志位的掩码。
+         *
+         * 0001 1111
+         */
+        final int SERIALIZATION_MASK = 0x1f; // 31
+
+
+        System.out.println(MAGIC + " : " + Integer.toBinaryString(MAGIC));
+        System.out.println(MAGIC_HIGH + " : " + Integer.toBinaryString(MAGIC_HIGH));
+        System.out.println(MAGIC_LOW + " : " + Integer.toBinaryString(MAGIC_LOW));
+        System.out.println(FLAG_REQUEST + " : " + Integer.toBinaryString(FLAG_REQUEST));
+        System.out.println(FLAG_TWOWAY + " : " + Integer.toBinaryString(FLAG_TWOWAY));
+        System.out.println(FLAG_EVENT + " : " + Integer.toBinaryString(FLAG_EVENT));
+        System.out.println(SERIALIZATION_MASK + " : " + Integer.toBinaryString(SERIALIZATION_MASK));
+
+        System.out.println(-5 + " ：" + Integer.toBinaryString(-5));
+        System.out.println((short) 0xfa + " : " + Integer.toBinaryString((short) 0xfa));
+        // 结合 short 数据类型，具有了具体符号位，并且溢出了
+        System.out.println((short) 0xdabb + " : " + Integer.toBinaryString((short) 0xdabb));
+        System.out.println(0xdabb + " : " + Integer.toBinaryString(0xdabb));
+        System.out.println(0x7fff + " : " + Integer.toBinaryString(0x7fff));
+
+
+    }
 
 }

@@ -191,11 +191,13 @@ public abstract class AbstractServer extends AbstractEndpoint implements Server 
         }
         ExecutorUtil.shutdownNow(executor, 100);
         try {
+            // 设置父类中的 closed 字段为true
             super.close();
         } catch (Throwable e) {
             logger.warn(e.getMessage(), e);
         }
         try {
+            // 调用子类实现，关闭具体服务
             doClose();
         } catch (Throwable e) {
             logger.warn(e.getMessage(), e);

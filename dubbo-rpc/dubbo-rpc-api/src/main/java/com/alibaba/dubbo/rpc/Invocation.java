@@ -26,9 +26,8 @@ import java.util.Map;
  * @see com.alibaba.dubbo.rpc.RpcInvocation
  */
 public interface Invocation {
-
     /**
-     * get method name. // 调用的方法名称
+     * 调用的方法名称
      *
      * @return method name.
      * @serial
@@ -36,7 +35,7 @@ public interface Invocation {
     String getMethodName();
 
     /**
-     * get parameter types.  // 参数类型集合
+     * 参数类型集合
      *
      * @return parameter types.
      * @serial
@@ -44,7 +43,7 @@ public interface Invocation {
     Class<?>[] getParameterTypes();
 
     /**
-     * get arguments. // 此次调用具体的参数值
+     * 此次调用具体的参数值
      *
      * @return arguments.
      * @serial
@@ -52,7 +51,8 @@ public interface Invocation {
     Object[] getArguments();
 
     /**
-     * get attachments.   // Invocation可以携带一个KV信息作为附加信息，一并传递给Provider，
+     * Invocation可以携带KV信息作为附加信息，一并传递给Provider。
+     * 注意：attachment 和 attribute 的区别
      *
      * @return attachments.
      * @serial
@@ -76,11 +76,10 @@ public interface Invocation {
     String getAttachment(String key, String defaultValue);
 
     /**
-     * get the invoker in current context. // 此次调用关联的Invoker 对象
+     * 此次调用关联的Invoker 对象
      *
      * @return invoker.
      * @transient
      */
     Invoker<?> getInvoker();
-
 }

@@ -129,6 +129,10 @@ public class HttpProtocol extends AbstractProxyProtocol {
 
     /**
      * 创建Exporter（使用Spring的）
+     * 注意：
+     * HttpInvoker 默认使用的序列化为 application/x-java-serialized-object ，即 Java 序列方式。我们也可以设置序列方式：
+     * httpServiceExporter.setContentType(xxx);
+     * application/json, application/x-www-form-urlencoded, application/json, application/*+json, application/json, application/*+json, application/json, application/x-www-form-urlencoded]
      *
      * @param impl
      * @param type
@@ -197,7 +201,9 @@ public class HttpProtocol extends AbstractProxyProtocol {
         // 获取客户端类型
         String client = url.getParameter(Constants.CLIENT_KEY);
 
-        // 根据客户端类型不同，创建不同的 执行器，这里创建SimpleHttpInvokerRequestExecutor 对象
+        // 同样可以通过 Executor 设置序列化方式
+        // 根据客户端类型不同，创建不同的 执行器，默认创建SimpleHttpInvokerRequestExecutor 对象，即使用的是 JDK 的 HTTP 功能。
+        // 但是也可以通过设置httpInvokerRequestExecutor属性来使用Apache HttpComponents客户端。
         if (client == null || client.length() == 0 || "simple".equals(client)) {
 
             // 使用的HttpClient 是 JDK HttpClent

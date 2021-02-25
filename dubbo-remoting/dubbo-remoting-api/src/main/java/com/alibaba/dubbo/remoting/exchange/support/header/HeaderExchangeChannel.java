@@ -71,17 +71,18 @@ final class HeaderExchangeChannel implements ExchangeChannel {
     /**
      * 创建HeaderExchangeChannel 对象。
      *
-     * @param ch
+     * @param ch Channel
      * @return
      */
     static HeaderExchangeChannel getOrAddChannel(Channel ch) {
         if (ch == null) {
             return null;
         }
-        // 通过 ch.getAttribute(CHANNEL_KEY) 键值，保证创建唯一的HeaderExchangeChannel对象 【必须是 已连接状态 】
+        // 通过 ch.getAttribute(CHANNEL_KEY) 键值，保证创建唯一的HeaderExchangeChannel对象
         HeaderExchangeChannel ret = (HeaderExchangeChannel) ch.getAttribute(CHANNEL_KEY);
         if (ret == null) {
             ret = new HeaderExchangeChannel(ch);
+            // ch 必须是已连接状态，否则不会绑定对应的 HeaderExchangeChannel 对象
             if (ch.isConnected()) {
                 ch.setAttribute(CHANNEL_KEY, ret);
             }
@@ -95,19 +96,26 @@ final class HeaderExchangeChannel implements ExchangeChannel {
      * @param ch
      */
     static void removeChannelIfDisconnected(Channel ch) {
-        // 未连接
+        // ch 断开了连接，则解除邦定的 HeaderExchangeChannel 对象
         if (ch != null && !ch.isConnected()) {
             ch.removeAttribute(CHANNEL_KEY);
         }
     }
 
+    /**
+     * Endpoint 方法
+     *
+     * @param message
+     * @throws RemotingException
+     */
     @Override
     public void send(Object message) throws RemotingException {
+        // 默认不等待消息发出就返回
         send(message, getUrl().getParameter(Constants.SENT_KEY, false));
     }
 
     /**
-     * 该方法内部调用的是其父类AbstractPeer，AbstractPeer最终调用AbstractClient#send方法
+     * Endpoint 方法
      *
      * @param message
      * @param sent    true: 会等待消息发出，消息发送失败会抛出异常；  false: 不等待消息发出，将消息放入IO队列，即可返回
@@ -115,14 +123,18 @@ final class HeaderExchangeChannel implements ExchangeChannel {
      */
     @Override
     public void send(Object message, boolean sent) throws RemotingException {
+        // 如果处于关闭状态，则抛出异常
         if (closed) {
             throw new RemotingException(this.getLocalAddress(), null, "Failed to send message " + message + ", cause: The channel " + this + " is closed!");
         }
+
+        // 如果消息是 Request、Response、String 类型，直接交给 Channel.send() 方法
         if (message instanceof Request
                 || message instanceof Response
                 || message instanceof String) {
             channel.send(message, sent);
         } else {
+            // 构建 Request 对象，并且不需要响应
             Request request = new Request();
             request.setVersion(Version.getProtocolVersion());
             request.setTwoWay(false);
@@ -131,16 +143,24 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         }
     }
 
+    /**
+     * 发送请求
+     *
+     * @param request
+     * @return
+     * @throws RemotingException
+     */
     @Override
     public ResponseFuture request(Object request) throws RemotingException {
+        // 请求超时时间，默认 1000
         return request(request, channel.getUrl().getPositiveParameter(Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT));
     }
 
     /**
-     * 发送请求。 和 send 方法 什么区别？
+     * 发送请求
      *
      * @param request
-     * @param timeout
+     * @param timeout 请求超时时间
      * @return
      * @throws RemotingException
      */
@@ -150,8 +170,9 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         if (closed) {
             throw new RemotingException(this.getLocalAddress(), null, "Failed to send request " + request + ", cause: The channel " + this + " is closed!");
         }
-        // 创建请求 【创建的时候会生成 请求编号】
+        // 创建请求，并初始化请求编号
         Request req = new Request();
+        // Dubbo 版本
         req.setVersion(Version.getProtocolVersion());
         // 需要响应
         req.setTwoWay(true);
@@ -162,7 +183,7 @@ final class HeaderExchangeChannel implements ExchangeChannel {
          *  1 netty从宏观上看是一个异步非阻塞的框架，所以当执行channel.send(req)的时候，其内部执行到netty发送消息时，不会等待结果，直接返回。为了实现“异步转为同步”，使用了DefaultFuture这个辅助类
          *  2 在创建 DefaultFuture对象时，会把该对象放到缓存Map {@link DefaultFuture#FUTURES }
          *  3 在NettyClient.request(Object request, int timeout)，在还没有等到客户端的响应回来的时候，就直接将future返回了
-         *  4 netty是异步非阻塞的，那么假设现在我发了1w个Request，后来返回来1w个Response，那么怎么对应Request和Response呢？如果对应不上，最起码的唤醒就会有问题。为了解决这个问题提，Request和Response中都有一个属性id，Response中的属性mId就是Request中的mId
+         *  4 netty是异步非阻塞的，那么假设现在我发了1w个Request，后来返回来1w个Response，那么怎么对应Request和Response呢？如果对应不上，最起码的唤醒就会有问题。为了解决这个问题，Request和Response中都有一个属性id，Response中的属性mId就是Request中的mId
          */
         DefaultFuture future = new DefaultFuture(channel, req, timeout);
         try {
@@ -182,17 +203,6 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         return closed;
     }
 
-    /**
-     * 关闭通道
-     */
-    @Override
-    public void close() {
-        try {
-            channel.close();
-        } catch (Throwable e) {
-            logger.warn(e.getMessage(), e);
-        }
-    }
 
     /**
      * 优雅关闭
@@ -212,7 +222,7 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         // 等待请求完成
         if (timeout > 0) {
             long start = System.currentTimeMillis();
-            // 有结果或者超时了，就结束
+            // 请求处理完或者关闭超时，则结束
             while (DefaultFuture.hasFuture(channel) && System.currentTimeMillis() - start < timeout) {
                 try {
                     Thread.sleep(10);
@@ -223,6 +233,19 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         }
         // 关闭通道
         close();
+    }
+
+    /**
+     * 关闭通道
+     */
+    @Override
+    public void close() {
+        try {
+            // 执行 channel 的关闭动作
+            channel.close();
+        } catch (Throwable e) {
+            logger.warn(e.getMessage(), e);
+        }
     }
 
     @Override

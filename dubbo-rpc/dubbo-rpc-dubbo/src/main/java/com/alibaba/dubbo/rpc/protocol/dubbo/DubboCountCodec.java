@@ -73,10 +73,11 @@ public final class DubboCountCodec implements Codec2 {
 
         // 循环解码消息
         do {
+
             // 通过DubboCodec提供的解码能力解码一条消息
             Object obj = codec.decode(channel, buffer);
 
-            // 字节数组不够，重置读进度。结束解析
+            // 字节数不够，重置读指针，然后结束解析
             if (Codec2.DecodeResult.NEED_MORE_INPUT == obj) {
                 buffer.readerIndex(save);
                 break;

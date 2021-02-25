@@ -41,6 +41,7 @@ public class HeartBeatTaskTest {
     public void setup() throws Exception {
         task = new HeartBeatTask(new HeartBeatTask.ChannelProvider() {
 
+            @Override
             public Collection<Channel> getChannels() {
                 return Collections.<Channel>singletonList(channel);
             }

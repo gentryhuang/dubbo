@@ -27,6 +27,7 @@ import com.alibaba.dubbo.common.extension.SPI;
 public interface Protocol {
 
     /**
+     * 默认端口
      * Get default port when user doesn't config the port.
      *
      * @return default port
@@ -34,12 +35,10 @@ public interface Protocol {
     int getDefaultPort();
 
     /**
-     * Export service for remote invocation: <br>
-     * 1. Protocol should record request source address after receive a request:
-     * RpcContext.getContext().setRemoteAddress();<br>
-     * 2. export() must be idempotent, that is, there's no difference between invoking once and invoking twice when
-     * export the same URL<br>
-     * 3. Invoker instance is passed in by the framework, protocol needs not to care <br>
+     * 将一个 Invoker 暴露出去 <br>
+     * 1. 接收到请求后，协议应该记录请求源地址: RpcContext.getContext().setRemoteAddress();<br>
+     * 2. export()必须是幂等的，也就是说，在暴露相同的URL时，调用一次和调用两次没有区别 <br>
+     * 3. Invoker 是由框架传入的，协议不需要关心 <br>
      *
      * @param <T>     Service type
      * @param invoker Service invoker
@@ -50,13 +49,9 @@ public interface Protocol {
     <T> Exporter<T> export(Invoker<T> invoker) throws RpcException;
 
     /**
-     * Refer a remote service: <br>
-     * 1. When user calls `invoke()` method of `Invoker` object which's returned from `refer()` call, the protocol
-     * needs to correspondingly execute `invoke()` method of `Invoker` object <br>
-     * 2. It's protocol's responsibility to implement `Invoker` which's returned from `refer()`. Generally speaking,
-     * protocol sends remote request in the `Invoker` implementation. <br>
-     * 3. When there's check=false set in URL, the implementation must not throw exception but try to recover when
-     * connection fails.
+     * 引用一个 Invoker  <br>
+     * 1. 协议的责任是根据参数返回一个 Invoker 对象，由 refer() 方法返回。<br>
+     * 2. Consumer端可以通过这个Invoker请求到Provider端的服务. <br>
      *
      * @param <T>  Service type
      * @param type Service class
@@ -68,10 +63,10 @@ public interface Protocol {
     <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException;
 
     /**
-     * Destroy protocol: <br>
-     * 1. Cancel all services this protocol exports and refers <br>
-     * 2. Release all occupied resources, for example: connection, port, etc. <br>
-     * 3. Protocol can continue to export and refer new service even after it's destroyed.
+     * 释放当前 Protocol 对象底层占用的资源 <br>
+     * 1. 销毁export()方法以及refer()方法使用到的Invoker对象 <br>
+     * 2. 释放所有占用资源, 如: 连接, 端口, 等等. <br>
+     * 3. 协议可以继续导出和引用新的服务，即使它被销毁。
      */
     void destroy();
 

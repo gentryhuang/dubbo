@@ -48,6 +48,7 @@ import static com.alibaba.dubbo.rpc.protocol.dubbo.CallbackServiceCodec.encodeIn
  * 并且在 dubbo:// 协议中，支持 参数回调 的特性，也是需要在编解码做一些特殊逻辑。这个由DubboCodec来解决
  */
 public class DubboCodec extends ExchangeCodec implements Codec2 {
+    private static final Logger log = LoggerFactory.getLogger(DubboCodec.class);
 
     /**
      * 协议名
@@ -62,16 +63,24 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
      */
     public static final byte RESPONSE_WITH_EXCEPTION = 0;
     /**
-     * 正常（空返回）响应
+     * 正常响应，有结果
      */
     public static final byte RESPONSE_VALUE = 1;
     /**
-     * 正常（有返回）响应
+     * 正常响应，无结果
      */
     public static final byte RESPONSE_NULL_VALUE = 2;
-
+    /**
+     * 异常返回包含隐藏参数
+     */
     public static final byte RESPONSE_WITH_EXCEPTION_WITH_ATTACHMENTS = 3;
+    /**
+     * 响应结果包含隐藏参数
+     */
     public static final byte RESPONSE_VALUE_WITH_ATTACHMENTS = 4;
+    /**
+     * 响应空值包含隐藏参数
+     */
     public static final byte RESPONSE_NULL_VALUE_WITH_ATTACHMENTS = 5;
     /**
      * 方法参数
@@ -81,7 +90,7 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
      * 方法参数类型
      */
     public static final Class<?>[] EMPTY_CLASS_ARRAY = new Class<?>[0];
-    private static final Logger log = LoggerFactory.getLogger(DubboCodec.class);
+
 
     /**
      * 解码内容体。将数据包解析成 Request/Response模型
@@ -102,6 +111,8 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
          * 2 SERIALIZATION_MASK 的值位31，对应的二进制补码为 0001 1111
          * 3 由 0001 1111 & header[2]对应的二进制补码，那么由于 0001 1111 后五位全是1，进行&运算后的结果取决与 header[2]对应的二进制补码的3-8位，即序列化器编号
          */
+
+        // 获取序列化器编号
         byte flag = header[2];
         byte proto = (byte) (flag & SERIALIZATION_MASK);
 
@@ -309,6 +320,7 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
      */
     @Override
     protected void encodeRequestData(Channel channel, ObjectOutput out, Object data, String version) throws IOException {
+
         RpcInvocation inv = (RpcInvocation) data;
 
         // 写入 `dubbo` `path` `version`
@@ -324,7 +336,7 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
         Object[] args = inv.getArguments();
         if (args != null) {
             for (int i = 0; i < args.length; i++) {
-                // 调用 CallbackServiceCodec#encodeInvocationArgument(...) 方法，编码参数。主要用于 参数回调 功能
+                // 调用 CallbackServiceCodec#encodeInvocationArgument(...) 方法编码参数，主要用于参数回调功能
                 out.writeObject(encodeInvocationArgument(channel, inv, i));
             }
         }
@@ -344,6 +356,7 @@ public class DubboCodec extends ExchangeCodec implements Codec2 {
     @Override
     protected void encodeResponseData(Channel channel, ObjectOutput out, Object data, String version) throws IOException {
 
+        // 将响应转为 Result 对象
         Result result = (Result) data;
 
         // 检测当前协议版本是否支持带有 attachments 集合的 Response 对象

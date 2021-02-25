@@ -26,38 +26,75 @@ import java.util.List;
 
 /**
  * @see com.alibaba.dubbo.remoting.transport.MultiMessageHandler
- *
+ * <p>
  * 实现 迭代器接口，多消息的封装
  */
 public final class MultiMessage implements Iterable {
-
+    /**
+     * 多消息的封装
+     */
     private final List messages = new ArrayList();
 
+    /**
+     * 私有构造方法
+     */
     private MultiMessage() {
     }
 
+    /**
+     * 封装多消息
+     *
+     * @param collection 消息集合
+     * @return
+     */
     public static MultiMessage createFromCollection(Collection collection) {
         MultiMessage result = new MultiMessage();
         result.addMessages(collection);
         return result;
     }
 
+    /**
+     * 封装多消息
+     *
+     * @param args 消息数组
+     * @return
+     */
     public static MultiMessage createFromArray(Object... args) {
         return createFromCollection(Arrays.asList(args));
     }
 
+    /**
+     * 创建 MultiMessage 对象
+     *
+     * @return
+     */
     public static MultiMessage create() {
         return new MultiMessage();
     }
 
+    /**
+     * 增加消息
+     *
+     * @param msg
+     */
     public void addMessage(Object msg) {
         messages.add(msg);
     }
 
+    /**
+     * 增加消息集合
+     *
+     * @param collection
+     */
     public void addMessages(Collection collection) {
         messages.addAll(collection);
     }
 
+    /**
+     * 获取消息集合
+     *
+     * @return
+     */
     public Collection getMessages() {
         return Collections.unmodifiableCollection(messages);
     }

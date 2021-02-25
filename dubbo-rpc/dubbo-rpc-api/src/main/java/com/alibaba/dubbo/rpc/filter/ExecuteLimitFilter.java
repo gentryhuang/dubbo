@@ -47,27 +47,20 @@ public class ExecuteLimitFilter implements Filter {
 
         // 信号量
         Semaphore executesLimit = null;
-
         // 是否获得信号量
         boolean acquireResult = false;
 
-        // 获得服务提供者当前方法最大可并发请求数
+        // 获得服务提供方当前方法最大可并发请求数
         int max = url.getMethodParameter(methodName, Constants.EXECUTES_KEY, 0);
 
         // 最大可并发请求数大于0
         if (max > 0) {
-
-            // 基于服务URL + 方法纬度，获得RpcStatus
+            // 基于 服务URL + 方法纬度，创建/获取 RpcStatus 计算器
             RpcStatus count = RpcStatus.getStatus(url, invocation.getMethodName());
-          /**  如果当前使用的线程数已经大于等于设置的阈值，就直接抛出异常
-            * if (count.getActive() >= max) {
-             *
-             * http://manzhizhen.iteye.com/blog/2386408
-             * use semaphore for concurrency control (to limit thread number) // 用户semaphore 将比较和+1做成原子的，控制并发
-             */
+            // 创建/获取 RpcStatus 对应的信号量
             executesLimit = count.getSemaphore(max);
 
-            // 获取不到信号量，则抛出异常
+            // 尝试获取信号量，获取失败则抛出异常
             if (executesLimit != null && !(acquireResult = executesLimit.tryAcquire())) {
                 throw new RpcException("Failed to invoke method " + invocation.getMethodName() + " in provider " + url + ", cause: The service using threads greater than <dubbo:service executes=\"" + max + "\" /> limited.");
             }
@@ -76,11 +69,10 @@ public class ExecuteLimitFilter implements Filter {
         long begin = System.currentTimeMillis();
         boolean isSuccess = true;
 
-        // 调用开始计数
+        // 计数器 +1
         RpcStatus.beginCount(url, methodName);
-
         try {
-            // 放行
+            // 服务调用
             Result result = invoker.invoke(invocation);
             return result;
         } catch (Throwable t) {
@@ -92,8 +84,7 @@ public class ExecuteLimitFilter implements Filter {
                 throw new RpcException("unexpected exception when ExecuteLimitFilter", t);
             }
         } finally {
-
-            // 调用结束的计数 [调用失败/成功，看isSuccess的值]
+            // 计数器-1  [调用失败/成功，看isSuccess的值]
             RpcStatus.endCount(url, methodName, System.currentTimeMillis() - begin, isSuccess);
 
             // 释放信号量
@@ -102,5 +93,4 @@ public class ExecuteLimitFilter implements Filter {
             }
         }
     }
-
 }

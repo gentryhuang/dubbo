@@ -46,42 +46,48 @@ public class HeaderExchangeClient implements ExchangeClient {
 
     private static final Logger logger = LoggerFactory.getLogger(HeaderExchangeClient.class);
     /**
-     * 定时器线程池
+     * 定时任务线程池
      */
     private static final ScheduledThreadPoolExecutor scheduled = new ScheduledThreadPoolExecutor(2, new NamedThreadFactory("dubbo-remoting-client-heartbeat", true));
     /**
-     * 客户端
+     * Transport 层的 Client 实例
      */
     private final Client client;
     /**
-     * 信息交换通道，Client 和服务端建立的连接
+     * 信息交换通道，Client 和 Server 建立的连接
      */
     private final ExchangeChannel channel;
     /**
-     * 心跳定时器
+     * 定时任务Future
      */
     private ScheduledFuture<?> heartbeatTimer;
     /**
-     * 心跳
+     * 心跳间隔
      */
     private int heartbeat;
     /**
-     * 心跳间隔，单位：毫秒
+     * 心跳超时时间
      */
     private int heartbeatTimeout;
 
+    /**
+     * @param client        Transport 层的 Client 实例
+     * @param needHeartbeat 是否开启心跳
+     */
     public HeaderExchangeClient(Client client, boolean needHeartbeat) {
         if (client == null) {
             throw new IllegalArgumentException("client == null");
         }
-        // 客户端
-        this.client = client;
 
-        // 创建 HeaderExchangeChannel 对象
+        // 设置 client 属性
+        this.client = client;
+        // 创建 HeaderExchangeChannel 对象，对 Transport层的Client进行装饰
         this.channel = new HeaderExchangeChannel(client);
 
-        // 读取心跳相关的配置,默认开启心跳机制
+        // 获取 Dubbo 版本
         String dubbo = client.getUrl().getParameter(Constants.DUBBO_VERSION_KEY);
+
+        // 读取心跳相关的配置,默认开启心跳机制
         this.heartbeat = client.getUrl().getParameter(Constants.HEARTBEAT_KEY, dubbo != null && dubbo.startsWith("1.0.") ? Constants.DEFAULT_HEARTBEAT : 0);
         this.heartbeatTimeout = client.getUrl().getParameter(Constants.HEARTBEAT_TIMEOUT_KEY, heartbeat * 3);
 
@@ -89,28 +95,21 @@ public class HeaderExchangeClient implements ExchangeClient {
         if (heartbeatTimeout < heartbeat * 2) {
             throw new IllegalStateException("heartbeatTimeout < heartbeatInterval * 2");
         }
+
         // 是否启动心跳
         if (needHeartbeat) {
-            // 发起心跳定时器
+            // 启动心跳定时任务
             startHeartbeatTimer();
         }
     }
 
     // -------------------------- HeaderExchangeClient 中很多方法只有一行代码，即调用HeaderExchangeChannel 对象的同签名方法。它主要的作用是封装了一些关于心跳检测的逻辑  -------------/
 
+
+    //------------------------ ExchangeChannel 接口方法的实现 -------------------/
     @Override
     public ResponseFuture request(Object request) throws RemotingException {
         return channel.request(request);
-    }
-
-    @Override
-    public URL getUrl() {
-        return channel.getUrl();
-    }
-
-    @Override
-    public InetSocketAddress getRemoteAddress() {
-        return channel.getRemoteAddress();
     }
 
     @Override
@@ -119,23 +118,35 @@ public class HeaderExchangeClient implements ExchangeClient {
     }
 
     @Override
+    public ExchangeHandler getExchangeHandler() {
+        return channel.getExchangeHandler();
+    }
+
+    @Override
+    public void close(int timeout) {
+        // Mark the client into the closure process
+        startClose();
+        doClose();
+        channel.close(timeout);
+    }
+
+
+    //-------------------------- Endpoint 接口方法的实现 ----------------------/
+    @Override
+    public URL getUrl() {
+        return channel.getUrl();
+    }
+
+    // 获取底层Channel关联的ChannelHandler。 Channel接口继承Endpoint接口是有原因的哟。
+    @Override
     public ChannelHandler getChannelHandler() {
         return channel.getChannelHandler();
     }
 
-    @Override
-    public boolean isConnected() {
-        return channel.isConnected();
-    }
-
+    // Channel接口继承Endpoint接口是有原因的哟。
     @Override
     public InetSocketAddress getLocalAddress() {
         return channel.getLocalAddress();
-    }
-
-    @Override
-    public ExchangeHandler getExchangeHandler() {
-        return channel.getExchangeHandler();
     }
 
     @Override
@@ -160,32 +171,20 @@ public class HeaderExchangeClient implements ExchangeClient {
     }
 
     @Override
-    public void close(int timeout) {
-        // Mark the client into the closure process
-        startClose();
-        doClose();
-        channel.close(timeout);
-    }
-
-    @Override
     public void startClose() {
         channel.startClose();
     }
 
+
+    //------------------------------- Channel 接口方法的实现 -------------------------/
     @Override
-    public void reset(URL url) {
-        client.reset(url);
+    public InetSocketAddress getRemoteAddress() {
+        return channel.getRemoteAddress();
     }
 
     @Override
-    @Deprecated
-    public void reset(com.alibaba.dubbo.common.Parameters parameters) {
-        reset(getUrl().addParameters(parameters.getParameters()));
-    }
-
-    @Override
-    public void reconnect() throws RemotingException {
-        client.reconnect();
+    public boolean isConnected() {
+        return channel.isConnected();
     }
 
     @Override
@@ -208,22 +207,42 @@ public class HeaderExchangeClient implements ExchangeClient {
         return channel.hasAttribute(key);
     }
 
+
+    //----------------------------- Client 接口方法的实现 ---------------------------/
+    @Override
+    public void reconnect() throws RemotingException {
+        client.reconnect();
+    }
+
+
+    @Override
+    public void reset(URL url) {
+        client.reset(url);
+    }
+
+    @Override
+    @Deprecated
+    public void reset(com.alibaba.dubbo.common.Parameters parameters) {
+        reset(getUrl().addParameters(parameters.getParameters()));
+    }
+
+
     /**
-     * 开启心跳定时器
+     * 开启心跳定时任务
      */
     private void startHeartbeatTimer() {
-        // 停止原有的定时任务
+        // 开启一个新的心跳定时任务时，需要停止原有的定时任务
         stopHeartbeatTimer();
-        // 发起新的定时任务
-        if (heartbeat > 0) {
 
+        // 开启新的定时任务
+        if (heartbeat > 0) {
             heartbeatTimer = scheduled.scheduleWithFixedDelay(
                     /**
                      * 创建心跳任务
                      */
                     new HeartBeatTask(new HeartBeatTask.ChannelProvider() {
                         /**
-                         * consumer只是获取当前的对象，即通道
+                         * 每个客户端端侧只有一个通道，这里是 HeaderExchangeClient 对象自己
                          * @return
                          */
                         @Override
@@ -239,6 +258,7 @@ public class HeaderExchangeClient implements ExchangeClient {
      * 停止定时任务
      */
     private void stopHeartbeatTimer() {
+        // 如果心跳定时任务没有取消，则尝试取消该任务。
         if (heartbeatTimer != null && !heartbeatTimer.isCancelled()) {
             try {
                 heartbeatTimer.cancel(true);

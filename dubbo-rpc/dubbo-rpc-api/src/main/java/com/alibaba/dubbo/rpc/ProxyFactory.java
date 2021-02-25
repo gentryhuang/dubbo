@@ -28,7 +28,7 @@ import com.alibaba.dubbo.common.extension.SPI;
 public interface ProxyFactory {
 
     /**
-     * 创建代理对象，在引用服务的过程会调用该方法
+     * 为传入的 Invoker 创建代理对象，在引用服务的过程会调用该方法
      * <p>
      * create proxy.
      *
@@ -39,7 +39,7 @@ public interface ProxyFactory {
     <T> T getProxy(Invoker<T> invoker) throws RpcException;
 
     /**
-     * create proxy.
+     * 支持是否泛型
      *
      * @param invoker
      * @return proxy
@@ -48,7 +48,7 @@ public interface ProxyFactory {
     <T> T getProxy(Invoker<T> invoker, boolean generic) throws RpcException;
 
     /**
-     * 创建Invoker，在暴露服务时会调用
+     * 将传入的服务实例封装成Invoker，在暴露服务时会调用
      * <p>
      * create invoker.
      *

@@ -165,6 +165,11 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
         }
     }
 
+    /**
+     * 连接是否有效，Server 具有一票否决权
+     *
+     * @return
+     */
     @Override
     public boolean isAvailable() {
         if (!super.isAvailable()) {
@@ -172,7 +177,7 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
         }
         for (ExchangeClient client : clients) {
             /**
-             * 即使Client 处于连接中，但是Server 处于正在关闭中，也算不可用。
+             * 即使Client处于连接中，但如果 Server 处于正在关闭中，连接也是不可用的
              *
              * {@link HeaderExchangeServer#sendChannelReadOnlyEvent()}
              */

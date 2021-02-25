@@ -388,21 +388,23 @@ public class DubboProtocol extends AbstractProtocol {
      */
     private void openServer(URL url) {
 
-        // 获得服务地址【主机、端口:ip:port】，并将其作为服务器实例的key，用于标识当前的服务起实例
+        // 获取 host:port这个地址，并将其作为服务器实例的key，用于标识当前的服务起实例
         String key = url.getAddress();
 
-        // 参数配置项 isserver,可以暴露一个仅当前JVM可调用的服务【todo 目前该配置项应不存在了】
+        // 参数配置项 isserver，只有Server端才能启动Server对象
         boolean isServer = url.getParameter(Constants.IS_SERVER_KEY, true);
 
         // 只有Server端才能启动Server对象
         if (isServer) {
             // 从serverMap缓存中获取服务器地址:端口 对应的通信服务器
             ExchangeServer server = serverMap.get(key);
+
+            // 无 Server监听该地址
             if (server == null) {
-                // 不存在则创建服务器
+                // 不存在则创建 Server
                 serverMap.put(key, createServer(url));
             } else {
-                // server supports reset, use together with override
+                // 如果已有 Server 实例，则尝试根据URL信息重置 Server
                 // 存在则重置服务器属性 【同一台服务器同一个端口上 仅允许启动一个服务器实例。若某个端口上已有服务器实例，此时reset方法就会调用，重置服务器的一些配置】
                 // com.alibaba.dubbo.remoting.transport.AbstractServer.reset
                 server.reset(url);
@@ -418,13 +420,13 @@ public class DubboProtocol extends AbstractProtocol {
      */
     private ExchangeServer createServer(URL url) {
 
-        // 默认开启 服务器关闭时发送 READ_ONLY事件
+        // 默认开启 在 Server 关闭的时候，只能发送 ReadOnly 请求
         url = url.addParameterIfAbsent(Constants.CHANNEL_READONLYEVENT_SENT_KEY, Boolean.TRUE.toString());
 
-        // 默认开启 心跳 【heartbeat参数会在HeaderExchangeServer启动心跳计时器使用】
+        // 默认开启 心跳 【heartbeat参数会在HeaderExchangeServer启动心跳计时器使用】,默认值为 60000，表示默认的心跳时间间隔为 60 秒
         url = url.addParameterIfAbsent(Constants.HEARTBEAT_KEY, String.valueOf(Constants.DEFAULT_HEARTBEAT));
 
-        // 校验Server 的 Dubbo SPI扩展是否存在，默认是Netty
+        // 检测SERVER_KEY参数指定的Transporter扩展实现是否合法, 即Dubbo SPI扩展是否存在，默认是Netty
         String str = url.getParameter(Constants.SERVER_KEY, Constants.DEFAULT_REMOTING_SERVER);
 
         // 通过SPI检测是否存在server参数如Netty所代表的Transporter 拓展，不存在则抛出异常
@@ -439,11 +441,12 @@ public class DubboProtocol extends AbstractProtocol {
         // 启动服务器
         ExchangeServer server;
         try {
-            // 创建ExchangeServer。启动服务，需要ExchangeHandler【todo RPC】
+            // 通过Exchangers门面类，创建ExchangeServer对象 ，需要ExchangeHandler
             server = Exchangers.bind(url, requestHandler);
         } catch (RemotingException e) {
             throw new RpcException("Fail to start server(url: " + url + ") " + e.getMessage(), e);
         }
+
         // 校验Client 的 Dubbo SPI拓展是否存在。可指定netty,mina
         str = url.getParameter(Constants.CLIENT_KEY);
         if (str != null && str.length() > 0) {

@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * URL statistics. (API, Cached, ThreadSafe)  RPC状态。
+ * URL statistics. (API, Cached, ThreadSafe)  RPC状态。计数器。
  * 可以计入如下纬度统计：
  * 1 基于服务URL
  * 2 基于服务URL + 方法
@@ -36,22 +36,23 @@ import java.util.concurrent.atomic.AtomicLong;
  * @see com.alibaba.dubbo.rpc.cluster.loadbalance.LeastActiveLoadBalance
  */
 public class RpcStatus {
-
     /**
-     * 基于服务URL为纬度的RpcStatus 集合
+     * 服务状态信息
      * key: URL
-     * value: RpcStatus
+     * value: RpcStatus 计数器
      */
     private static final ConcurrentMap<String, RpcStatus> SERVICE_STATISTICS = new ConcurrentHashMap<String, RpcStatus>();
-
     /**
-     * 基于服务URL+ 方法纬度 的RpcStatus 集合
+     * 服务每个方法的状态信息
+     * key1: URL
+     * key2: 方法名
+     * RpcStatus 计数器
      */
     private static final ConcurrentMap<String, ConcurrentMap<String, RpcStatus>> METHOD_STATISTICS = new ConcurrentHashMap<String, ConcurrentMap<String, RpcStatus>>();
 
     private final ConcurrentMap<String, Object> values = new ConcurrentHashMap<String, Object>();
     /**
-     * 调用中次数
+     * 当前并发度
      *
      * @see com.alibaba.dubbo.rpc.filter.ActiveLimitFilter
      */
@@ -73,18 +74,17 @@ public class RpcStatus {
      */
     private final AtomicLong failedElapsed = new AtomicLong();
     /**
-     * 最大调用时长，单位：毫秒
+     * 所有调用中最长的耗时，单位：毫秒
      */
     private final AtomicLong maxElapsed = new AtomicLong();
     /**
-     * 最大调用失败时长，单位：毫秒
+     * 所有失败调用中最长的耗时，单位：毫秒
      */
     private final AtomicLong failedMaxElapsed = new AtomicLong();
     /**
-     * 最大调用成功时长，单位：毫秒
+     * 所有成功调用中最长的耗时，单位：毫秒
      */
     private final AtomicLong succeededMaxElapsed = new AtomicLong();
-
     /**
      * Semaphore used to control concurrency limit set by `executes`
      * <p>

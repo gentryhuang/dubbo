@@ -64,20 +64,19 @@ public class ExceptionFilter implements Filter {
         try {
             // 服务调用
             Result result = invoker.invoke(invocation);
-            // 泛化调用直接不处理
+
+            // 1. 泛化调用直接抛出，非泛化调用分类处理
             if (result.hasException() && GenericService.class != invoker.getInterface()) {
                 try {
-
-                    // 拿到异常对象
+                    // 获取异常对象
                     Throwable exception = result.getException();
 
-                    // 如果是受检查异常，则直接抛出。
+                    // 2. 如果是 checked 异常，则直接抛出
                     if (!(exception instanceof RuntimeException) && (exception instanceof Exception)) {
                         return result;
                     }
 
-                    // 在方法签名上有声明，直接抛出
-                    // directly throw if the exception appears in the signature
+                    // 3. 在方法签名上有声明，直接抛出
                     try {
                         Method method = invoker.getInterface().getMethod(invocation.getMethodName(), invocation.getParameterTypes());
                         Class<?>[] exceptionClassses = method.getExceptionTypes();
@@ -91,34 +90,29 @@ public class ExceptionFilter implements Filter {
                     }
 
                     // 未在方法签名上定义的异常，在服务端打印 错误日志
-                    // for the exception not found in method's signature, print ERROR message in server's log.
                     logger.error("Got unchecked and undeclared exception which called by " + RpcContext.getContext().getRemoteHost()
                             + ". service: " + invoker.getInterface().getName() + ", method: " + invocation.getMethodName()
                             + ", exception: " + exception.getClass().getName() + ": " + exception.getMessage(), exception);
 
-                    // 异常类和接口类在同一个 jar 包里，直接抛出。服务端消费者可以反序列化该异常
-                    // directly throw if exception class and interface class are in the same jar file.
+                    // 4. 异常类和接口类在同一个 jar 包里，直接抛出
                     String serviceFile = ReflectUtils.getCodeBase(invoker.getInterface());
                     String exceptionFile = ReflectUtils.getCodeBase(exception.getClass());
                     if (serviceFile == null || exceptionFile == null || serviceFile.equals(exceptionFile)) {
                         return result;
                     }
 
-                    // 是JDK自带的异常，直接抛出
-                    // directly throw if it's JDK exception
+                    // 5. 是JDK自带的异常，直接抛出
                     String className = exception.getClass().getName();
                     if (className.startsWith("java.") || className.startsWith("javax.")) {
                         return result;
                     }
 
-                    // 是Dubbo中定义异常，直接抛出
-                    // directly throw if it's dubbo exception
+                    // 6. 是Dubbo中定义异常，直接抛出
                     if (exception instanceof RpcException) {
                         return result;
                     }
 
                     // 否则，包装成RuntimeException 抛给客户端
-                    // otherwise, wrap with RuntimeException and throw back to the client
                     return new RpcResult(new RuntimeException(StringUtils.toString(exception)));
 
                 } catch (Throwable e) {
@@ -129,7 +123,7 @@ public class ExceptionFilter implements Filter {
                 }
             }
 
-            // 返回
+            // 直接抛出
             return result;
         } catch (RuntimeException e) {
             logger.error("Got unchecked and undeclared exception which called by " + RpcContext.getContext().getRemoteHost()
