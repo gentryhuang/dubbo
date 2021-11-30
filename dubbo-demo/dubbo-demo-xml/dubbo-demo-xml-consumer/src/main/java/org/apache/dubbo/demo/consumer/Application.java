@@ -17,12 +17,7 @@
 package org.apache.dubbo.demo.consumer;
 
 import org.apache.dubbo.demo.DemoService;
-
-import org.apache.dubbo.rpc.RpcContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 
 public class Application {
     /**
@@ -33,13 +28,12 @@ public class Application {
         ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("spring/dubbo-consumer.xml");
         context.start();
         DemoService demoService = context.getBean("demoService", DemoService.class);
-        String world = demoService.sayHello("world");
-        System.out.println(world);
 
-
-        // CompletableFuture<String> hello = demoService.sayHelloAsync("world");
-        // System.out.println("result: " + hello.get());
-
+        while (true) {
+            String world = demoService.sayHello("world");
+            System.out.println(world);
+            Thread.sleep(3000);
+        }
 
     }
 }

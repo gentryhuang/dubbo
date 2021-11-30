@@ -26,12 +26,11 @@
 
     <dubbo:registry address="zookeeper://127.0.0.1:2181"/>
 
-    <dubbo:protocol name="dubbo" port="20880" payload="100"/>
+    <dubbo:protocol name="dubbo" port="20880"/>
     <!--    <dubbo:protocol name="http" port="8080"/>-->
 
 
     <bean id="demoService" class="org.apache.dubbo.demo.provider.DemoServiceImpl"/>
-
     <dubbo:service interface="org.apache.dubbo.demo.DemoService" ref="demoService"/>
 
 </beans>
